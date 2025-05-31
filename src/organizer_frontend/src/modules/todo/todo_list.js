@@ -12,29 +12,29 @@ class TodoList extends HTMLElement {
     }
 
     // properties
-    #list: Array<TodoItem> = []
+    #list = []
 
-    set list(list: Array<TodoItem>) {
+    set list(list) {
         this.#list = list
         this.render()
     }
 
     // behaviors
-    addItem(item: TodoItem) {
+    addItem(item) {
         this.#list.push(item)
-        this.shadowRoot!.querySelector("#todo-list-items")!.appendChild(item)
+        this.shadowRoot.querySelector("#todo-list-items").appendChild(item)
 
         item.save()
     }
 
     clearItems() {
         this.#list = []
-        this.shadowRoot!.querySelector("#todo-list-items")!.innerHTML = ""
+        this.shadowRoot.querySelector("#todo-list-items").innerHTML = ""
     }
 
     // render
     render() {
-        this.shadowRoot!.innerHTML = `
+        this.shadowRoot.innerHTML = `
             <style>
                 #todo-list { 
                     display: flex;
@@ -70,15 +70,15 @@ class TodoList extends HTMLElement {
         //
 
         // add new item
-        this.shadowRoot!.querySelector("#add-item-form")!.addEventListener("submit", (e) => {
+        this.shadowRoot.querySelector("#add-item-form").addEventListener("submit", (e) => {
             e.preventDefault()
-            const target = this.shadowRoot!.querySelector("#add-item-input")! as HTMLInputElement
+            const target = this.shadowRoot.querySelector("#add-item-input")
             this.addItem(new TodoItem(target.value))
             target.value = ""
         });
 
         // clear item list
-        this.shadowRoot!.querySelector("#clear")!.addEventListener("click", () => this.clearItems());
+        this.shadowRoot.querySelector("#clear").addEventListener("click", () => this.clearItems());
     }
 }
 

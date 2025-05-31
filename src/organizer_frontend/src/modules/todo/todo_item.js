@@ -1,16 +1,16 @@
 export class TodoItem extends HTMLElement {
      // properties
-     #message: string = ""
-     set message(message: string) {
+     #message = ""
+     set message(message) {
          this.#message = message
          this.render()
     }
 
     // css properties
-    readonly #width = "25vw"
+    #width = "25vw"
 
     // constructor and  web component events
-    constructor(message: string) {
+    constructor(message) {
         super()
         this.attachShadow({ mode: "open" })
 
@@ -28,7 +28,7 @@ export class TodoItem extends HTMLElement {
 
     // render
     render() {
-        this.shadowRoot!.innerHTML = `
+        this.shadowRoot.innerHTML = `
             <style>
                 .todo-item { 
                     display: flex;
@@ -51,18 +51,18 @@ export class TodoItem extends HTMLElement {
         //
 
         // toggle done status
-        this.shadowRoot!.querySelector("#toggle")!.addEventListener("change", () => {
-            this.shadowRoot!.querySelector(".todo-item")!.classList.toggle("done");
+        this.shadowRoot.querySelector("#toggle").addEventListener("change", () => {
+            this.shadowRoot.querySelector(".todo-item").classList.toggle("done");
         });
 
         // display edit for this item
-        this.shadowRoot!.querySelector("#edit")!.addEventListener("click", () => {
+        this.shadowRoot.querySelector("#edit").addEventListener("click", () => {
             this.renderEdit()
         })
     }
 
     renderEdit() {
-        this.shadowRoot!.innerHTML = `
+        this.shadowRoot.innerHTML = `
             <style>
                 .todo-item { 
                     display: flex;
@@ -82,8 +82,8 @@ export class TodoItem extends HTMLElement {
         //
 
         // save new message
-        this.shadowRoot!.querySelector("#edit-save")!.addEventListener("click", (e) => {
-            this.#message = (this.shadowRoot!.querySelector("#edit-input")! as HTMLInputElement).value
+        this.shadowRoot.querySelector("#edit-save").addEventListener("click", (e) => {
+            this.#message = this.shadowRoot.querySelector("#edit-input").value
             this.render()
         })
     }

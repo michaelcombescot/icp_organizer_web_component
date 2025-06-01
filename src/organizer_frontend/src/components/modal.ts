@@ -5,15 +5,7 @@
 // </component-modal>
 //
 
-class Modal extends HTMLElement {
-    //
-    // ATTRIBUTES
-    //
-
-    #popoverID
-    #shadowID
-    #height
-    #width
+class ModalElement extends HTMLElement {
 
     //
     // INITIALIZATION
@@ -22,43 +14,26 @@ class Modal extends HTMLElement {
     constructor() {
         super();
         this.attachShadow({ mode: "open" });
-        this.#popoverID = this.getAttribute("popover-id");
-        this.#shadowID = this.getAttribute("shadow-id");
-        this.#height = this.getAttribute("height") || "80vh";
-        this.#width = this.getAttribute("width") || "80vw";
     }
 
     connectedCallback() {
         this.render()
-
-        this.handleShowPopover()
-        this.handleHidePopover()
-    }
-
-    //
-    // TRIGGERS
-    //
-
-    handleShowPopover() {
-        const shadow = document.querySelector(`#${this.#shadowID}`) as HTMLElement
-
-        shadow.shadowRoot!.querySelector(`[popovertarget="${this.#popoverID}"]`)!.addEventListener("click", () => this.showPopover())
-    }
-
-    handleHidePopover() {
-        this.shadowRoot!.querySelector("#close-btn")!.addEventListener("click", () => this.hidePopover())
     }
 
     //
     // BEHAVIOURS
     //
 
-    showPopover() {
-        (this.shadowRoot!.querySelector(`#${this.#popoverID}`) as HTMLDialogElement)!.showPopover()
+    show() {
+        (this.shadowRoot!.querySelector(`#modal`) as HTMLDialogElement)!.showPopover()
     }
 
-    hidePopover() {
-        (this.shadowRoot!.querySelector(`#${this.#popoverID}`) as HTMLDialogElement)!.hidePopover()
+    hide() {
+        (this.shadowRoot!.querySelector(`#modal`) as HTMLDialogElement)!.hidePopover()
+    }
+
+    fillWith (content: HTMLElement) {
+        this.replaceChildren(content);
     }
 
     //
@@ -78,7 +53,7 @@ class Modal extends HTMLElement {
                     background-color: rgba(0, 0, 0, 0.5);
                 }
 
-                #content {
+                #modal-body {
                     position: fixed;
                     z-index: 1;
                     top: 50%;
@@ -87,21 +62,25 @@ class Modal extends HTMLElement {
                     border-radius: 10px;
                     background-color: white;
                     padding: 20px;
-                    width: ${this.#width};
-                    height: ${this.#height};
+                    width: 80vw;
+                    height: 70vh;
                 }
             </style>
 
             
-            <div id="${this.#popoverID}" popover="manual">
+            <div id="modal" popover="manual">
                 <div id="mask"></div>
-                <div id="content">
+                <div id=modal-body>
                     <slot></slot>
                     <button id="close-btn">Close</button>
                 </div>
             </div>
         `
+
+        this.shadowRoot!.querySelector("#close-btn")!.addEventListener("click", () => {
+            this.hide()
+        })
     }
 }
 
-customElements.define("component-modal", Modal);
+customElements.define("component-modal", ModalElement);

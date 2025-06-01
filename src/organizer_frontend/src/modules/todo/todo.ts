@@ -49,7 +49,6 @@ class TodoElement extends HTMLElement {
     //
     constructor(todo: Todo) {
         super();
-        this.attachShadow({ mode: "open" });
 
         this.#todo = todo;
     }
@@ -63,26 +62,26 @@ class TodoElement extends HTMLElement {
     //
 
     handleDone(): void {
-        this.shadowRoot!.querySelector("#toggle")!.addEventListener("change", () => {
-            this.shadowRoot!.querySelector(".todo-item")!.classList.toggle("done");
+        this.querySelector("#toggle")!.addEventListener("change", () => {
+            this.querySelector(".todo-item")!.classList.toggle("done");
         });
     }
 
     handleOpenEditMode(): void {
-        this.shadowRoot!.querySelector("#edit")!.addEventListener("click", () => {
+        this.querySelector("#edit")!.addEventListener("click", () => {
             this.renderEdit();
         });
     }
 
     handleCancelEdit(): void {
-        this.shadowRoot!.querySelector("#edit-cancel")!.addEventListener("click", () => {
+        this.querySelector("#edit-cancel")!.addEventListener("click", () => {
             this.render();
         });
     }
 
     handleSaveEdit(): void {
-        this.shadowRoot!.querySelector("#edit-form")!.addEventListener("submit", () => {
-            const inputElement = this.shadowRoot!.querySelector("#edit-input") as HTMLInputElement;
+        this.querySelector("#edit-form")!.addEventListener("submit", () => {
+            const inputElement = this.querySelector("#edit-input") as HTMLInputElement;
             this.#todo.resume = inputElement.value;
             todoStore.updateTodo(this.#todo);
             this.render();
@@ -90,7 +89,7 @@ class TodoElement extends HTMLElement {
     }
 
     handleDelete(): void {
-        this.shadowRoot!.querySelector("#delete")!.addEventListener("click", () => {
+        this.querySelector("#delete")!.addEventListener("click", () => {
             todoStore.deleteTodo(this.#todo.id);
             this.remove();
         });
@@ -100,7 +99,7 @@ class TodoElement extends HTMLElement {
     // RENDERER
     //
     render(): void {
-        this.shadowRoot!.innerHTML = `
+        this.innerHTML = `
             <style>
                 .todo-item {
                     display: flex;
@@ -124,7 +123,7 @@ class TodoElement extends HTMLElement {
     }
 
     renderEdit(): void {
-        this.shadowRoot!.innerHTML = `
+        this.innerHTML = `
             <style>
                 .todo-item { 
                     display: flex;

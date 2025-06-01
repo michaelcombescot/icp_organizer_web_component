@@ -5,7 +5,6 @@ import "../../components/modal";
 class TodoPageElement extends HTMLElement {
     constructor() {
         super();
-        this.attachShadow({ mode: "open" });
     }
 
     connectedCallback() {
@@ -13,7 +12,7 @@ class TodoPageElement extends HTMLElement {
     }
 
     render() {
-        this.shadowRoot!.innerHTML = `
+        this.innerHTML = `
             <style>
                 #todo-lists {
                     display: flex;
@@ -21,16 +20,21 @@ class TodoPageElement extends HTMLElement {
                 }
             </style>
 
-            <button popovertarget="modal-new-task">New task</button>
-            <component-modal popover-id="modal-new-task">
-                <todo-form></todo-form>
-            </component-modal>
+            <button id="js-open-modal-new-task">New task</button>
 
             <div id="todo-lists">
                 <todo-list id="todo-list-priority" type="priority"></todo-list>
                 <todo-list id="todo-list-scheduled" type="scheduled"></todo-list>
             </div>
         `;
+
+        this.querySelector("#js-open-modal-new-task")!.addEventListener("click", (e) => {
+            e.preventDefault();
+
+            const modal = (document.querySelector("#modal") as ModalElement);
+            modal.fillWith(document.createElement("todo-form"))
+            modal.show();
+        });
     }
 }
 

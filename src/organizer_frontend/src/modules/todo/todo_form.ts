@@ -15,7 +15,6 @@ class TodoFormElement extends HTMLElement {
 
     constructor(todo: Todo | null) {
         super();
-        this.attachShadow({ mode: "open" });
         this.#popoverID = this.getAttribute("popover-id");
         this.#todo = todo;
     }
@@ -30,7 +29,7 @@ class TodoFormElement extends HTMLElement {
     //
 
     private handleSubmitForm(): void {
-        this.shadowRoot!.querySelector("#todo-form")!.addEventListener("submit", (e: Event) => {
+        this.querySelector("#todo-form")!.addEventListener("submit", (e: Event) => {
             e.preventDefault();
             e.stopPropagation();
             e.stopImmediatePropagation();
@@ -46,12 +45,12 @@ class TodoFormElement extends HTMLElement {
             todo.save();
 
             // hide popover
-            (document.querySelector(`[popover-id=${this.#popoverID}]`) as any).hidePopover();
+            (document.querySelector("#modal") as ModalElement).hide();
         });
     }
 
     private extractFormData(): TodoParams {
-        const formElement = this.shadowRoot!.querySelector("#todo-form") as HTMLFormElement;
+        const formElement = this.querySelector("#todo-form") as HTMLFormElement;
         const formData = new FormData(formElement);
         formElement.reset();
 
@@ -70,7 +69,7 @@ class TodoFormElement extends HTMLElement {
     //
 
     render(): void {
-        this.shadowRoot!.innerHTML = `
+        this.innerHTML = `
             <form id="todo-form">
                 <input type="text" name="resume" value="${this.#todo ? this.#todo.resume :  ""}" placeholder="What do you need to do?" required />
                 <input type="text" name="description" value="${this.#todo ? this.#todo.description :  ""}" placeholder="Describe the task" />

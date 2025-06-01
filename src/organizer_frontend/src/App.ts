@@ -14,6 +14,8 @@ class App {
         </style>
         
         <todo-page id="todo-page"></todo-page>
+
+        <component-modal id="modal"></component-modal>
     `
   }
 }

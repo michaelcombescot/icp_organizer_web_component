@@ -8,6 +8,7 @@ export class TodoListElement extends HTMLElement {
     //
     // PROPERTIES
     //
+
     #list: TodoElement[] = [];
     setList(list: TodoElement[]): void {
         this.#list = list;
@@ -19,7 +20,6 @@ export class TodoListElement extends HTMLElement {
     //
     constructor() {
         super();
-        this.attachShadow({ mode: "open" });
     }
 
     async connectedCallback(): Promise<void> {
@@ -50,14 +50,14 @@ export class TodoListElement extends HTMLElement {
 
     addItem(item: TodoElement): void {
         this.#list.push(item);
-        this.shadowRoot!.querySelector("#todo-list-items")!.appendChild(item);
+        this.querySelector("#todo-list-items")!.appendChild(item);
     }
 
     //
     // RENDERER
     //
     render(): void {
-        this.shadowRoot!.innerHTML = `
+        this.innerHTML = `
             <style>
                 #todo-list { 
                     display: flex;
@@ -82,7 +82,7 @@ export class TodoListElement extends HTMLElement {
 
         // populate with todo list
         this.#list.forEach((item) => {
-            this.shadowRoot!.querySelector("#todo-list-items")!.appendChild(item)
+            this.querySelector("#todo-list-items")!.appendChild(item)
         });
     }
 }

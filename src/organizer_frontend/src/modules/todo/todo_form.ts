@@ -1,4 +1,4 @@
-import { Todo, TodoElement, TodoParams } from "./todo";
+import { Todo, TodoElement, TodoParams, Priority } from "./todo";
 import { TodoListElement } from "./todo_list";
 
 class TodoFormElement extends HTMLElement {
@@ -7,15 +7,17 @@ class TodoFormElement extends HTMLElement {
     //
 
     #popoverID: string | null;
+    #todo: Todo | null;
 
     //
     // INITIALIZATION
     //
 
-    constructor() {
+    constructor(todo: Todo | null) {
         super();
         this.attachShadow({ mode: "open" });
         this.#popoverID = this.getAttribute("popover-id");
+        this.#todo = todo;
     }
 
     connectedCallback(): void {
@@ -33,29 +35,11 @@ class TodoFormElement extends HTMLElement {
             e.stopPropagation();
             e.stopImmediatePropagation();
 
-            const formElement = this.shadowRoot!.querySelector("#todo-form") as HTMLFormElement;
-            const formData = new FormData(formElement);
-            formElement.reset();
-
-            let data = Object.fromEntries(formData.entries());
-
-            data.id = crypto.randomUUID();
-           
-
-            // create and validate todo
-            const params: TodoParams = {
-                id: data.id,
-                resume: data.resume as string,
-                description: data.description as string,
-                scheduledDate: data.scheduledDate as string,
-                priority: data.priority as string
-            }
-
-            const todo = new Todo(params);
+            const todoParams = this.extractFormData();
+            const todo = new Todo(todoParams);
 
             // add to the right list
-            const listId = !todo.scheduledDate ? "#todo-list-priority" : "#todo-list-scheduled";
-
+            const listId = todo.scheduledDate === "" ? "#todo-list-priority" : "#todo-list-scheduled";
             (document.querySelector(listId) as TodoListElement).addItem(new TodoElement(todo))
 
             // save to db
@@ -66,19 +50,35 @@ class TodoFormElement extends HTMLElement {
         });
     }
 
+    private extractFormData(): TodoParams {
+        const formElement = this.shadowRoot!.querySelector("#todo-form") as HTMLFormElement;
+        const formData = new FormData(formElement);
+        formElement.reset();
+
+        return {
+            id: this.#todo ? this.#todo.id : crypto.randomUUID(),
+            resume: formData.get("resume") as string,
+            description: formData.get("description") as string,
+            scheduledDate: formData.get("scheduledDate") as string,
+            priority: formData.get("priority") as Priority,
+            status: "Pending",
+        };
+    }
+
     //
     // RENDERER
     //
-    private render(): void {
+
+    render(): void {
         this.shadowRoot!.innerHTML = `
             <form id="todo-form">
-                <input type="text" name="resume" placeholder="What do you need to do?" required />
-                <input type="text" name="description" placeholder="Describe the task" />
-                <input type="datetime-local" name="scheduled-date" />
-                <select name="priority">
-                    <option value="high">High</option>
-                    <option value="medium">Medium</option>
-                    <option value="low">Low</option>
+                <input type="text" name="resume" value="${this.#todo ? this.#todo.resume :  ""}" placeholder="What do you need to do?" required />
+                <input type="text" name="description" value="${this.#todo ? this.#todo.description :  ""}" placeholder="Describe the task" />
+                <input type="datetime-local" name="scheduledDate" value="${this.#todo ? this.#todo.scheduledDate :  ""}" />
+                <select name="priority" value="${this.#todo ? this.#todo.priority :  "Medium"}">
+                    <option value="High">High</option>
+                    <option value="Medium">Medium</option>
+                    <option value="Low">Low</option>
                 </select>
                 <button id="todo-form-submit" type="submit">Add</button>
             </form>

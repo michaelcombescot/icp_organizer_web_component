@@ -56,6 +56,19 @@ class TodoStore {
             console.error("IndexedDB error:", transaction.error);
         };
     }
+
+    updateTodo(todo: Todo): void {
+        const transaction = this.#dbConn.transaction([todoStoreName], "readwrite");
+        const store = transaction.objectStore(todoStoreName);
+        store.put(todo);
+
+        transaction.oncomplete = () => {
+            console.log("Todo updated in IndexedDB");
+        };
+        transaction.onerror = () => {
+            console.error("IndexedDB error:", transaction.error);
+        };
+    }
 }
 
 const db = await DB.getDB();

@@ -1,6 +1,6 @@
-// to use it:
+// to use it it needs 2 attributes popover-id and shadow-id, example:
 // <button popovertarget="new-task">New task</button>
-// <component-modal popover-id="new-task">
+// <component-modal popover-id="new-task" shadow-id="new-task-shadow">
 //   <div>CONTENT</div>
 // </component-modal>
 //
@@ -11,6 +11,9 @@ class Modal extends HTMLElement {
     //
 
     #popoverID
+    #shadowID
+    #height
+    #width
 
     //
     // INITIALIZATION
@@ -20,6 +23,9 @@ class Modal extends HTMLElement {
         super();
         this.attachShadow({ mode: "open" });
         this.#popoverID = this.getAttribute("popover-id");
+        this.#shadowID = this.getAttribute("shadow-id");
+        this.#height = this.getAttribute("height") || "80vh";
+        this.#width = this.getAttribute("width") || "80vw";
     }
 
     connectedCallback() {
@@ -34,11 +40,13 @@ class Modal extends HTMLElement {
     //
 
     handleShowPopover() {
-        document.querySelector(`[popovertarget="${this.#popoverID}"]`).addEventListener("click", () => this.showPopover())
+        const shadow = document.querySelector(`#${this.#shadowID}`) as HTMLElement
+
+        shadow.shadowRoot!.querySelector(`[popovertarget="${this.#popoverID}"]`)!.addEventListener("click", () => this.showPopover())
     }
 
     handleHidePopover() {
-        this.shadowRoot.querySelector("#close-btn").addEventListener("click", () => this.hidePopover())
+        this.shadowRoot!.querySelector("#close-btn")!.addEventListener("click", () => this.hidePopover())
     }
 
     //
@@ -46,11 +54,11 @@ class Modal extends HTMLElement {
     //
 
     showPopover() {
-        this.shadowRoot.querySelector(`#${this.#popoverID}`).showPopover()
+        (this.shadowRoot!.querySelector(`#${this.#popoverID}`) as HTMLDialogElement)!.showPopover()
     }
 
     hidePopover() {
-        this.shadowRoot.querySelector(`#${this.#popoverID}`).hidePopover()
+        (this.shadowRoot!.querySelector(`#${this.#popoverID}`) as HTMLDialogElement)!.hidePopover()
     }
 
     //
@@ -58,7 +66,7 @@ class Modal extends HTMLElement {
     //
 
     render() {
-        this.shadowRoot.innerHTML = `
+        this.shadowRoot!.innerHTML = `
             <style>
                 #mask {
                     position: fixed;
@@ -79,6 +87,8 @@ class Modal extends HTMLElement {
                     border-radius: 10px;
                     background-color: white;
                     padding: 20px;
+                    width: ${this.#width};
+                    height: ${this.#height};
                 }
             </style>
 

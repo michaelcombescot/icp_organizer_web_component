@@ -5,15 +5,20 @@ interface TodoParams {
     resume: string;
     description: string;
     scheduledDate: string;
-    priority: string;
+    priority: Priority;
+    status: Status;
 }
+
+type Priority = "High" | "Medium" | "Low";
+type Status = "Done" | "Pending";
 
 class Todo {
     id: string;
     resume: string;
     description: string;
     scheduledDate: string;
-    priority: string;
+    priority: Priority;
+    status: Status;
 
     constructor(todoParams: TodoParams) {
         this.id = todoParams.id;
@@ -21,6 +26,7 @@ class Todo {
         this.description = todoParams.description;
         this.scheduledDate = todoParams.scheduledDate;
         this.priority = todoParams.priority;
+        this.status = todoParams.status;
     }
 
     save(): void {
@@ -46,8 +52,6 @@ class TodoElement extends HTMLElement {
         this.attachShadow({ mode: "open" });
 
         this.#todo = todo;
-
-        console.log(" constructor todo", todo);
     }
 
     connectedCallback(): void {
@@ -70,11 +74,25 @@ class TodoElement extends HTMLElement {
         });
     }
 
+    handleCancelEdit(): void {
+        this.shadowRoot!.querySelector("#edit-cancel")!.addEventListener("click", () => {
+            this.render();
+        });
+    }
+
     handleSaveEdit(): void {
-        this.shadowRoot!.querySelector("#edit-save")!.addEventListener("click", () => {
+        this.shadowRoot!.querySelector("#edit-form")!.addEventListener("submit", () => {
             const inputElement = this.shadowRoot!.querySelector("#edit-input") as HTMLInputElement;
             this.#todo.resume = inputElement.value;
+            todoStore.updateTodo(this.#todo);
             this.render();
+        });
+    }
+
+    handleDelete(): void {
+        this.shadowRoot!.querySelector("#delete")!.addEventListener("click", () => {
+            todoStore.deleteTodo(this.#todo.id);
+            this.remove();
         });
     }
 
@@ -94,13 +112,15 @@ class TodoElement extends HTMLElement {
 
             <div class="todo-item">
                 <input type="checkbox" id="toggle" />
-                <h2>${this.#todo.resume}</h2>
-                <button id="edit">edit</button>
+                <span>${this.#todo.resume}</span>
+                <button id="edit">Edit</button>
+                <button id="delete">Delete</button>
             </div>
         `;
 
         this.handleDone();
         this.handleOpenEditMode();
+        this.handleDelete();
     }
 
     renderEdit(): void {
@@ -112,18 +132,20 @@ class TodoElement extends HTMLElement {
             </style>
 
             <div class="todo-item">
-                <form>
-                    <input id="edit-input" type="text" />
-                    <button id="edit-save">save</button>
+                <form id="edit-form">
+                    <input id="edit-input" type="text" required />
+                    <input type="submit" value="save" />
+                    <button id="edit-cancel">cancel</button>
                 </form>
             </div>
         `;
 
         this.handleSaveEdit();
+        this.handleCancelEdit();
     }
 }
 
 customElements.define("todo-item", TodoElement);
 
 export { TodoElement, Todo };
-export type { TodoParams }
+export type { TodoParams, Priority }

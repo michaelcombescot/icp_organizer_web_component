@@ -1,37 +1,61 @@
+// to use it:
+// <button popovertarget="new-task">New task</button>
+// <component-modal popover-id="new-task">
+//   <div>CONTENT</div>
+// </component-modal>
+//
+
 class Modal extends HTMLElement {
-    #content
+    //
+    // ATTRIBUTES
+    //
+
+    #popoverID
+
+    //
+    // INITIALIZATION
+    //
 
     constructor() {
         super();
         this.attachShadow({ mode: "open" });
-        this.popoverID = this.getAttribute("popover-id");
+        this.#popoverID = this.getAttribute("popover-id");
     }
 
     connectedCallback() {
         this.render()
 
-        document.querySelector(`[popovertarget="${this.popoverID}"]`).addEventListener("click", () => this.showPopover());
-
-        this.shadowRoot.querySelector("#close-btn").addEventListener("click", () => {
-            this.shadowRoot.querySelector(`#${this.popoverID}`).hidePopover();
-        });
+        this.handleShowPopover()
+        this.handleHidePopover()
     }
 
+    //
+    // TRIGGERS
+    //
+
+    handleShowPopover() {
+        document.querySelector(`[popovertarget="${this.#popoverID}"]`).addEventListener("click", () => this.showPopover())
+    }
+
+    handleHidePopover() {
+        this.shadowRoot.querySelector("#close-btn").addEventListener("click", () => this.hidePopover())
+    }
+
+    //
+    // BEHAVIOURS
+    //
+
     showPopover() {
-        const popover = this.shadowRoot.querySelector(`#${this.popoverID}`);
-        if (popover) {
-            popover.showPopover();
-        } else {
-            console.error("Popover element not found.");
-        }
+        this.shadowRoot.querySelector(`#${this.#popoverID}`).showPopover()
     }
 
     hidePopover() {
-        const popover = this.shadowRoot.querySelector(`#${this.popoverID}`);
-        if (popover) {
-            popover.hidePopover();
-        }
+        this.shadowRoot.querySelector(`#${this.#popoverID}`).hidePopover()
     }
+
+    //
+    // RENDERER
+    //
 
     render() {
         this.shadowRoot.innerHTML = `
@@ -59,7 +83,7 @@ class Modal extends HTMLElement {
             </style>
 
             
-            <div id="${this.popoverID}" popover="manual">
+            <div id="${this.#popoverID}" popover="manual">
                 <div id="mask"></div>
                 <div id="content">
                     <slot></slot>

@@ -1,5 +1,6 @@
 import { Todo, TodoElement, TodoParams, Priority } from "./todo";
 import { TodoListElement } from "./todo_list";
+import { todoStore } from "./todo_store";
 
 class TodoFormElement extends HTMLElement {
     //
@@ -34,22 +35,27 @@ class TodoFormElement extends HTMLElement {
             e.stopPropagation();
             e.stopImmediatePropagation();
 
-            const todoParams = this.extractFormData();
-            const todo = new Todo(todoParams);
+            const todo = this.extractFormData();
 
-            // add to the right list
-            const listId = todo.scheduledDate === "" ? "#todo-list-priority" : "#todo-list-scheduled";
-            (document.querySelector(listId) as TodoListElement).addItem(new TodoElement(todo))
+            // save and display
+            if (this.#todo) {
+                todoStore.updateTodo(todo);
 
-            // save to db
-            todo.save();
+                const todoElement = document.querySelector(`#todo-item-${this.#todo.id}`)?.parentElement as TodoElement;
+                todoElement.todo = todo;
+            } else {
+                todoStore.addTodo(todo);
+
+                const listId = todo.scheduledDate === "" ? "#todo-list-priority" : "#todo-list-scheduled";
+                (document.querySelector(listId) as TodoListElement).addItem(new TodoElement(todo))
+            }            
 
             // hide popover
             (document.querySelector("#modal") as ModalElement).hide();
         });
     }
 
-    private extractFormData(): TodoParams {
+    private extractFormData(): Todo {
         const formElement = this.querySelector("#todo-form") as HTMLFormElement;
         const formData = new FormData(formElement);
         formElement.reset();
@@ -60,7 +66,7 @@ class TodoFormElement extends HTMLElement {
             description: formData.get("description") as string,
             scheduledDate: formData.get("scheduledDate") as string,
             priority: formData.get("priority") as Priority,
-            status: "Pending",
+            status: "pending",
         };
     }
 
@@ -86,3 +92,5 @@ class TodoFormElement extends HTMLElement {
 }
 
 customElements.define("todo-form", TodoFormElement);
+
+export { TodoFormElement };

@@ -50,7 +50,7 @@ export class TodoListElement extends HTMLElement {
 
     addItem(item: TodoElement): void {
         this.#list.push(item);
-        this.querySelector("#todo-list-items")!.appendChild(item);
+        this.querySelector(".todo-list-items")!.appendChild(item);
     }
 
     //
@@ -59,14 +59,15 @@ export class TodoListElement extends HTMLElement {
     render(): void {
         this.innerHTML = `
             <style>
-                #todo-list { 
+                .todo-list { 
                     display: flex;
                     align-items: center;
                     flex-direction: column;
+                    gap: 1em;
                     padding: 1em;
                 }
 
-                #todo-list-items {
+                .todo-list-items {
                     display: flex;
                     flex-wrap: wrap;
                     flex-direction: column;
@@ -74,15 +75,15 @@ export class TodoListElement extends HTMLElement {
                 }
             </style>
 
-            <div id="todo-list">
-                <div id="todo-list-items">
+            <div class="todo-list">
+                <div class="todo-list-items">
                 </div>
             </div>
         `;
 
         // populate with todo list
         this.#list.forEach((item) => {
-            this.querySelector("#todo-list-items")!.appendChild(item)
+            this.querySelector(".todo-list-items")!.appendChild(item)
         });
     }
 }

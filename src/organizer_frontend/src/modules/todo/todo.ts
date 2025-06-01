@@ -1,4 +1,5 @@
 import { todoStore } from "./todo_store";
+import { TodoFormElement } from "./todo_form";
 
 interface TodoParams {
     id: string;
@@ -9,8 +10,8 @@ interface TodoParams {
     status: Status;
 }
 
-type Priority = "High" | "Medium" | "Low";
-type Status = "Done" | "Pending";
+type Priority = "high" | "medium" | "low";
+type Status = "done" | "pending";
 
 class Todo {
     id: string;
@@ -28,10 +29,6 @@ class Todo {
         this.priority = todoParams.priority;
         this.status = todoParams.status;
     }
-
-    save(): void {
-        todoStore.addTodo(this);
-    }
 }
 
 class TodoElement extends HTMLElement {
@@ -39,9 +36,12 @@ class TodoElement extends HTMLElement {
     // PROPERTIES
     //
     #todo: Todo;
-
     get todo(): Todo {
         return this.#todo;
+    }
+    set todo(todo: Todo) {
+        this.#todo = todo;
+        this.render();
     }
 
     //
@@ -62,34 +62,22 @@ class TodoElement extends HTMLElement {
     //
 
     handleDone(): void {
-        this.querySelector("#toggle")!.addEventListener("change", () => {
-            this.querySelector(".todo-item")!.classList.toggle("done");
+        this.querySelector("#todo-action-done")!.addEventListener("click", () => {
+            debugger
+            this.querySelector(`#todo-item-${this.#todo.id}`)!.classList.toggle("done");
         });
     }
 
-    handleOpenEditMode(): void {
-        this.querySelector("#edit")!.addEventListener("click", () => {
-            this.renderEdit();
-        });
-    }
-
-    handleCancelEdit(): void {
-        this.querySelector("#edit-cancel")!.addEventListener("click", () => {
-            this.render();
-        });
-    }
-
-    handleSaveEdit(): void {
-        this.querySelector("#edit-form")!.addEventListener("submit", () => {
-            const inputElement = this.querySelector("#edit-input") as HTMLInputElement;
-            this.#todo.resume = inputElement.value;
-            todoStore.updateTodo(this.#todo);
-            this.render();
+    handleOpenEdit(): void {
+        this.querySelector("#todo-action-edit")!.addEventListener("click", () => {
+            const modal = (document.querySelector("#modal") as ModalElement);
+            modal.fillWith(new TodoFormElement(this.#todo));
+            modal.show();
         });
     }
 
     handleDelete(): void {
-        this.querySelector("#delete")!.addEventListener("click", () => {
+        this.querySelector("#todo-action-delete")!.addEventListener("click", () => {
             todoStore.deleteTodo(this.#todo.id);
             this.remove();
         });
@@ -103,44 +91,31 @@ class TodoElement extends HTMLElement {
             <style>
                 .todo-item {
                     display: flex;
+                    flex-direction: column;
 
                     #toggle { margin-right: 0.6em; }
                     &.done { background-color: green; }
+                    .todo-item-actions {
+                        display: flex;
+                        justify-content: space-between;
+                    }
                 }
             </style>
 
-            <div class="todo-item">
-                <input type="checkbox" id="toggle" />
-                <span>${this.#todo.resume}</span>
-                <button id="edit">Edit</button>
-                <button id="delete">Delete</button>
+            <div id="todo-item-${this.#todo.id}" class="todo-item">
+                <div class="todo-date">${this.#todo.scheduledDate}</div>">
+                <div class="todo-resume ${this.#todo.status}">${this.#todo.resume}</div>
+                <div class="todo-item-actions">
+                    <button id="todo-action-edit">Edit</button>
+                    <button id="todo-action-delete">Delete</button>
+                    <button id="todo-action-done">Done</button>
+                </div>
             </div>
         `;
 
         this.handleDone();
-        this.handleOpenEditMode();
+        this.handleOpenEdit();
         this.handleDelete();
-    }
-
-    renderEdit(): void {
-        this.innerHTML = `
-            <style>
-                .todo-item { 
-                    display: flex;
-                }
-            </style>
-
-            <div class="todo-item">
-                <form id="edit-form">
-                    <input id="edit-input" type="text" required />
-                    <input type="submit" value="save" />
-                    <button id="edit-cancel">cancel</button>
-                </form>
-            </div>
-        `;
-
-        this.handleSaveEdit();
-        this.handleCancelEdit();
     }
 }
 

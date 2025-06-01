@@ -16,7 +16,14 @@ class TodoPageElement extends HTMLElement {
             <style>
                 #todo-lists {
                     display: flex;
-                    gap: 1em;
+                    justify-content: space-around;
+                    width: 100%;
+                }
+
+                #todo-list-priority, #todo-list-scheduled {
+                    width: 45%;
+                    border: 1px solid black;
+                    border-radius: 5px;
                 }
             </style>
 

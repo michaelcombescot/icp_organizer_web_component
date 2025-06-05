@@ -1,8 +1,8 @@
 // display a list of TodoElement, attribute type must be "priority" or "scheduled"
 
 import { DB } from "../../db/db";
-import { TodoElement } from "./todo";
-import { todoStore } from "./todo_store";
+import { TodoElement } from "./element_todo";
+import { todoStore } from "./store";
 
 export class TodoListElement extends HTMLElement {
     //
@@ -61,18 +61,16 @@ export class TodoListElement extends HTMLElement {
             <style>
                 .todo-list { 
                     display: flex;
-                    align-items: center;
+                    // align-items: center;
                     flex-direction: column;
                     gap: 1em;
                     padding: 1em;
-                    width: 100%;
-                    border: 1px solid black;
-                    border-radius: 5px;
+                    border-radius: 10px;
+                    background-color: rgb(3, 252, 194, 0.1); 
                 }
 
                 .todo-list-items {
                     display: flex;
-                    flex-wrap: wrap;
                     flex-direction: column;
                     gap: 1em;
                 }

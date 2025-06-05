@@ -1,7 +1,7 @@
 import { i18n } from "../../i18n/i18n";
-import { Todo, TodoElement, TodoParams, Priority } from "./todo";
-import { TodoListElement } from "./todo_list";
-import { todoStore } from "./todo_store";
+import { Todo, TodoElement, TodoParams, Priority } from "./element_todo";
+import { TodoListElement } from "./element_todo_list";
+import { todoStore } from "./store";
 
 class TodoFormElement extends HTMLElement {
     //
@@ -33,8 +33,6 @@ class TodoFormElement extends HTMLElement {
     private handleSubmitForm(): void {
         this.querySelector("#todo-form-form")!.addEventListener("submit", (e: Event) => {
             e.preventDefault();
-            e.stopPropagation();
-            e.stopImmediatePropagation();
 
             const todo = this.extractFormData();
 
@@ -75,11 +73,8 @@ class TodoFormElement extends HTMLElement {
     // RENDERER
     //
 
-    
-    
-
     render(): void {
-        this.innerHTML = `
+        this.innerHTML = /*html*/`
             <style>
                 #todo-form {
                     display: flex;
@@ -108,14 +103,14 @@ class TodoFormElement extends HTMLElement {
             </style>
 
             <div id="todo-form">
-                <h2>${this.#todo ? i18n.toDoFormTitleEdit : i18n.toDoFormTitleNew}</h2>
+                <h2>${this.#todo ? i18n.todoFormTitleEdit : i18n.todoFormTitleNew}</h2>
 
                 <form id="todo-form-form">
                     <label for="resume">${i18n.todoFormFieldResume}</label>
                     <input type="text" name="resume" value="${this.#todo ? this.#todo.resume :  ""}" placeholder="What do you need to do?" required />
 
                     <label for="description">${i18n.todoFormFieldDescription}</label>
-                    <textarea type="text" name="description" value="${this.#todo ? this.#todo.description :  ""}" placeholder="Describe the task"></textarea>
+                    <textarea type="text" name="description" value="" placeholder="Describe the task">${this.#todo ? this.#todo.description :  ""}</textarea>
 
                     <label for="scheduledDate">${i18n.todoFormFieldScheduledDate}</label>
                     <input type="datetime-local" name="scheduledDate" value="${this.#todo ? this.#todo.scheduledDate :  ""}" />

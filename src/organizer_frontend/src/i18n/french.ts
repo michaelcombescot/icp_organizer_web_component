@@ -1,8 +1,10 @@
 import { Language } from "./i18n";
 
 export const french: Language = {
-    toDoFormTitleNew: "Nouvelle tâche",
-    toDoFormTitleEdit: "Modifier la tâche",
+    todoCreateNewButton: "Nouvelle tâche",
+
+    todoFormTitleNew: "Nouvelle tâche",
+    todoFormTitleEdit: "Modifier la tâche",
     todoFormFieldResume: "Résumé",
     todoFormFieldDescription: "Description",
     todoFormFieldScheduledDate: "Date de début",

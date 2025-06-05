@@ -1,7 +1,13 @@
-import './modules/todo/todo_page';
+import './modules/todo/element_todo_page';
+import dayjs from 'dayjs';
+import relativeTime from 'dayjs/plugin/relativeTime';
+import "dayjs/locale/fr";
 
 class App {
   constructor() {
+    dayjs.locale(navigator.language || navigator.languages[0])
+    dayjs.extend(relativeTime)
+
     this.#render();
   }
 

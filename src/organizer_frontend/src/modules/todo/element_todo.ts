@@ -1,5 +1,7 @@
-import { todoStore } from "./todo_store";
-import { TodoFormElement } from "./todo_form";
+import { todoStore } from "./store";
+import { TodoFormElement } from "./element_todo_form";
+import { TodoShowElement } from "./element_todo_show";
+import dayjs from "dayjs";
 
 interface TodoParams {
     id: string;
@@ -33,6 +35,12 @@ class Todo {
 
 class TodoElement extends HTMLElement {
     //
+    // CONST
+    //
+
+    #idStr: string
+
+    //
     // PROPERTIES
     //
     #todo: Todo;
@@ -51,6 +59,8 @@ class TodoElement extends HTMLElement {
         super();
 
         this.#todo = todo;
+
+        this.#idStr = `todo-item-${this.#todo.id}`
     }
 
     connectedCallback(): void {
@@ -63,8 +73,7 @@ class TodoElement extends HTMLElement {
 
     handleDone(): void {
         this.querySelector("#todo-action-done")!.addEventListener("click", () => {
-            debugger
-            this.querySelector(`#todo-item-${this.#todo.id}`)!.classList.toggle("done");
+            this.querySelector(`#${this.#idStr}`)!.classList.toggle("done");
         });
     }
 
@@ -72,6 +81,14 @@ class TodoElement extends HTMLElement {
         this.querySelector("#todo-action-edit")!.addEventListener("click", () => {
             const modal = (document.querySelector("#modal") as ModalElement);
             modal.fillWith(new TodoFormElement(this.#todo));
+            modal.show();
+        });
+    }
+
+    handleOpenShow(): void {
+        this.querySelector(`#${this.#idStr} .todo-resume`)!.addEventListener("click", () => {
+            const modal = (document.querySelector("#modal") as ModalElement);
+            modal.fillWith(new TodoShowElement(this.#todo));
             modal.show();
         });
     }
@@ -86,14 +103,26 @@ class TodoElement extends HTMLElement {
     //
     // RENDERER
     //
+
     render(): void {
-        this.innerHTML = `
+
+        let scheduledDate: string | null = null
+        let remaining_time: string | null = null
+        if (this.#todo.scheduledDate != "") {
+            scheduledDate = dayjs(this.#todo.scheduledDate).format("DD/MM/YYYY HH:mm");
+            remaining_time = dayjs(this.#todo.scheduledDate).fromNow();
+        }
+
+        this.innerHTML = /*html*/`
             <style>
                 .todo-item {
+                    box-sizing: border-box;
                     display: flex;
                     flex-direction: column;
-
-                    #toggle { margin-right: 0.6em; }
+                    gap: 1em;
+                    border-radius: 10px;
+                    background-color: white;
+                    padding: 1em;
                     
                     &.done { background-color: green; }
                     
@@ -102,16 +131,27 @@ class TodoElement extends HTMLElement {
                         justify-content: space-between;
                     }
 
+                    .todo-date {
+                        display: flex;
+                        justify-content: space-between;
+                    }
+
                     .todo-resume {
                         &.high { background-color: red; }
                         &.medium { background-color: yellow; }
-                        &.low { background-color: green; }
                     }
                 }
             </style>
 
-            <div id="todo-item-${this.#todo.id}" class="todo-item">
-                <div class="todo-date">${this.#todo.scheduledDate}</div>
+            <div id="${this.#idStr}" class="todo-item">
+                ${scheduledDate != null ?
+                    `<div class="todo-date">
+                        <span>${scheduledDate}</span>
+                        <span>${remaining_time}</span>
+                    </div>`
+                    : 
+                    ""
+                }
                 <div class="todo-resume ${this.#todo.priority}">${this.#todo.resume}</div>
                 <div class="todo-item-actions">
                     <button id="todo-action-edit">Edit</button>
@@ -123,6 +163,7 @@ class TodoElement extends HTMLElement {
 
         this.handleDone();
         this.handleOpenEdit();
+        this.handleOpenShow();
         this.handleDelete();
     }
 }

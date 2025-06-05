@@ -1,6 +1,7 @@
-import "./todo_list";
-import "./todo_form";
+import "./element_todo_list";
+import "./element_todo_form";
 import "../../components/modal";
+import { i18n } from "../../i18n/i18n";
 
 class TodoPageElement extends HTMLElement {
     constructor() {
@@ -15,20 +16,28 @@ class TodoPageElement extends HTMLElement {
         this.innerHTML = `
             <style>
                 #todo-page {
-                    #todo-open-new-task {
-                        margin-bottom: 1em;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 2em;
+
+                    #todo-open-modal-new-task {
+                        width: max-content;
                     }                    
 
                     #todo-lists {
                         display: flex;
                         justify-content: space-around;
-                        width: 100%;
+                        gap: 5em;
+
+                        todo-list {
+                            flex: 1;
+                        }
                     }
                 }
             </style>
 
             <div id="todo-page">
-                <button id="todo-open-modal-new-task">New task</button>
+                <button id="todo-open-modal-new-task">${ i18n.todoCreateNewButton }</button>
 
                 <div id="todo-lists">
                     <todo-list id="todo-list-priority" type="priority"></todo-list>

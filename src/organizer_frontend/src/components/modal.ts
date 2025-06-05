@@ -52,7 +52,8 @@ class ModalElement extends HTMLElement {
 
                 #modal-body {
                     position: fixed; top: 50%; left: 50%;
-                    width: max-content; height: 70vh;
+                    width: max-content;
+                    height: max-content;
                     z-index: 1;
                     transform: translate(-50%, -50%);
                     border-radius: 10px;
@@ -70,7 +71,7 @@ class ModalElement extends HTMLElement {
                             transition: transform 0.2s ease-in-out;
                             cursor: pointer;
                             color: #222;
-                            transform: scale(1.2);  
+                            transform: scale(1.2);
                         }
                     }
                 }

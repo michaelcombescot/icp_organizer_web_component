@@ -3,8 +3,10 @@ import { french } from "./french";
 export const i18n = french
 
 export interface Language {
-    toDoFormTitleNew: string;
-    toDoFormTitleEdit: string;
+    todoCreateNewButton: string
+
+    todoFormTitleNew: string;
+    todoFormTitleEdit: string;
     todoFormFieldResume: string,
     todoFormFieldDescription: string,
     todoFormFieldScheduledDate: string,

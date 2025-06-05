@@ -23,7 +23,7 @@ export class TodoListElement extends HTMLElement {
     }
 
     async connectedCallback(): Promise<void> {
-        await this.initList();
+        await this.loadList();
 
         this.render();
     }
@@ -32,7 +32,7 @@ export class TodoListElement extends HTMLElement {
     // BEHAVIORS
     //
 
-    async initList() {
+    async loadList() {
         const todos = await todoStore.getTodos();
 
         switch ( this.getAttribute("type") ) {
@@ -50,14 +50,14 @@ export class TodoListElement extends HTMLElement {
                                 .map(todo => new TodoElement(todo))
                 break;
             default:
-                console.log("Invalid todo list type");
+                console.log(`Invalid todo list type ${this.getAttribute("type")}`);
                 break;
         }
     }
 
-    addItem(item: TodoElement): void {
-        this.#list.push(item);
-        this.querySelector(".todo-list-items")!.appendChild(item);
+    async addItem(item: TodoElement) {
+        await this.loadList();
+        this.render();
     }
 
     //

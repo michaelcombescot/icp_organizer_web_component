@@ -14,28 +14,30 @@ class TodoPageElement extends HTMLElement {
     render() {
         this.innerHTML = `
             <style>
-                #todo-lists {
-                    display: flex;
-                    justify-content: space-around;
-                    width: 100%;
-                }
+                #todo-page {
+                    #todo-open-new-task {
+                        margin-bottom: 1em;
+                    }                    
 
-                #todo-list-priority, #todo-list-scheduled {
-                    width: 45%;
-                    border: 1px solid black;
-                    border-radius: 5px;
+                    #todo-lists {
+                        display: flex;
+                        justify-content: space-around;
+                        width: 100%;
+                    }
                 }
             </style>
 
-            <button id="js-open-modal-new-task">New task</button>
+            <div id="todo-page">
+                <button id="todo-open-modal-new-task">New task</button>
 
-            <div id="todo-lists">
-                <todo-list id="todo-list-priority" type="priority"></todo-list>
-                <todo-list id="todo-list-scheduled" type="scheduled"></todo-list>
+                <div id="todo-lists">
+                    <todo-list id="todo-list-priority" type="priority"></todo-list>
+                    <todo-list id="todo-list-scheduled" type="scheduled"></todo-list>
+                </div>
             </div>
         `;
 
-        this.querySelector("#js-open-modal-new-task")!.addEventListener("click", (e) => {
+        this.querySelector("#todo-open-modal-new-task")!.addEventListener("click", (e) => {
             e.preventDefault();
 
             const modal = (document.querySelector("#modal") as ModalElement);

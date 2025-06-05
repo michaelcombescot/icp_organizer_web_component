@@ -65,6 +65,9 @@ export class TodoListElement extends HTMLElement {
                     flex-direction: column;
                     gap: 1em;
                     padding: 1em;
+                    width: 100%;
+                    border: 1px solid black;
+                    border-radius: 5px;
                 }
 
                 .todo-list-items {

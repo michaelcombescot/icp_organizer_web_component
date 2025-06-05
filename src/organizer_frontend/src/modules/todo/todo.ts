@@ -94,17 +94,25 @@ class TodoElement extends HTMLElement {
                     flex-direction: column;
 
                     #toggle { margin-right: 0.6em; }
+                    
                     &.done { background-color: green; }
+                    
                     .todo-item-actions {
                         display: flex;
                         justify-content: space-between;
+                    }
+
+                    .todo-resume {
+                        &.high { background-color: red; }
+                        &.medium { background-color: yellow; }
+                        &.low { background-color: green; }
                     }
                 }
             </style>
 
             <div id="todo-item-${this.#todo.id}" class="todo-item">
-                <div class="todo-date">${this.#todo.scheduledDate}</div>">
-                <div class="todo-resume ${this.#todo.status}">${this.#todo.resume}</div>
+                <div class="todo-date">${this.#todo.scheduledDate}</div>
+                <div class="todo-resume ${this.#todo.priority}">${this.#todo.resume}</div>
                 <div class="todo-item-actions">
                     <button id="todo-action-edit">Edit</button>
                     <button id="todo-action-delete">Delete</button>

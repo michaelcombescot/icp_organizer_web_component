@@ -9,6 +9,7 @@ class App {
     document.getElementById('root')!.innerHTML = `
         <style>
             #root {
+                padding: 1em;
                 font-size: 1rem;
             }
         </style>

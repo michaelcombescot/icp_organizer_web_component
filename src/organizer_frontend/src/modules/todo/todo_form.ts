@@ -1,3 +1,4 @@
+import { i18n } from "../../i18n/i18n";
 import { Todo, TodoElement, TodoParams, Priority } from "./todo";
 import { TodoListElement } from "./todo_list";
 import { todoStore } from "./todo_store";
@@ -30,7 +31,7 @@ class TodoFormElement extends HTMLElement {
     //
 
     private handleSubmitForm(): void {
-        this.querySelector("#todo-form")!.addEventListener("submit", (e: Event) => {
+        this.querySelector("#todo-form-form")!.addEventListener("submit", (e: Event) => {
             e.preventDefault();
             e.stopPropagation();
             e.stopImmediatePropagation();
@@ -56,7 +57,7 @@ class TodoFormElement extends HTMLElement {
     }
 
     private extractFormData(): Todo {
-        const formElement = this.querySelector("#todo-form") as HTMLFormElement;
+        const formElement = this.querySelector("#todo-form-form") as HTMLFormElement;
         const formData = new FormData(formElement);
         formElement.reset();
 
@@ -74,19 +75,61 @@ class TodoFormElement extends HTMLElement {
     // RENDERER
     //
 
+    
+    
+
     render(): void {
         this.innerHTML = `
-            <form id="todo-form">
-                <input type="text" name="resume" value="${this.#todo ? this.#todo.resume :  ""}" placeholder="What do you need to do?" required />
-                <input type="text" name="description" value="${this.#todo ? this.#todo.description :  ""}" placeholder="Describe the task" />
-                <input type="datetime-local" name="scheduledDate" value="${this.#todo ? this.#todo.scheduledDate :  ""}" />
-                <select name="priority" value="${this.#todo ? this.#todo.priority :  "Medium"}">
-                    <option value="High">High</option>
-                    <option value="Medium">Medium</option>
-                    <option value="Low">Low</option>
-                </select>
-                <button id="todo-form-submit" type="submit">Add</button>
-            </form>
+            <style>
+                #todo-form {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 3em;
+                    align-items: center;
+
+                    form {
+                        display: grid;
+                        grid-template-columns: 0.5fr 2fr;
+                        grid-template-rows: 1fr 3fr 1fr 1fr 1fr;
+                        grid-auto-rows: 1fr;
+                        gap: 2em;
+                        align-items: center;
+                        width: 70vw;
+                        max-width: 60em;
+
+                        label[for="resume"]::after { content: "*"; color: red; }
+                        input { box-sizing: border-box; }
+
+                        textarea { height: 100%; resize: none; }
+
+                        input[type="submit"] { grid-column: -2 / -1; justify-self: right;}
+                    }
+                }
+            </style>
+
+            <div id="todo-form">
+                <h2>${this.#todo ? i18n.toDoFormTitleEdit : i18n.toDoFormTitleNew}</h2>
+
+                <form id="todo-form-form">
+                    <label for="resume">${i18n.todoFormFieldResume}</label>
+                    <input type="text" name="resume" value="${this.#todo ? this.#todo.resume :  ""}" placeholder="What do you need to do?" required />
+
+                    <label for="description">${i18n.todoFormFieldDescription}</label>
+                    <textarea type="text" name="description" value="${this.#todo ? this.#todo.description :  ""}" placeholder="Describe the task"></textarea>
+
+                    <label for="scheduledDate">${i18n.todoFormFieldScheduledDate}</label>
+                    <input type="datetime-local" name="scheduledDate" value="${this.#todo ? this.#todo.scheduledDate :  ""}" />
+
+                    <label for="priority">${i18n.todoFormFieldPriority}</label>
+                    <select name="priority" value="${this.#todo ? this.#todo.priority :  "low"}">
+                        <option value="low" selected>Low</option>
+                        <option value="medium">Medium</option>
+                        <option value="high">High</option>
+                    </select>
+                    
+                    <input id="todo-form-submit" type="submit" value="${i18n.todoFormInputSubmit}" />
+                </form>
+            </div>
         `;
     }
 }

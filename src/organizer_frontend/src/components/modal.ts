@@ -44,35 +44,45 @@ class ModalElement extends HTMLElement {
         this.shadowRoot!.innerHTML = `
             <style>
                 #mask {
-                    position: fixed;
+                    position: fixed; top: 0; left: 0;
+                    width: 100%; height: 100%;
                     z-index: 0;
-                    top: 0;
-                    left: 0;
-                    width: 100%;
-                    height: 100%;
                     background-color: rgba(0, 0, 0, 0.5);
                 }
 
                 #modal-body {
-                    position: fixed;
+                    position: fixed; top: 50%; left: 50%;
+                    width: max-content; height: 70vh;
                     z-index: 1;
-                    top: 50%;
-                    left: 50%;
                     transform: translate(-50%, -50%);
                     border-radius: 10px;
                     background-color: white;
-                    padding: 20px;
-                    width: 80vw;
-                    height: 70vh;
+                    padding: 2em;
+
+                    #close-btn {
+                        position: absolute; top: 10px; right: 10px;
+                        width: 30px; height: 30px;
+                        font-size: 24px;
+                        background: transparent;
+                        border: none;
+
+                        &:hover {
+                            transition: transform 0.2s ease-in-out;
+                            cursor: pointer;
+                            color: #222;
+                            transform: scale(1.2);  
+                        }
+                    }
                 }
             </style>
 
             
-            <div id="modal" popover="manual">
+            <div id="modal" popover="manual" opened>
                 <div id="mask"></div>
                 <div id=modal-body>
+                    <button id="close-btn">X</button>
                     <slot></slot>
-                    <button id="close-btn">Close</button>
+                    
                 </div>
             </div>
         `

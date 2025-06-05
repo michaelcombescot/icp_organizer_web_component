@@ -12,7 +12,12 @@ interface TodoParams {
     status: Status;
 }
 
-type Priority = "high" | "medium" | "low";
+enum Priority {
+    High = 3,
+    Medium = 2,
+    Low = 1
+}
+
 type Status = "done" | "pending";
 
 class Todo {

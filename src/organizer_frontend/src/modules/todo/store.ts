@@ -9,7 +9,7 @@ class TodoStore {
         this.#dbConn = db;
     }
 
-    addTodo(todo: { id: string; resume: string; description: string; scheduledDate: string; priority: string }): void {
+    addTodo(todo: Todo): void {
         const transaction = this.#dbConn.transaction([todoStoreName], "readwrite");
         const store = transaction.objectStore(todoStoreName);
         store.add(todo);

@@ -1,7 +1,7 @@
 // display a list of TodoElement, attribute type must be "priority" or "scheduled"
 
 import { DB } from "../../db/db";
-import { TodoElement } from "./element_todo";
+import { TodoElement, Todo } from "./element_todo";
 import { todoStore } from "./store";
 
 export class TodoListElement extends HTMLElement {
@@ -37,10 +37,17 @@ export class TodoListElement extends HTMLElement {
 
         switch ( this.getAttribute("type") ) {
             case "priority":
-                this.#list = todos.filter(todo => !todo.scheduledDate).map(todo => new TodoElement(todo));
+                this.#list = todos
+                                .filter(todo => !todo.scheduledDate)
+                                .sort((a, b) => b.priority.valueOf() - a.priority.valueOf())
+                                .map(todo => new TodoElement(todo));
+                                
                 break;
             case "scheduled":
-                this.#list = todos.filter(todo => todo.scheduledDate).map(todo => new TodoElement(todo));
+                this.#list = todos
+                                .filter(todo => todo.scheduledDate)
+                                .sort((a, b) => new Date(a.scheduledDate).getTime() - new Date(b.scheduledDate).getTime())
+                                .map(todo => new TodoElement(todo))
                 break;
             default:
                 console.log("Invalid todo list type");

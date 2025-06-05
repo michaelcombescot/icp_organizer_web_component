@@ -17,6 +17,8 @@ class TodoFormElement extends HTMLElement {
 
     constructor(todo: Todo | null) {
         super();
+        this.attachShadow({ mode: "open" });
+
         this.#popoverID = this.getAttribute("popover-id");
         this.#todo = todo;
     }
@@ -31,7 +33,7 @@ class TodoFormElement extends HTMLElement {
     //
 
     private handleSubmitForm(): void {
-        this.querySelector("#todo-form-form")!.addEventListener("submit", (e: Event) => {
+        this.shadowRoot!.querySelector("#todo-form-form")!.addEventListener("submit", (e: Event) => {
             e.preventDefault();
 
             const todo = this.extractFormData();
@@ -55,18 +57,18 @@ class TodoFormElement extends HTMLElement {
     }
 
     private extractFormData(): Todo {
-        const formElement = this.querySelector("#todo-form-form") as HTMLFormElement;
+        const formElement = this.shadowRoot!.querySelector("#todo-form-form") as HTMLFormElement;
         const formData = new FormData(formElement);
         formElement.reset();
 
-        return {
+        return new Todo({
             id: this.#todo ? this.#todo.id : crypto.randomUUID(),
             resume: formData.get("resume") as string,
             description: formData.get("description") as string,
             scheduledDate: formData.get("scheduledDate") as string,
-            priority: formData.get("priority") as Priority,
+            priority: Number(formData.get("priority")) as Priority,
             status: "pending",
-        };
+        });
     }
 
     //
@@ -74,7 +76,7 @@ class TodoFormElement extends HTMLElement {
     //
 
     render(): void {
-        this.innerHTML = /*html*/`
+        this.shadowRoot!.innerHTML = /*html*/`
             <style>
                 #todo-form {
                     display: flex;
@@ -116,16 +118,19 @@ class TodoFormElement extends HTMLElement {
                     <input type="datetime-local" name="scheduledDate" value="${this.#todo ? this.#todo.scheduledDate :  ""}" />
 
                     <label for="priority">${i18n.todoFormFieldPriority}</label>
-                    <select name="priority" value="${this.#todo ? this.#todo.priority :  "low"}">
-                        <option value="low" selected>Low</option>
-                        <option value="medium">Medium</option>
-                        <option value="high">High</option>
+                    <select name="priority" value="${this.#todo ? this.#todo.priority :  "1"}">
+                        <option value="1">Low</option>
+                        <option value="2">Medium</option>
+                        <option value="3">High</option>
                     </select>
                     
                     <input id="todo-form-submit" type="submit" value="${i18n.todoFormInputSubmit}" />
                 </form>
             </div>
         `;
+
+        const selectPriority = this.shadowRoot!.querySelector("select[name=priority]") as HTMLSelectElement;
+        selectPriority.value = this.#todo ? this.#todo.priority.toString() : "1";
     }
 }
 

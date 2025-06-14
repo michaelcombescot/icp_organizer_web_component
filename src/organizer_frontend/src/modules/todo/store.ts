@@ -1,6 +1,6 @@
 import { todoStoreName } from "../../db/store_names";
 import { DB } from "../../db/db";
-import { Todo } from "./element_todo";
+import { Todo } from "./component_todo";
 
 class TodoStore {
     #dbConn: IDBDatabase;

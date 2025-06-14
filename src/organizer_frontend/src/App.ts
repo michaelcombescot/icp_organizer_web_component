@@ -1,30 +1,24 @@
-import './modules/todo/element_todo_page';
-import dayjs from 'dayjs';
-import relativeTime from 'dayjs/plugin/relativeTime';
-import "dayjs/locale/fr";
+import './modules/todo/component_todo_page';
+import './components/modal';
+import { html, css, LitElement } from 'lit';
+import { customElement } from 'lit/decorators.js';
 
-class App {
-  constructor() {
-    dayjs.locale(navigator.language || navigator.languages[0])
-    dayjs.extend(relativeTime)
-
-    this.#render();
-  }
-
-  #render() {
-    document.getElementById('root')!.innerHTML = `
-        <style>
-            #root {
-                padding: 1em;
-                font-size: 1rem;
-            }
-        </style>
-        
-        <todo-page id="todo-page"></todo-page>
-
-        <component-modal id="modal"></component-modal>
+@customElement('main-app')
+class App extends LitElement {
+    static styles = css`
+        #main-app {
+            padding: 1em;
+            font-size: 1rem;
+        }
     `
-  }
-}
 
-export default App;
+    protected render() { 
+        return html`       
+            <div id="main-app">     
+                <component-todo-page></component-todo-page>
+
+                <component-modal></component-modal>
+            </div>
+        `
+    }
+}

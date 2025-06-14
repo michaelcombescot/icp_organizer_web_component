@@ -1,7 +1,7 @@
 import { todoStore } from "./store";
 import { ComponentTodoForm } from "./component_todo_form";
 import { ComponentTodoShow } from "./component_todo_show";
-import dayjs from "dayjs";
+import dayjs from "../../utils/date";
 import { css, html, LitElement } from "lit";
 import { property, customElement } from "lit/decorators.js";
 import { openModal } from "../../components/modal";

@@ -1,11 +1,12 @@
 import { i18n } from "../../i18n/i18n";
-import { Todo, ComponentTodo, TodoParams, Priority } from "./component_todo";
+import { Todo, ComponentTodo, Priority } from "./component_todo";
 import { ComponentTodoList, TodoListType } from "./component_todo_list";
 import { todoStore } from "./store";
 import { closeModal, ComponentModal } from "../../components/modal";
 import { css, html, LitElement } from "lit";
 import { property, customElement } from 'lit/decorators.js';
 import { getList } from "./component_todo_list";
+import { enumValues } from "../../utils/enums";
 
 @customElement("component-todo-form")
 class ComponentTodoForm extends LitElement {
@@ -36,8 +37,6 @@ class ComponentTodoForm extends LitElement {
 
             // update or create new todo
             if (this.todoComponent) {
-
-                debugger
                 todoStore.updateTodo(todo);     
                 this.todoComponent!.todo = todo;
             } else {
@@ -45,8 +44,6 @@ class ComponentTodoForm extends LitElement {
 
                 const listType = todo.scheduledDate === "" ? TodoListType.PRIORITY : TodoListType.SCHEDULED;
                 const list = getList(listType)
-
-                debugger
 
                 list.addItem(ComponentTodo.create(todo));
             }            
@@ -103,9 +100,13 @@ class ComponentTodoForm extends LitElement {
 
                     <label for="priority">${i18n.todoFormFieldPriority}</label>
                     <select name="priority" value="${this.todoComponent?.todo.priority || "1"}">
-                        <option value="1">Low</option>
-                        <option value="2">Medium</option>
-                        <option value="3">High</option>
+                        ${
+                            enumValues(Priority).map( value => html`
+                                <option value="${value}" ?selected=${this.todoComponent?.todo.priority === value}>
+                                    ${i18n.todoFormPriority[value as Priority]}
+                                </option>
+                            `)
+                        }
                     </select>
                     
                     <input id="todo-form-submit" type="submit" value="${i18n.todoFormInputSubmit}" />

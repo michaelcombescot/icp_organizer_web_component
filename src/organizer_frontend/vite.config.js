@@ -7,6 +7,7 @@ dotenv.config({ path: '../../.env' });
 
 export default defineConfig({
   build: {
+    target: "esnext",
     emptyOutDir: true,
   },
   optimizeDeps: {

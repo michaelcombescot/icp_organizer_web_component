@@ -122,5 +122,4 @@ class ComponentTodo extends LitElement {
     }
 }
 
-export { ComponentTodo, Todo };
-export type { TodoParams, Priority }
+export { ComponentTodo, Todo, Priority };

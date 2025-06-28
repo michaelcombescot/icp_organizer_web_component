@@ -17,8 +17,6 @@ class ComponentTodoList extends LitElement {
     async loadList() {
         const todos = await todoStore.getTodos();
 
-        console.log("Todos: ", todos, this.listType);
-
         switch ( this.listType ) {
             case TodoListType.PRIORITY:
                 this.list = todos

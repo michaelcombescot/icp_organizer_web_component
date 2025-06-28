@@ -13,7 +13,8 @@
     },
     "organizer_backend": {
       "main": "src/organizer_backend/main.mo",
-      "type": "motoko"
+      "type": "motoko",
+      "args" : "--enhanced-orthogonal-persistence"
     },
     "organizer_frontend": {
       "dependencies": [
@@ -29,7 +30,7 @@
   "defaults": {
     "build": {
       "args": "",
-      "packtool": ""
+      "packtool": "mops sources"
     }
   },
   "output_env_file": ".env",

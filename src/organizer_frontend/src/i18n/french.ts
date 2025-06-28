@@ -11,4 +11,9 @@ export const french: Language = {
     todoFormFieldPriority: "Priorité",
     todoFormFieldStatus: "Statut",
     todoFormInputSubmit: "Enregistrer",
+    todoFormPriority: {
+        1: "Faible",
+        2: "Moyenne",
+        3: "Elevée"
+    }
 }

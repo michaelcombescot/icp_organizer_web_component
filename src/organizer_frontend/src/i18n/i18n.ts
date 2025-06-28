@@ -1,4 +1,5 @@
 import { french } from "./french";
+import { Priority } from "../modules/todo/component_todo";
 
 export const i18n = french
 
@@ -13,4 +14,5 @@ export interface Language {
     todoFormFieldPriority: string,
     todoFormFieldStatus: string,
     todoFormInputSubmit: string,
+    todoFormPriority: Record<Priority, string>
 }

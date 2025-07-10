@@ -1,4 +1,4 @@
-import './modules/todo/component_todo_page';
+import './modules/todo/components/component_todo_page';
 import './components/modal';
 import { html, css, LitElement } from 'lit';
 import { customElement } from 'lit/decorators.js';

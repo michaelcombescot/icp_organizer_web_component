@@ -1,50 +1,14 @@
-import { todoStore } from "./store";
+import { todoStore } from "../models/store";
+import { Todo } from "../models/todo";
 import { ComponentTodoForm } from "./component_todo_form";
 import { ComponentTodoShow } from "./component_todo_show";
-import dayjs from "../../utils/date";
 import { css, html, LitElement } from "lit";
 import { property, customElement } from "lit/decorators.js";
-import { openModal } from "../../components/modal";
-
-interface TodoParams {
-    id: string;
-    resume: string;
-    description: string;
-    scheduledDate: string;
-    priority: Priority;
-    status: Status;
-}
-
-enum Priority {
-    High = 3,
-    Medium = 2,
-    Low = 1
-}
-
-type Status = "done" | "pending";
-
-class Todo {
-    id: string;
-    resume: string;
-    description: string;
-    scheduledDate: string;
-    priority: Priority;
-    status: Status;
-
-    constructor(todoParams: TodoParams) {
-        this.id = todoParams.id;
-        this.resume = todoParams.resume;
-        this.description = todoParams.description;
-        this.scheduledDate = todoParams.scheduledDate;
-        this.priority = todoParams.priority;
-        this.status = todoParams.status;
-    }
-}
+import { openModal } from "../../../components/modal";
 
 @customElement("component-todo")
 class ComponentTodo extends LitElement {
     @property({ type: Object }) todo!: Todo 
-    get idStr() { return this.todo ? `todo-item-${this.todo.id}` : '' }
 
     static create(todo: Todo) {
         const compTodo = new ComponentTodo();
@@ -52,14 +16,14 @@ class ComponentTodo extends LitElement {
         return compTodo;
     }
 
-    handleDone(): void { this.shadowRoot!.querySelector(`#${this.idStr}`)!.classList.toggle("done") }
+    handleDone(): void { this.shadowRoot!.querySelector(`#${this.todo.uuid}`)!.classList.toggle("done") }
 
     handleOpenEdit(): void { openModal(ComponentTodoForm.create(this)) }
 
     handleOpenShow(): void { openModal(ComponentTodoShow.create(this)) }
 
     handleDelete(): void {
-        todoStore.deleteTodo(this.todo!.id);
+        todoStore.deleteTodo(this.todo!.uuid);
         this.remove();
     }
 
@@ -93,21 +57,15 @@ class ComponentTodo extends LitElement {
         }
     `
 
-    protected render() {
-        let scheduledDate: string | null = null
-        let remainingTime: string | null = null
-        if (this.todo!.scheduledDate != "") {
-            scheduledDate = dayjs(this.todo!.scheduledDate).format("DD/MM/YYYY HH:mm");
-            remainingTime = dayjs(this.todo!.scheduledDate).fromNow();
-        }
 
+    protected render() {
         return html `
-            <div id="${this.idStr}" class="todo-item">
-                ${scheduledDate != null ?
+            <div id="${this.todo.uuid}" class="todo-item">
+                ${this.todo.scheduledDate != "" ?
                     html`
                         <div class="todo-date">
-                            <span>${scheduledDate}</span>
-                            <span>${remainingTime}</span>
+                            <span>${this.todo.getScheduledDateStr()}</span>
+                            <span>${this.todo.getRemainingTimeStr()}</span>
                         </div>
                     ` : ""
                 }
@@ -122,4 +80,4 @@ class ComponentTodo extends LitElement {
     }
 }
 
-export { ComponentTodo, Todo, Priority };
+export { ComponentTodo };

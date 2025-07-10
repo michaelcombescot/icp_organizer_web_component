@@ -1,5 +1,5 @@
 import { french } from "./french";
-import { Priority } from "../modules/todo/component_todo";
+import { Priority } from "../modules/todo/components/component_todo";
 
 export const i18n = french
 

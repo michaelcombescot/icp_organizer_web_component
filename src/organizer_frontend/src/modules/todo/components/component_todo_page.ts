@@ -1,7 +1,7 @@
 import "./component_todo_list";
 import { ComponentTodoForm } from "./component_todo_form";
-import { openModal, ComponentModal } from "../../components/modal";
-import { i18n } from "../../i18n/i18n";
+import { openModal, ComponentModal } from "../../../components/modal";
+import { i18n } from "../../../i18n/i18n";
 import { html, css, LitElement } from 'lit';
 import { customElement } from 'lit/decorators.js';
 

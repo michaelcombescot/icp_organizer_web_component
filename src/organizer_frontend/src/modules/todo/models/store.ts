@@ -1,6 +1,6 @@
-import { todoStoreName } from "../../db/store_names";
-import { DB } from "../../db/db";
-import { Todo } from "./component_todo";
+import { todoStoreName } from "../../../db/store_names";
+import { DB } from "../../../db/db";
+import { Todo } from "./todo";
 
 class TodoStore {
     #dbConn: IDBDatabase;
@@ -71,5 +71,4 @@ class TodoStore {
     }
 }
 
-const db = await DB.getDB();
 export const todoStore = new TodoStore(await DB.getDB());

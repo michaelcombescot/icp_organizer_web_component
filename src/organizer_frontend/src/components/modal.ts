@@ -1,6 +1,6 @@
 import { html, css, LitElement } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
-import { ComponentTodoForm } from '../modules/todo/component_todo_form';
+import { ComponentTodoForm } from '../modules/todo/components/component_todo_form';
 
 @customElement('component-modal')
 export class ComponentModal extends LitElement {
@@ -58,7 +58,7 @@ export class ComponentModal extends LitElement {
                 <div id="mask" @click="${this.hide}"></div>
                 <div id="modal-body">
                     <button id="close-btn" @click="${this.hide}">X</button>
-                    <div id="modal-content">POULET</div>
+                    <div id="modal-content"></div>
                 </div>
             </div>
         `;

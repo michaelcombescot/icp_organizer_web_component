@@ -1,8 +1,7 @@
 import { LitElement, html, css } from "lit";
 import { customElement, property } from "lit/decorators.js";
-import { DB } from "../../db/db";
-import { ComponentTodo, Todo } from "./component_todo";
-import { todoStore } from "./store";
+import { ComponentTodo } from "./component_todo";
+import { todoStore } from "../models/store";
 
 enum TodoListType {
   PRIORITY = "priority",

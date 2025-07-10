@@ -1,12 +1,13 @@
-import { i18n } from "../../i18n/i18n";
-import { Todo, ComponentTodo, Priority } from "./component_todo";
+import { i18n } from "../../../i18n/i18n";
+import { ComponentTodo } from "./component_todo";
 import { ComponentTodoList, TodoListType } from "./component_todo_list";
-import { todoStore } from "./store";
-import { closeModal, ComponentModal } from "../../components/modal";
+import { todoStore } from "../models/store";
+import { closeModal, ComponentModal } from "../../../components/modal";
 import { css, html, LitElement } from "lit";
 import { property, customElement } from 'lit/decorators.js';
 import { getList } from "./component_todo_list";
-import { enumValues } from "../../utils/enums";
+import { enumValues } from "../../../utils/enums";
+import { Todo, TodoPriority, TodoStatus } from "../models/todo";
 
 @customElement("component-todo-form")
 class ComponentTodoForm extends LitElement {
@@ -27,12 +28,12 @@ class ComponentTodoForm extends LitElement {
             formElement.reset();
 
             const todo = new Todo({
-                id: this.todoComponent ? this.todoComponent.todo.id : crypto.randomUUID(),
+                uuid: this.todoComponent ? this.todoComponent.todo.uuid : crypto.randomUUID(),
                 resume: formData.get("resume") as string,
                 description: formData.get("description") as string,
                 scheduledDate: formData.get("scheduledDate") as string,
-                priority: Number(formData.get("priority")) as Priority,
-                status: "pending",
+                priority: Number(formData.get("priority")) as TodoPriority,
+                status: TodoStatus.PENDING,
             });
 
             // update or create new todo
@@ -101,9 +102,9 @@ class ComponentTodoForm extends LitElement {
                     <label for="priority">${i18n.todoFormFieldPriority}</label>
                     <select name="priority" value="${this.todoComponent?.todo.priority || "1"}">
                         ${
-                            enumValues(Priority).map( value => html`
+                            enumValues(TodoPriority).map( value => html`
                                 <option value="${value}" ?selected=${this.todoComponent?.todo.priority === value}>
-                                    ${i18n.todoFormPriority[value as Priority]}
+                                    ${i18n.todoFormPriority[value as TodoPriority]}
                                 </option>
                             `)
                         }

@@ -18,7 +18,7 @@ class OrganizerDB {
 
             request.onupgradeneeded = (event: IDBVersionChangeEvent) => {
                 this.#db = (event.target as IDBOpenDBRequest).result;
-                this.#db.createObjectStore(todoStoreName, { keyPath: "id" });
+                this.#db.createObjectStore(todoStoreName, { keyPath: "uuid" });
             };
 
             request.onsuccess = (event: Event) => {

@@ -1,24 +1,24 @@
 import dayjs from "../../../utils/date";
 
 export enum TodoPriority {
-  LOW = 1,
-  NORMAL = 2,
-  HIGH = 3
+    LOW = 1,
+    NORMAL = 2,
+    HIGH = 3
 }
 
 export enum TodoStatus {
-  PENDING = 'pending',
-  DONE = 'done'
+    PENDING = 'pending',
+    DONE = 'done'
 }
 
-export type TodoFormData = {
+export interface TodoFormData {
     uuid: string;
     resume: string;
     description: string;
     scheduledDate: string;
     priority: TodoPriority;
     status: TodoStatus;
-};
+}
 
 export class Todo {
     uuid: string;
@@ -27,7 +27,7 @@ export class Todo {
     scheduledDate: string;
     priority: TodoPriority;
     status: TodoStatus;
-    createdAt: Date
+    createdAt: Date;
 
     constructor(data: TodoFormData) {
         this.uuid = data.uuid;
@@ -40,18 +40,15 @@ export class Todo {
     }
 
     getRemainingTimeStr(): string {
-        if (this.scheduledDate != "") {
-            return dayjs(this.scheduledDate).fromNow();
-        }
-
-		return ""
+        return this.scheduledDate !== "" ? dayjs(this.scheduledDate).fromNow() : "";
     }
 
-	getScheduledDateStr(): string {
-		if (this.scheduledDate != "") {
-            return dayjs(this.scheduledDate).format("DD/MM/YYYY HH:mm");
-        }
+    getScheduledDateStr(): string {
+        return this.scheduledDate !== "" ? dayjs(this.scheduledDate).format("DD/MM/YYYY HH:mm") : "";
+    }
+}
 
-		return ""
-	}
+export enum TodoListType {
+    PRIORITY = "priority",
+    SCHEDULED = "scheduled"
 }

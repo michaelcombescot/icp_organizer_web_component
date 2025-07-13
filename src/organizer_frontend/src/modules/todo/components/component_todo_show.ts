@@ -1,34 +1,37 @@
-import { LitElement, css, html } from "lit";
-import { property, customElement } from "lit/decorators.js";
 import { ComponentTodo } from "./component_todo";
+import { Todo } from "../models/todo";
 
-@customElement('todo-show')
-export class ComponentTodoShow extends LitElement {
-    @property({ type: Object }) todoComponent!: ComponentTodo
+export class ComponentTodoShow extends HTMLElement {
+    #todo: Todo
 
-    static create (todoComponent : ComponentTodo) : ComponentTodoShow {
-        const comp = new this();
-        comp.todoComponent = todoComponent;
-        return comp
+    constructor(todo: Todo) {
+        super();
+        this.#todo = todo
     }
 
-    static style = css`
-        #todo-show {
-            display: flex;
-            flex-direction: column;
-            gap: 1em;
-        }
-    `
+    connectedCallback() {
+        this.#render()
+    }
 
-    render() {
-        return html`
+    #render() {
+        this.innerHTML = /*html*/`
             <div id="todo-show">
-                <div>${this.todoComponent.todo!.resume}</div>
-                <div>${this.todoComponent.todo!.description}</div>
-                <div>${this.todoComponent.todo!.scheduledDate}</div>
-                <div>${this.todoComponent.todo!.priority}</div>
-                <div>${this.todoComponent.todo!.status}</div>
+                <div>${this.#todo!.resume}</div>
+                <div>${this.#todo!.description}</div>
+                <div>${this.#todo!.scheduledDate}</div>
+                <div>${this.#todo!.priority}</div>
+                <div>${this.#todo!.status}</div>
             </div>
+
+            <style>
+                #todo-show {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 1em;
+                }
+            </style>
         `
     }
 }
+
+customElements.define('todo-show', ComponentTodoShow);

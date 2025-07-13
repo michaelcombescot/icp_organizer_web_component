@@ -1,91 +1,63 @@
-import { LitElement, html, css } from "lit";
-import { customElement, property } from "lit/decorators.js";
-import { ComponentTodo } from "./component_todo";
 import { todoStore } from "../models/store";
+import { Todo } from "../models/todo";
+import { TodoListType } from "../models/todo";
+import { ComponentTodo } from "./component_todo";
 
-enum TodoListType {
-  PRIORITY = "priority",
-  SCHEDULED = "scheduled"
-}
-
-@customElement("component-todo-list")
-class ComponentTodoList extends LitElement {
-    @property({ type: Object }) list: ComponentTodo[] = []
-    @property({ type: String }) listType!: TodoListType
-
-    async loadList() {
-        const todos = await todoStore.getTodos();
-
-        switch ( this.listType ) {
-            case TodoListType.PRIORITY:
-                this.list = todos
-                                .filter(todo => !todo.scheduledDate)
-                                .sort((a, b) => b.priority.valueOf() - a.priority.valueOf())
-                                .map(todo => ComponentTodo.create(todo));
-                                
-                break;
-            case TodoListType.SCHEDULED:
-                this.list = todos
-                                .filter(todo => todo.scheduledDate)
-                                .sort((a, b) => new Date(a.scheduledDate).getTime() - new Date(b.scheduledDate).getTime())
-                                .map(todo => ComponentTodo.create(todo))
-                break;
-            default:
-                console.log(`Invalid todo list type ${this.getAttribute("type")}`);
-                break;
-        }
+class ComponentTodoList extends HTMLElement {
+    #list: Todo[]
+    set list(list: Todo[]) {
+        this.#list = list;
+        this.#render()
+    }
+    get list() {
+        return this.#list
     }
 
-    async addItem(item: ComponentTodo) {
-        await this.loadList();
-        this.render();
+    constructor() {
+        super();
+        this.#list = []
     }
 
-    //
-    // LIFECYCLE
-    //
-
-    protected async firstUpdated() {
-        await this.loadList();
+    async connectedCallback() {
+        this.#render()
     }
 
     //
     // RENDER
     //
 
-    static styles = css`
-        .todo-list { 
-            display: flex;
-            // align-items: center;
-            flex-direction: column;
-            gap: 1em;
-            padding: 1em;
-            border-radius: 10px;
-            background-color: rgb(3, 252, 194, 0.1); 
-        }
-
-        .todo-list-items {
-            display: flex;
-            flex-direction: column;
-            gap: 1em;
-        }
-    `
-    render() {
-        return html`
+    async #render() {
+        this.innerHTML = /*html*/`
             <div class="todo-list">
                 <div class="todo-list-items">
-                    ${this.list.map(item => item)}
                 </div>
             </div>
+
+            <style>
+                .todo-list { 
+                    display: flex;
+                    // align-items: center;
+                    flex-direction: column;
+                    gap: 1em;
+                    padding: 1em;
+                    border-radius: 10px;
+                    background-color: rgb(3, 252, 194, 0.1); 
+                }
+
+                .todo-list-items {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 1em;
+                }
+            </style>
         `;
+
+        this.#list.forEach(item => {
+            this.querySelector(".todo-list-items")!.appendChild(new ComponentTodo(item))
+        })
     }
 }
 
-const getList = (type : TodoListType) : ComponentTodoList => {
-    return document
-            .querySelector("main-app")!
-            .shadowRoot!.querySelector("component-todo-page")!
-            .shadowRoot!.querySelector(`component-todo-list[listType=${type}]`)!;
-}
+customElements.define("component-todo-list", ComponentTodoList);
 
-export { TodoListType, ComponentTodoList, getList }
+export { ComponentTodoList }

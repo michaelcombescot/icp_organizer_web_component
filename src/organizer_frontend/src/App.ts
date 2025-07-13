@@ -1,24 +1,31 @@
-import './modules/todo/components/component_todo_page';
-import './components/modal';
-import { html, css, LitElement } from 'lit';
-import { customElement } from 'lit/decorators.js';
+import './modules/todo/components/component_todo_page'
+import './components/modal'
 
-@customElement('main-app')
-class App extends LitElement {
-    static styles = css`
-        #main-app {
-            padding: 1em;
-            font-size: 1rem;
-        }
-    `
+class App extends HTMLElement {
+    constructor() {
+        super()
+    }
 
-    protected render() { 
-        return html`       
-            <div id="main-app">     
+    connectedCallback() {
+        this.#render()
+    }
+
+    #render() { 
+        this.innerHTML = /*html*/`       
+            <div id="main-app">    
                 <component-todo-page></component-todo-page>
 
                 <component-modal></component-modal>
             </div>
+
+            <style>
+                #main-app {
+                    padding: 1em;
+                    font-size: 1rem;
+                }
+            </style>
         `
     }
 }
+
+customElements.define('main-app', App)

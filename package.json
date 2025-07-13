@@ -16,7 +16,6 @@
     "src/organizer_frontend"
   ],
   "dependencies": {
-    "dayjs": "^1.11.13",
-    "lit": "^3.3.0"
+    "dayjs": "^1.11.13"
   }
 }

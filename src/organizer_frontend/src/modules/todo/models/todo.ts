@@ -1,33 +1,29 @@
 import dayjs from "../../../utils/date";
-
-export enum TodoPriority {
-    LOW = 1,
-    NORMAL = 2,
-    HIGH = 3
-}
-
-export enum TodoStatus {
-    PENDING = 'pending',
-    DONE = 'done'
-}
+import {organizer_backend} from "../../../../../declarations/organizer_backend";
 
 export interface TodoFormData {
     uuid: string;
     resume: string;
     description: string;
-    scheduledDate: string;
+    scheduledDate: bigint;
     priority: TodoPriority;
     status: TodoStatus;
 }
 
-export class Todo {
+export type TodoPriority = Parameters<typeof organizer_backend.addTodo>[0]["priority"];
+export const todoPriorityValues = ['low', 'medium', 'high']
+
+export type TodoStatus = Parameters<typeof organizer_backend.addTodo>[0]["status"];
+
+
+export class Todo implements Todo {
     uuid: string;
     resume: string;
     description: string;
-    scheduledDate: string;
+    scheduledDate: bigint;
     priority: TodoPriority;
     status: TodoStatus;
-    createdAt: Date;
+    createdAt: bigint;
 
     constructor(data: TodoFormData) {
         this.uuid = data.uuid;
@@ -36,15 +32,7 @@ export class Todo {
         this.scheduledDate = data.scheduledDate;
         this.priority = data.priority;
         this.status = data.status;
-        this.createdAt = new Date();
-    }
-
-    getRemainingTimeStr(): string {
-        return this.scheduledDate !== "" ? dayjs(this.scheduledDate).fromNow() : "";
-    }
-
-    getScheduledDateStr(): string {
-        return this.scheduledDate !== "" ? dayjs(this.scheduledDate).format("DD/MM/YYYY HH:mm") : "";
+        this.createdAt = BigInt(dayjs().valueOf());
     }
 }
 

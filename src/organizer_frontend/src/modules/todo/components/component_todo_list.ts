@@ -40,7 +40,6 @@ class ComponentTodoList extends HTMLElement {
                     flex-direction: column;
                     gap: 1em;
                     padding: 1em;
-                    border-radius: 10px;
                     background-color: rgb(3, 252, 194, 0.1); 
                 }
 

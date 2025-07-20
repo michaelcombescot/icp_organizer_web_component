@@ -42,10 +42,10 @@ class ComponentModal extends HTMLElement {
                     #modal-body {
                         position: fixed; top: 50%; left: 50%;
                         width: max-content;
+                        max-width: 85vw;
                         height: max-content;
                         z-index: 1;
                         transform: translate(-50%, -50%);
-                        border-radius: 10px;
                         background-color: white;
                         padding: 2em;
 

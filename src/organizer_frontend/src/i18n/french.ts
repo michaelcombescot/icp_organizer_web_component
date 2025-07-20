@@ -1,19 +1,33 @@
 import { Language } from "./i18n";
 
 export const french: Language = {
+    headerTitle: "Organizer",
+    headerHome: "Accueil",
+    headerAbout: "A propos",
+    headerContact: "Contact",
+    headerSignIn: "Connexion",
+    headerSignUp: "Inscription",
+    headerLogOut: "Déconnexion",
+
     todoCreateNewButton: "Nouvelle tâche",
 
     todoFormTitleNew: "Nouvelle tâche",
     todoFormTitleEdit: "Modifier la tâche",
     todoFormFieldResume: "Résumé",
+    todoFormFieldResumePlaceholder: "Résumé de la tâche",
     todoFormFieldDescription: "Description",
-    todoFormFieldScheduledDate: "Date de début",
+    todoFormFieldDescriptionPlaceholder: "Description de la tâche",
+    todoFormFieldScheduledDate: "Date limite de réalisation",
     todoFormFieldPriority: "Priorité",
+    todoFormPriorities: {
+        "low": "Faible",
+        "medium": "Moyenne",
+        "high": "Elevée"
+    },
     todoFormFieldStatus: "Statut",
+    todoFormStatuses: {
+        "pending": "En cours",
+        "done": "Terminee"
+    },
     todoFormInputSubmit: "Enregistrer",
-    todoFormPriority: {
-        1: "Faible",
-        2: "Moyenne",
-        3: "Elevée"
-    }
 }

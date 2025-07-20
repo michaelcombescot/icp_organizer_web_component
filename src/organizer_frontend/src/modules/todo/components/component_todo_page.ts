@@ -2,6 +2,7 @@ import "./component_todo_list";
 import { ComponentTodoForm } from "./component_todo_form";
 import { openModalWithElement } from "../../../components/modal";
 import { i18n } from "../../../i18n/i18n";
+import { todoStore } from "../models/store";
 
 customElements.define("component-todo-page",
     class ComponentTodoPage extends HTMLElement {
@@ -11,6 +12,7 @@ customElements.define("component-todo-page",
 
         connectedCallback() {
             this.#render()
+            todoStore.loadStore()
         }
 
         #bindEvents() {

@@ -2,7 +2,8 @@ import { i18n } from "../../../i18n/i18n";
 import { todoStore } from "../models/store";
 import { closeModal } from "../../../components/modal";
 import { enumValues } from "../../../utils/enums";
-import { Todo, TodoPriority, TodoStatus } from "../models/todo";
+import { Todo, TodoPriority, todoPriorityValues } from "../models/todo";
+import { stringToEpoch } from "../../../utils/date";
 
 class ComponentTodoForm extends HTMLElement {
     todo: Todo | null = null;
@@ -15,13 +16,13 @@ class ComponentTodoForm extends HTMLElement {
     }
 
     connectedCallback() {
-        this.render();
+        this.#render();
 
         const formElement = this.querySelector("#todo-form-form") as HTMLFormElement;
         formElement.addEventListener("submit", this.handleSubmitForm.bind(this));
     }
 
-    private handleSubmitForm(e : Event): void {
+    private async handleSubmitForm(e : Event) {
             e.preventDefault();
 
             // extract form data and create a new todo
@@ -29,13 +30,17 @@ class ComponentTodoForm extends HTMLElement {
             const formData = new FormData(formElement);
             formElement.reset();
 
+            const priorityValue = formData.get("priority") as keyof TodoPriority
+
             const todo = new Todo({
                 uuid: this.todo ? this.todo.uuid : crypto.randomUUID(),
                 resume: formData.get("resume") as string,
                 description: formData.get("description") as string,
-                scheduledDate: formData.get("scheduledDate") as string,
-                priority: Number(formData.get("priority")) as TodoPriority,
-                status: TodoStatus.PENDING,
+                scheduledDate: stringToEpoch(formData.get("scheduledDate") as string),
+                priority:   priorityValue === "low" ? { low: null } :
+                            priorityValue === "medium" ? { medium: null } :
+                            { high: null },
+                status: { 'pending' : null }
             });
 
             // update or create new todo
@@ -53,27 +58,31 @@ class ComponentTodoForm extends HTMLElement {
     // RENDER
     //
 
-    private render() {
+    #render() {
+        const priorityValue = this.todo ?
+                                Object.keys(this.todo!.priority)[0]
+                                : "medium";
+
         this.innerHTML = /*html*/`
             <div id="todo-form">
                 <h2>${this.isEditMode ? i18n.todoFormTitleEdit : i18n.todoFormTitleNew}</h2>
 
                 <form id="todo-form-form">
                     <label for="resume" class="required">${i18n.todoFormFieldResume}</label>
-                    <input type="text" name="resume" value="${this.todo?.resume ||  ""}" placeholder="What do you need to do?" required />
+                    <input type="text" name="resume" value="${this.todo?.resume ||  ""}" placeholder="${i18n.todoFormFieldResumePlaceholder}" required />
 
                     <label for="description">${i18n.todoFormFieldDescription}</label>
-                    <textarea type="text" name="description" placeholder="Describe the task" .value=${this.todo?.description ||  ""}></textarea>
+                    <textarea type="text" name="description" placeholder="${i18n.todoFormFieldDescriptionPlaceholder}">${this.todo?.description ||  ""}</textarea>
 
                     <label for="scheduledDate">${i18n.todoFormFieldScheduledDate}</label>
                     <input type="datetime-local" name="scheduledDate" value="${this.todo?.scheduledDate ||  ""}" />
 
                     <label for="priority">${i18n.todoFormFieldPriority}</label>
-                    <select name="priority" value="${this.todo?.priority || "1"}">
+                    <select name="priority">
                         ${
-                            enumValues(TodoPriority).map( value => /*html*/`
-                                <option value="${value}" ${this.todo?.priority === value ? "selected" : ""}>
-                                    ${i18n.todoFormPriority[value as TodoPriority]}
+                            todoPriorityValues.map( value => /*html*/`
+                                <option value="${value}" ${value === priorityValue ? "selected" : ""}>
+                                    ${i18n.todoFormPriorities[value]}
                                 </option>
                             `)
                         }

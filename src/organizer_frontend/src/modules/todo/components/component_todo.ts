@@ -3,6 +3,7 @@ import { Todo } from "../models/todo";
 import { ComponentTodoForm } from "./component_todo_form";
 import { ComponentTodoShow } from "./component_todo_show";
 import { openModalWithElement } from "../../../components/modal";
+import { remainingTimeFromEpoch, stringDateFromEpoch } from "../../../utils/date";
 
 class ComponentTodo extends HTMLElement {
     #todo: Todo
@@ -46,11 +47,11 @@ class ComponentTodo extends HTMLElement {
     #render() {
         this.innerHTML = /*html*/`
             <div class="todo-item">
-                ${this.#todo.scheduledDate != "" ?
+                ${this.#todo.scheduledDate != BigInt(0) ?
                     /*html*/`
                         <div id="todo-date">
-                            <span>${this.#todo.getScheduledDateStr()}</span>
-                            <span>${this.#todo.getRemainingTimeStr()}</span>
+                            <span>${stringDateFromEpoch(this.#todo.scheduledDate)}</span>
+                            <span>${remainingTimeFromEpoch(this.#todo.scheduledDate)}</span>
                         </div>
                     ` : ""
                 }
@@ -68,7 +69,6 @@ class ComponentTodo extends HTMLElement {
                     display: flex;
                     flex-direction: column;
                     gap: 1em;
-                    border-radius: 10px;
                     background-color: white;
                     padding: 1em;
                     

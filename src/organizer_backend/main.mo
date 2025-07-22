@@ -4,7 +4,6 @@ import { phash; thash } "mo:map/Map";
 import Result "mo:base/Result";
 import Time "mo:base/Time";
 import Principal "mo:base/Principal";
-import Debug "mo:base/Debug";
 
 persistent actor {
     type Todo = {
@@ -79,20 +78,15 @@ persistent actor {
     };
 
     public shared ({ caller }) func removeTodo(uuid: Text) : async () {
-        Debug.print(Principal.toText(caller));
-
         switch (Map.get(todos, phash, caller)) {
             case null ();
             case (?user_todos_map) {
                 Map.delete(user_todos_map, thash, uuid);
-                // Map.set(todos, phash, caller, user_todos_map);
             };
         };
     };
 
     public query ({ caller }) func sizeTodo() : async (Nat) {
-        Debug.print(Principal.toText(caller));
-
         switch (Map.get(todos, phash, caller)) {
             case null 0;
             case (?user_todos_map) {

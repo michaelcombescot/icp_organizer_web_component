@@ -4,6 +4,7 @@ import './components/router/router_link'
 import { i18n } from './i18n/i18n'
 import { navigateTo, routes } from './components/router/router'
 import { login, logout, whoami, isAuthenticated } from './components/auth/auth'
+// import { logo } from '../assets/icp-logo.svg'
 
 class App extends HTMLElement {
     constructor() {
@@ -34,7 +35,9 @@ class App extends HTMLElement {
                                 <a href="#" id="log-out-link">Log Out</a>
                             `
                             : /*html*/`
-                                <button id="login-button">Login</button>
+                                <a href="#" id="login-button">
+                                    <img src="/assets/icp-logo.svg" alt="icp-logo" />
+                                </a>
                             `
                         }                        
                     </div>
@@ -55,6 +58,14 @@ class App extends HTMLElement {
                         align-items: center;
                         gap: 2em;
                         background-color: rgb(3, 252, 194, 0.1);
+
+                        #auth-links {
+                            #login-button {
+                                img {
+                                    width: 4em;
+                                }
+                            }
+                        }
                     }
 
                     #page {

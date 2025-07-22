@@ -41,7 +41,6 @@ export const login = async () => {
 };
 
 export const logout = async () => {
-    debugger
     await authClient.logout()
     window.location.reload();
 };

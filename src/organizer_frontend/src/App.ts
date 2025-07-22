@@ -3,6 +3,7 @@ import './components/modal'
 import './components/router/router_link'
 import { i18n } from './i18n/i18n'
 import { navigateTo, routes } from './components/router/router'
+import { login, logout, whoami, isAuthenticated } from './components/auth/auth'
 
 class App extends HTMLElement {
     constructor() {
@@ -11,11 +12,10 @@ class App extends HTMLElement {
 
     connectedCallback() {
         this.#render()
-
         navigateTo(window.location.pathname);
     }
 
-    #render() { 
+    #render() {
         this.innerHTML = /*html*/`       
             <div id="main-app">
                 <header>
@@ -28,9 +28,15 @@ class App extends HTMLElement {
                     <h1>${i18n.headerTitle}</h1>
 
                     <div id="auth-links">
-                        <component-router-link href="${routes.signUp}" text="Sign up"></component-router-link>
-                        <component-router-link href="${routes.signIn}" text="Sign in"></component-router-link>
-                        <component-router-link href="${routes.logOut}" text="Log Out"></component-router-link>
+                        ${
+                            isAuthenticated ?
+                            /*html*/`
+                                <a href="#" id="log-out-link">Log Out</a>
+                            `
+                            : /*html*/`
+                                <button id="login-button">Login</button>
+                            `
+                        }                        
                     </div>
                 </header>
 
@@ -57,6 +63,10 @@ class App extends HTMLElement {
                 }
             </style>
         `
+
+        this.querySelector("#whoami-button")?.addEventListener("click", () => whoami().then(r => console.log(r)))
+        this.querySelector("#login-button")?.addEventListener("click", () => login())
+        this.querySelector("#log-out-link")?.addEventListener("click", () => logout())
     }
 }
 

@@ -16,6 +16,18 @@
     "src/organizer_frontend"
   ],
   "dependencies": {
-    "dayjs": "^1.11.13"
+    "@dfinity/agent": "^3.0.0",
+    "@dfinity/auth-client": "^3.0.0",
+    "@dfinity/identity": "^3.0.0",
+    "@dfinity/candid": "^3.0.0",
+    "@dfinity/principal": "^3.0.0",
+    "borc": "^3.0.0",
+    "cbor": "^10.0.9",
+    "dayjs": "^1.11.13",
+    "simple": "^0.2.0",
+    "simple-cbor": "^0.4.1"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.15"
   }
 }

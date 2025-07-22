@@ -10,7 +10,6 @@ export const routes = {
     contact: "/contact",
     signIn: "/signin",
     signUp: "/signup",
-    logOut: "/logout",
     todo: "/todo",
 }
 
@@ -33,9 +32,6 @@ export const navigateTo = (path: string) => {
             break;
         case routes.signUp:
             element = document.createElement("component-sign-up")
-            break;
-        case routes.logOut:
-            element = document.createElement("component-log-out")
             break;
         case routes.todo:
             element = document.createElement("component-todo-page")

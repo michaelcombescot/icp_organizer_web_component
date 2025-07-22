@@ -2,8 +2,8 @@ import { todoStoreName } from "../../../db/store_names";
 import { DB } from "../../../db/db";
 import { Todo } from "./todo";
 import { ComponentTodoList } from "../components/component_todo_list";
-import { organizer_backend } from "../../../../../declarations/organizer_backend";
 import { TodoPriority } from "./todo";
+import { actor } from "../../../components/auth/auth";
 
 class TodoStore {
     #dbConn: IDBDatabase
@@ -28,7 +28,7 @@ class TodoStore {
     async addTodo(todo: Todo) {
         // save to backend
         try {
-            await organizer_backend.addTodo(todo);
+            await actor.addTodo(todo);
         } catch (error) {
             console.error("Failed to add todo:", error);
             return; // Exit the function early
@@ -50,7 +50,7 @@ class TodoStore {
     async deleteTodo(uuid: string) {
         // delete from backend
         try {
-            await organizer_backend.removeTodo(uuid);
+            await actor.removeTodo(uuid);
         } catch (error) {
             console.error("Failed to add todo:", error);
             return; // Exit the function early
@@ -71,7 +71,7 @@ class TodoStore {
     async updateTodo(todo: Todo) {
         // delete from backend
         try {
-            await organizer_backend.updateTodo(todo);
+            await actor.updateTodo(todo);
         } catch (error) {
             console.error("Failed to add todo:", error);
             return; // Exit the function early

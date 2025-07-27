@@ -2,7 +2,7 @@ import "./component_todo_list";
 import { ComponentTodoForm } from "./component_todo_form";
 import { openModalWithElement } from "../../../components/modal";
 import { i18n } from "../../../i18n/i18n";
-import { todoStore } from "../models/store";
+import { todoStore } from "../models/todo_store";
 
 customElements.define("component-todo-page",
     class ComponentTodoPage extends HTMLElement {

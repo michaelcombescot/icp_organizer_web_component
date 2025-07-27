@@ -1,4 +1,4 @@
-import { todoStore } from "../models/store";
+import { todoStore } from "../models/todo_store";
 import { Todo } from "../models/todo";
 import { TodoListType } from "../models/todo";
 import { ComponentTodo } from "./component_todo";
@@ -36,7 +36,6 @@ class ComponentTodoList extends HTMLElement {
             <style>
                 .todo-list { 
                     display: flex;
-                    // align-items: center;
                     flex-direction: column;
                     gap: 1em;
                     padding: 1em;

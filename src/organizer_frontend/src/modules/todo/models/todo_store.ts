@@ -31,7 +31,7 @@ class TodoStore {
             await actor.addTodo(todo);
         } catch (error) {
             console.error("Failed to add todo:", error);
-            return; // Exit the function early
+            return
         }
 
         // add to db
@@ -53,7 +53,7 @@ class TodoStore {
             await actor.removeTodo(uuid);
         } catch (error) {
             console.error("Failed to add todo:", error);
-            return; // Exit the function early
+            return
         }
 
         const transaction = this.#dbConn.transaction([todoStoreName], "readwrite");
@@ -74,7 +74,7 @@ class TodoStore {
             await actor.updateTodo(todo);
         } catch (error) {
             console.error("Failed to add todo:", error);
-            return; // Exit the function early
+            return
         }
 
         // update db
@@ -90,7 +90,7 @@ class TodoStore {
         };
     }
 
-    async #getTodos(): Promise<Todo[]> {
+    async getTodos(): Promise<Todo[]> {
         return new Promise((resolve, reject) => {
             const transaction = this.#dbConn.transaction([todoStoreName], "readonly");
             const store = transaction.objectStore(todoStoreName);
@@ -120,7 +120,7 @@ class TodoStore {
     // for a first version it's way easier for handling ordering/editing, especially when the priority or date is changed/removed
     // it can probably stay like this forever, I don't think there will be performances issues even whith hundreds of todos
     async #updateUI() {
-        const todos = await this.#getTodos()
+        const todos = await this.getTodos()
         let priorityTodos: Todo[] = []
         let scheduledTodos: Todo[] = []
 

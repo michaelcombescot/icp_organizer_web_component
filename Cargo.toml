@@ -1,0 +1,5 @@
+[workspace]
+members = [
+    "src/organizer_backend"
+]
+resolver = "2"

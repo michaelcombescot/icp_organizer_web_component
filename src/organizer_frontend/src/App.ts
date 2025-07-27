@@ -22,8 +22,7 @@ class App extends HTMLElement {
                 <header>
                     <div id="pages-links">
                         <component-router-link href="${routes.home}" text="${i18n.headerHome}"></component-router-link>
-                        <component-router-link href="${routes.about}" text="${i18n.headerAbout}"></component-router-link>
-                        <component-router-link href="${routes.contact}" text="${i18n.headerContact}"></component-router-link>
+                        <component-router-link href="${routes.todoLists}" text="${i18n.headerTodoLists}"></component-router-link>
                     </div>
 
                     <h1>${i18n.headerTitle}</h1>

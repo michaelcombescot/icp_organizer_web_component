@@ -2,49 +2,40 @@ import Text "mo:base/Text";
 import Map "mo:map/Map";
 import { phash; thash } "mo:map/Map";
 import Result "mo:base/Result";
-import Time "mo:base/Time";
 import Principal "mo:base/Principal";
+import Todo "./todo/todo";
 
 persistent actor {
-    type Todo = {
-        uuid: Text;
-        resume: Text;
-        description: Text;
-        scheduledDate: Time.Time;
-        priority: TodoPriority;
-        status: TodoStatus;
-        createdAt: Time.Time;
-    };
+    /////
+    // memory declarations
+    /////
 
-    type TodoPriority = {
-        #high;
-        #medium;
-        #low;
-    };
+    // Main memory for the todo module, format is Map<Principal, Map<todo_uuid, todo_data>>
+    var todos = Map.new<Principal, Map.Map<Text, Todo.Todo>>();
 
-    type TodoStatus = {
-        #pending;
-        #done;
-    };
+    // memory for todo lists, format is Map<Principal, Map<todo_list_uuid, todo_list_data>>
+    // todo_list_data.todos contains all the todo uuids linked to the list
+    var todoLists = Map.new<Principal, Map.Map<Text, Todo.TodoList>>();
 
-    // principal => todo_uuid => todo
-    stable var todos = Map.new<Principal, Map.Map<Text, Todo>>();
+    /////
+    // TODO homepage interface
+    /////
 
-    public query ({ caller }) func getTodos() : async ([Todo]) {
+    public query ({ caller }) func getTodos() : async ([Todo.Todo]) {
         switch (Map.get(todos, phash, caller)) {
             case null [];
             case (?user_todos_map) {
-                Map.toArrayMap(user_todos_map, func(_ : Text, value: Todo) : ?Todo {
+                Map.toArrayMap(user_todos_map, func(_ : Text, value: Todo.Todo) : ?Todo.Todo {
                     ?value
                 })
             };
         };
     };
 
-    public shared ({ caller }) func addTodo(todo: Todo) : async Result.Result<(), Text> {
+    public shared ({ caller }) func addTodo(todo: Todo.Todo) : async Result.Result<(), Text> {
         switch (Map.get(todos, phash, caller)) {
             case null {
-                let new_user_map = Map.new<Text, Todo>();
+                let new_user_map = Map.new<Text, Todo.Todo>();
                 Map.set(new_user_map, thash, todo.uuid, todo);
                 Map.set(todos, phash, caller, new_user_map);
 
@@ -62,7 +53,7 @@ persistent actor {
         };
     };
 
-    public shared ({ caller }) func updateTodo(todo: Todo) : async Result.Result<(), Text> {
+    public shared ({ caller }) func updateTodo(todo: Todo.Todo) : async Result.Result<(), Text> {
         switch (Map.get(todos, phash, caller)) {
             case null #err("Todo not found");
             case (?user_todos_map) {
@@ -95,7 +86,36 @@ persistent actor {
         }
     };
 
+    /////
+    // TODO LIST INTERFACE
+    /////
+
+    public shared ({ caller }) func createTodoList(todoList: Todo.TodoList) : async Result.Result<(), Text> {
+        switch (Map.get(todoLists, phash, caller)) {
+            case null {
+                let listMap = Map.new<Text, Todo.TodoList>();
+                Map.set(listMap, thash, todoList.uuid, todoList);
+                Map.set(todoLists, phash, caller, listMap);
+                return #ok;
+            };
+            case (?todoLists) {
+                switch (Map.get(todoLists, thash, todoList.uuid)) {
+                    case null {
+                        Map.set(todoLists, thash, todoList.uuid, todoList);
+                        #ok
+                    };
+                    case (?_) #err("Todo list already exists with this uuid");
+                }
+            };
+        };
+    };
+
+    /////
+    // auth interface
+    /////
+
     public query ({caller}) func whoami() : async Text {
         Principal.toText(caller)
     };
 }
+

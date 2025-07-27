@@ -1,4 +1,4 @@
-import { todoStoreName } from "./store_names";
+import { listStoreName, todoStoreName } from "./store_names";
 
 class OrganizerDB {
     #db!: IDBDatabase;
@@ -19,6 +19,7 @@ class OrganizerDB {
             request.onupgradeneeded = (event: IDBVersionChangeEvent) => {
                 this.#db = (event.target as IDBOpenDBRequest).result;
                 this.#db.createObjectStore(todoStoreName, { keyPath: "uuid" });
+                this.#db.createObjectStore(listStoreName, { keyPath: "uuid" });
             };
 
             request.onsuccess = (event: Event) => {

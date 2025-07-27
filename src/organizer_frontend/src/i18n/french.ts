@@ -3,12 +3,12 @@ import { Language } from "./i18n";
 export const french: Language = {
     headerTitle: "Organizer",
     headerHome: "Accueil",
-    headerAbout: "A propos",
-    headerContact: "Contact",
+    headerTodoLists: "Listes de tâches",
     headerSignIn: "Connexion",
     headerSignUp: "Inscription",
     headerLogOut: "Déconnexion",
 
+    // homepage
     todoCreateNewButton: "Nouvelle tâche",
 
     todoFormTitleNew: "Nouvelle tâche",
@@ -30,4 +30,14 @@ export const french: Language = {
         "done": "Terminee"
     },
     todoFormInputSubmit: "Enregistrer",
+
+    // lists
+    todoListCreateButton: "Nouvelle liste",
+
+    todoListFormTitleNew: "Nouvelle liste",
+    todoListFormTitleEdit: "Modifier la liste",
+    todoListFormFieldName: "Nom",
+    todoListFormFieldNamePlaceholder: "Nom de la liste",
+    todoListFormFieldColor: "Couleur",
+    todoListFormInputSubmit: "Enregistrer",
 }

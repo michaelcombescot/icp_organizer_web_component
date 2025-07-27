@@ -1,4 +1,4 @@
-import { todoStore } from "../models/store";
+import { todoStore } from "../models/todo_store";
 import { Todo } from "../models/todo";
 import { ComponentTodoForm } from "./component_todo_form";
 import { ComponentTodoShow } from "./component_todo_show";

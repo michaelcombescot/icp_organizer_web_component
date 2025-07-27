@@ -1,5 +1,5 @@
 import { i18n } from "../../../i18n/i18n";
-import { todoStore } from "../models/store";
+import { todoStore } from "../models/todo_store";
 import { closeModal } from "../../../components/modal";
 import { enumValues } from "../../../utils/enums";
 import { Todo, TodoPriority, todoPriorityValues } from "../models/todo";
@@ -9,7 +9,7 @@ class ComponentTodoForm extends HTMLElement {
     todo: Todo | null = null;
     isEditMode: boolean = false;
 
-    constructor(todo : Todo | null, elementToUpdate : HTMLElement | null = null) {
+    constructor(todo : Todo | null) {
         super();
         this.todo = todo;
         this.isEditMode = !!todo;
@@ -17,9 +17,10 @@ class ComponentTodoForm extends HTMLElement {
 
     connectedCallback() {
         this.#render();
+    }
 
-        const formElement = this.querySelector("#todo-form-form") as HTMLFormElement;
-        formElement.addEventListener("submit", this.handleSubmitForm.bind(this));
+    #bindEvents() {
+        this.querySelector("#todo-form-form")!.addEventListener("submit", this.handleSubmitForm.bind(this));
     }
 
     private async handleSubmitForm(e : Event) {
@@ -119,6 +120,8 @@ class ComponentTodoForm extends HTMLElement {
                 }
             </style>
         `
+
+        this.#bindEvents();
     }
 }
 

@@ -1,65 +1,39 @@
 import { todoStoreName } from "../../../db/store_names";
 import { DB } from "../../../db/db";
-import { Todo } from "./todo";
 import { ComponentTodoList } from "../components/component_todo_list";
 import { TodoPriority } from "./todo";
 import { actor } from "../../../components/auth/auth";
 import { List } from "./list";
 import { listStoreName } from "../../../db/store_names";
-import { todoStore } from "./todo_store";
 
 export class ListStore {
-    #dbConn: IDBDatabase
+    constructor() {}
 
-    #priorityOrder: Record<keyof TodoPriority, number> = {
-        low: 0,
-        medium: 1,
-        high: 2,
-    };
-
-    #getComponentList() { return document.querySelector("#todo-lists-list") as ComponentTodoList }
-
-    constructor(db: IDBDatabase) {
-        this.#dbConn = db;
-    }
-
-    loadList(listUUID: string) {
-        this.#updateUILoadList(listUUID);
-    }
-
-    async getList(listUUID: string): Promise<List> {
-        const store = this.#dbConn.transaction([listStoreName], "readonly").objectStore(todoStoreName);
+    async getLists(): Promise<List[]> {
         return new Promise((resolve, reject) => {
-            // get List
-            let reqList = store.get(listUUID);
-            let list: List
-            reqList.onsuccess = () => list = reqList.result as List;
-            reqList.onerror = () => reject(reqList.error);
-
-            // get todos
-            todoStore.getTodos().then((todos: Todo[]) => {
-                list.todos = todos.filter((todo: Todo) => list.todosUUIDs.includes(todo.uuid));
-                resolve(list)
-            }).catch((error) => {
-                reject(`Failed to get todos in getList:${error}`);
-            })
+            const store = DB.transaction([listStoreName], "readonly").objectStore(listStoreName);
+            const req = store.getAll()
+            req.onsuccess = () => resolve(req.result.map((item) => new List(item)))
+            req.onerror = () => reject(req.error);
         })
     }
 
-    async addList(todo: Todo) {
-        // save to backend
-        try {
-            await actor.addList(todo);
-        } catch (error) {
-            console.error("Failed to add todo:", error);
-            return
-        }
+    async addList(list: List): Promise<void> {
+        return new Promise((resolve, reject) => {
+            // save to backend
+            // try {
+            //     await actor.createTodoList(list);
+            // } catch (error) {
+            //     console.error("Failed to add todo:", error);
+            //     return
+            // }
 
-        // add to db
-        const store = this.#dbConn.transaction([todoStoreName], "readwrite").objectStore(todoStoreName);
-        const req = store.add(todo);
-        req.onsuccess = () => {}
-        req.onerror = () => { console.error("IndexedDB error:", req.error); }
+            // indexedDB
+            const store = DB.transaction([listStoreName], "readwrite").objectStore(listStoreName);
+            const req = store.add(list);
+            req.onsuccess = () => { resolve() }
+            req.onerror = () => { reject(req.error) }
+        })
     }
 
     // async deleteTodo(uuid: string) {
@@ -104,38 +78,6 @@ export class ListStore {
     //         console.error("IndexedDB error:", transaction.error);
     //     };
     // }
-
-    async #updateUILoadList(listUUID: string) {
-        const list = await this.#getList(listUUID)
-        let priorityTodos: Todo[] = []
-        let scheduledTodos: Todo[] = []
-
-        for ( const todo of todos ) {
-            if (!todo.scheduledDate) {
-                priorityTodos.push(todo)
-            } else {
-                scheduledTodos.push(todo)
-            }
-        }
-
-        priorityTodos = this.#sortTodoBypriority(priorityTodos)
-        scheduledTodos = this.#sortTodoByDate(scheduledTodos)
-
-        this.#getComponentListPriority().list = priorityTodos
-        this.#getComponentListScheduled().list = scheduledTodos
-    }
-
-    #sortTodoBypriority(todos: Todo[]) {
-        return todos.sort((a, b) => {
-            const aLevel = this.#priorityOrder[Object.keys(a.priority)[0] as keyof TodoPriority];
-            const bLevel = this.#priorityOrder[Object.keys(b.priority)[0] as keyof TodoPriority];
-            return bLevel - aLevel; // descending (high → low)
-        });
-    }
-
-    #sortTodoByDate(todos: Todo[]) {
-        return todos.sort((a, b) => Number(a.scheduledDate) - Number(b.scheduledDate))
-    }
 }
 
-export const listStore = new ListStore(await DB.getDB())
+export const listStore = new ListStore()

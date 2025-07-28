@@ -1,33 +1,25 @@
 import { listStoreName, todoStoreName } from "./store_names";
 
 class OrganizerDB {
-    #db!: IDBDatabase;
-    #name: string = "organizerDB";
+    static #name: string = "organizerDB";
 
-    async getDB(): Promise<IDBDatabase> {
-        if (!this.#db) {
-            await this.init();
-        }
-
-        return this.#db;
-    }
-
-    async init(): Promise<IDBDatabase> {
+    static async init(): Promise<IDBDatabase> {
         return new Promise((resolve, reject) => {
-            const request: IDBOpenDBRequest = indexedDB.open(this.#name, 1);
+            const req: IDBOpenDBRequest = indexedDB.open(this.#name, 1);
+            let db: IDBDatabase
 
-            request.onupgradeneeded = (event: IDBVersionChangeEvent) => {
-                this.#db = (event.target as IDBOpenDBRequest).result;
-                this.#db.createObjectStore(todoStoreName, { keyPath: "uuid" });
-                this.#db.createObjectStore(listStoreName, { keyPath: "uuid" });
+            req.onupgradeneeded = (event: IDBVersionChangeEvent) => {
+                db = (event.target as IDBOpenDBRequest).result;
+                db.createObjectStore(todoStoreName, { keyPath: "uuid" });
+                db.createObjectStore(listStoreName, { keyPath: "uuid" });
             };
 
-            request.onsuccess = (event: Event) => {
-                this.#db = (event.target as IDBOpenDBRequest).result;
-                resolve(this.#db);
+            req.onsuccess = (event: Event) => {
+                db = (event.target as IDBOpenDBRequest).result;
+                resolve(db);
             };
 
-            request.onerror = (event: Event) => {
+            req.onerror = (event: Event) => {
                 console.error("IndexedDB error:", (event.target as IDBOpenDBRequest).error);
                 reject((event.target as IDBOpenDBRequest).error);
             };
@@ -35,4 +27,6 @@ class OrganizerDB {
     }
 }
 
-export const DB = new OrganizerDB();
+// indexedDB.deleteDatabase("organizerDB");
+
+export const DB = await OrganizerDB.init();

@@ -4,6 +4,7 @@ import { closeModal } from "../../../components/modal";
 import { enumValues } from "../../../utils/enums";
 import { Todo, TodoPriority, todoPriorityValues } from "../models/todo";
 import { stringToEpoch } from "../../../utils/date";
+import { getTodoPage } from "./component_todo_page";
 
 class ComponentTodoForm extends HTMLElement {
     todo: Todo | null = null;
@@ -41,7 +42,8 @@ class ComponentTodoForm extends HTMLElement {
                 priority:   priorityValue === "low" ? { low: null } :
                             priorityValue === "medium" ? { medium: null } :
                             { high: null },
-                status: { 'pending' : null }
+                status: { 'pending' : null },
+                listUUID: formData.get("todoListUUID") as string
             });
 
             // update or create new todo
@@ -49,7 +51,10 @@ class ComponentTodoForm extends HTMLElement {
                 todoStore.updateTodo(todo);     
             } else {
                 todoStore.addTodo(todo);
-            }            
+            }
+
+            // update the todo page
+            getTodoPage().update();
 
             // hide popover
             closeModal()

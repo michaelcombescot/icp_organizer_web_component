@@ -22,13 +22,6 @@ class ComponentTodo extends HTMLElement {
         this.#render();
     }
 
-    #bindEvents(): void {
-        this.querySelector("#todo-resume")!.addEventListener("click", () => this.#handleOpenShow());
-        this.querySelector("#todo-action-done")!.addEventListener("click", () => this.#handleDone());
-        this.querySelector("#todo-action-edit")!.addEventListener("click", () => this.#handleOpenEdit());
-        this.querySelector("#todo-action-delete")!.addEventListener("click", () => this.#handleDelete());
-    }
-
     #handleDone(): void { this.querySelector(`#${this.#todo.uuid}`)!.classList.toggle("done") }
 
     #handleOpenEdit(): void { openModalWithElement(new ComponentTodoForm(this.#todo)) }
@@ -36,12 +29,8 @@ class ComponentTodo extends HTMLElement {
     #handleOpenShow(): void { openModalWithElement(new ComponentTodoShow(this.#todo)) }
 
     #handleDelete(): void {
-        todoStore.deleteTodo(this.#todo!.uuid);
-    }
-
-    handleUpdate(todo: Todo): void {
-        this.#todo = todo;
-        this.#render();
+        todoStore.deleteTodo(this.#todo.uuid)
+        this.remove();
     }
 
     #render() {
@@ -93,7 +82,10 @@ class ComponentTodo extends HTMLElement {
             </style>
         `
 
-        this.#bindEvents();
+        this.querySelector("#todo-resume")!.addEventListener("click", () => this.#handleOpenShow());
+        this.querySelector("#todo-action-done")!.addEventListener("click", () => this.#handleDone());
+        this.querySelector("#todo-action-edit")!.addEventListener("click", () => this.#handleOpenEdit());
+        this.querySelector("#todo-action-delete")!.addEventListener("click", () => this.#handleDelete());
     }
 }
 

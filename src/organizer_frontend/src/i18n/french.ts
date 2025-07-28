@@ -40,4 +40,5 @@ export const french: Language = {
     todoListFormFieldNamePlaceholder: "Nom de la liste",
     todoListFormFieldColor: "Couleur",
     todoListFormInputSubmit: "Enregistrer",
+    todoListFormSubmitButton: "Enregistrer",
 }

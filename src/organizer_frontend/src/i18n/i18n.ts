@@ -13,7 +13,9 @@ export interface Language {
 
     // homepage
     todoCreateNewButton: string
+    todoListCreateButton: string
 
+    // todo form
     todoFormTitleNew: string
     todoFormTitleEdit: string
     todoFormFieldResume: string
@@ -27,13 +29,12 @@ export interface Language {
     todoFormStatuses: Record<string, string>
     todoFormInputSubmit: string
 
-    // lists
-    todoListCreateButton: string
-
+    // list form
     todoListFormTitleNew: string,
     todoListFormTitleEdit: string,
     todoListFormFieldName: string,
     todoListFormFieldNamePlaceholder: string,
     todoListFormFieldColor: string,
     todoListFormInputSubmit: string,
+    todoListFormSubmitButton: string
 }

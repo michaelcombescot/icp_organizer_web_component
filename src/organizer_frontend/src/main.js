@@ -7,7 +7,6 @@ import './index.scss';
 
 
 (async () => {
-    await DB.init();
     dayjs.locale(navigator.language || navigator.languages[0]);
     dayjs.extend(relativeTime);
 })();

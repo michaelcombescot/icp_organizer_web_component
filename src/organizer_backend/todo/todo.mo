@@ -11,6 +11,7 @@ module {
         priority: TodoPriority;
         status: TodoStatus;
         createdAt: Time.Time;
+        todoListUUID: Text;
     };
 
     type TodoPriority = {
@@ -29,6 +30,5 @@ module {
         uuid: Text;
         name: Text;
         color: Text;
-        todosUUIDs: [Text];
     } 
 }

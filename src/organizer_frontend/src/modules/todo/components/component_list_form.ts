@@ -29,15 +29,15 @@ export class ComponentListForm extends HTMLElement {
             const formData = new FormData(formElement);
             formElement.reset();
 
-            const list = new List(
-                this.#list ? this.#list.uuid : crypto.randomUUID(),
-                formData.get("name") as string,
-                formData.get("color") as string
-            );
+            const list = new List({
+                uuid:this.#list ? this.#list.uuid : crypto.randomUUID(),
+                name: formData.get("name") as string,
+                color: formData.get("color") as string
+            });
 
             // update or create new todo
             if (this.#isEditMode) {
-                listStore.updateList(list);     
+                // listStore.updateList(list);     
             } else {
                 listStore.addList(list);
             }            
@@ -57,6 +57,8 @@ export class ComponentListForm extends HTMLElement {
 
                     <label for="color">${i18n.todoListFormFieldColor}</label>
                     <input type="color" name="color" placeholder="List color">
+
+                    <input type="submit" value="${i18n.todoListFormSubmitButton}">
                 </form>
             </div>
 

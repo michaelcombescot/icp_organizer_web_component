@@ -4,152 +4,94 @@ import { Todo } from "./todo";
 import { ComponentTodoList } from "../components/component_todo_list";
 import { TodoPriority } from "./todo";
 import { actor } from "../../../components/auth/auth";
+import { listStore } from "./list_store";
 
 class TodoStore {
-    #dbConn: IDBDatabase
+    constructor() {}
 
-    #priorityOrder: Record<keyof TodoPriority, number> = {
-        low: 0,
-        medium: 1,
-        high: 2,
-    };
+    async getTodos(fromBackend = false): Promise<Todo[]> {
+        return new Promise(async (resolve, reject) => {
+            let todos: Todo[] = [];
 
-    #getComponentListPriority() { return document.querySelector("#todo-list-priority") as ComponentTodoList }
-    #getComponentListScheduled() { return document.querySelector("#todo-list-scheduled") as ComponentTodoList }
+            if (fromBackend) {
+                // try {
+                //     const todos = await actor.getTodos();
+                //     resolve(todos);
+                // } catch (error) {
+                //     console.error("Failed to get todos:", error);
+                //     reject(error);
+                // }
+            }
 
-    constructor(db: IDBDatabase) {
-        this.#dbConn = db;
+            // get Todos from indexedDB
+            const store = DB.transaction([todoStoreName], "readonly").objectStore(todoStoreName);
+            const req = store.getAll();
+
+            req.onsuccess = async () => {
+                req.result.map((item) => todos.push(new Todo(item)))
+
+                const lists = await listStore.getLists()
+                todos.forEach((todo) => todo.list = lists.find((list) => list.uuid === todo.listUUID));
+
+                resolve(todos)
+            }
+            req.onerror = () => { reject(req.error) }
+        })
     }
 
-    loadStore() {
-        this.#updateUI();
-    }
-
-    async addTodo(todo: Todo) {
-        // save to backend
-        try {
-            await actor.addTodo(todo);
-        } catch (error) {
-            console.error("Failed to add todo:", error);
-            return
-        }
-
-        // add to db
-        const transaction = this.#dbConn.transaction([todoStoreName], "readwrite");
-        const store = transaction.objectStore(todoStoreName);
-        store.add(todo);
-
-        transaction.oncomplete = () => {
-            this.#updateUI()
-        };
-        transaction.onerror = () => {
-            console.error("IndexedDB error:", transaction.error);
-        };
-    }
-
-    async deleteTodo(uuid: string) {
-        // delete from backend
-        try {
-            await actor.removeTodo(uuid);
-        } catch (error) {
-            console.error("Failed to add todo:", error);
-            return
-        }
-
-        const transaction = this.#dbConn.transaction([todoStoreName], "readwrite");
-        const store = transaction.objectStore(todoStoreName);
-        store.delete(uuid);
-
-        transaction.oncomplete = () => {
-            document.querySelector(`#todo-${uuid}`)!.remove();
-        };
-        transaction.onerror = () => {
-            console.error("IndexedDB error:", transaction.error);
-        };
-    }
-
-    async updateTodo(todo: Todo) {
-        // delete from backend
-        try {
-            await actor.updateTodo(todo);
-        } catch (error) {
-            console.error("Failed to add todo:", error);
-            return
-        }
-
-        // update db
-        const transaction = this.#dbConn.transaction([todoStoreName], "readwrite");
-        const store = transaction.objectStore(todoStoreName);
-        store.put(todo);
-
-        transaction.oncomplete = () => {
-            this.#updateUI()
-        };
-        transaction.onerror = () => {
-            console.error("IndexedDB error:", transaction.error);
-        };
-    }
-
-    async getTodos(): Promise<Todo[]> {
+    async addTodo(todo: Todo) : Promise<void> {
         return new Promise((resolve, reject) => {
-            const transaction = this.#dbConn.transaction([todoStoreName], "readonly");
-            const store = transaction.objectStore(todoStoreName);
-            const todos: Todo[] = [];
+            // save to backend
+            // try {
+            //     await actor.addTodo(todo);
+            // } catch (error) {
+            //     console.error("Failed to add todo:", error);
+            //     return
+            // }
 
-            store.openCursor().onsuccess = (event) => {
-                const cursor = (event.target as IDBRequest).result
-                if (cursor) {
-                    const value = cursor.value as Todo;
-                    todos.push(new Todo(cursor.value));
-                    cursor.continue();
-                }
-            };
-
-            transaction.onerror = () => {
-                reject(transaction.error);
-            };
-
-            transaction.oncomplete = () => {
-                resolve(todos);
-            }
-        });
+            // indexedDB
+            const transaction = DB.transaction([todoStoreName], "readwrite");
+            const req = transaction.objectStore(todoStoreName).add(todo);
+            req.onsuccess = () => { resolve() }
+            req.onerror = () => { reject(req.error) }  
+        })
     }
 
+    async updateTodo(todo: Todo) : Promise<void> {
+        return new Promise((resolve, reject) => {
+            // delete from backend
+            // try {
+            //     await actor.updateTodo(todo);
+            // } catch (error) {
+            //     console.error("Failed to add todo:", error);
+            //     return
+            // }
 
-    // this function handle a reload of everything in the page
-    // for a first version it's way easier for handling ordering/editing, especially when the priority or date is changed/removed
-    // it can probably stay like this forever, I don't think there will be performances issues even whith hundreds of todos
-    async #updateUI() {
-        const todos = await this.getTodos()
-        let priorityTodos: Todo[] = []
-        let scheduledTodos: Todo[] = []
-
-        for ( const todo of todos ) {
-            if (!todo.scheduledDate) {
-                priorityTodos.push(todo)
-            } else {
-                scheduledTodos.push(todo)
-            }
-        }
-
-        priorityTodos = this.#sortTodoBypriority(priorityTodos)
-        scheduledTodos = this.#sortTodoByDate(scheduledTodos)
-
-        this.#getComponentListPriority().list = priorityTodos
-        this.#getComponentListScheduled().list = scheduledTodos
+            // indexedDB
+            const transaction = DB.transaction([todoStoreName], "readwrite");
+            const req = transaction.objectStore(todoStoreName).put(todo);
+            req.onsuccess = () => { resolve() }
+            req.onerror = () => { reject(req.error) };  
+        })
     }
 
-    #sortTodoBypriority(todos: Todo[]) {
-        return todos.sort((a, b) => {
-            const aLevel = this.#priorityOrder[Object.keys(a.priority)[0] as keyof TodoPriority];
-            const bLevel = this.#priorityOrder[Object.keys(b.priority)[0] as keyof TodoPriority];
-            return bLevel - aLevel; // descending (high → low)
-        });
-    }
+    async deleteTodo(uuid: string) : Promise<void> {
+        return new Promise((resolve, reject) => {
+            // delete from backend
+            // try {
+            //     await actor.removeTodo(uuid);
+            // } catch (error) {
+            //     console.error("Failed to add todo:", error);
+            //     return
+            // }
 
-    #sortTodoByDate(todos: Todo[]) {
-        return todos.sort((a, b) => Number(a.scheduledDate) - Number(b.scheduledDate))
+            // indexedDB
+            const transaction = DB.transaction([todoStoreName], "readwrite")
+            const req = transaction.objectStore(todoStoreName).delete(uuid);
+            req.onsuccess = () => { resolve() }
+            req.onerror = () => { reject(req.error) };    
+        })
     }
 }
 
-export const todoStore = new TodoStore(await DB.getDB())
+export const todoStore = new TodoStore()

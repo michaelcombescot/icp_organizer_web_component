@@ -24,7 +24,7 @@ class ComponentTodo extends HTMLElement {
 
     #handleDone(): void { this.querySelector(`#${this.#todo.uuid}`)!.classList.toggle("done") }
 
-    #handleOpenEdit(): void { openModalWithElement(new ComponentTodoForm(this.#todo)) }
+    #handleOpenEdit(): void { openModalWithElement(new ComponentTodoForm(this.#todo, this.#todo.listUUID)) }
 
     #handleOpenShow(): void { openModalWithElement(new ComponentTodoShow(this.#todo)) }
 

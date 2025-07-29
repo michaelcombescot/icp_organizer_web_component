@@ -27,6 +27,7 @@ export interface Language {
     todoFormPriorities: Record<string, string>
     todoFormFieldStatus: string
     todoFormStatuses: Record<string, string>
+    todoFormFieldList: string
     todoFormInputSubmit: string
 
     // list form
@@ -36,5 +37,4 @@ export interface Language {
     todoListFormFieldNamePlaceholder: string,
     todoListFormFieldColor: string,
     todoListFormInputSubmit: string,
-    todoListFormSubmitButton: string
 }

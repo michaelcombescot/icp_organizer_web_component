@@ -29,6 +29,7 @@ export const french: Language = {
         "pending": "En cours",
         "done": "Terminee"
     },
+    todoFormFieldList: "Liste",
     todoFormInputSubmit: "Enregistrer",
 
     // lists
@@ -40,5 +41,4 @@ export const french: Language = {
     todoListFormFieldNamePlaceholder: "Nom de la liste",
     todoListFormFieldColor: "Couleur",
     todoListFormInputSubmit: "Enregistrer",
-    todoListFormSubmitButton: "Enregistrer",
 }

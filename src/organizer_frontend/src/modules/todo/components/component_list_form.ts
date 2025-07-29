@@ -2,6 +2,7 @@ import { i18n } from "../../../i18n/i18n";
 import { List } from "../models/list";
 import { closeModal } from "../../../components/modal";
 import { listStore } from "../models/list_store";
+import { getTodoPage } from "./component_todo_page";
 
 export class ComponentListForm extends HTMLElement {
     #list: List | null = null
@@ -15,10 +16,6 @@ export class ComponentListForm extends HTMLElement {
 
     connectedCallback() {
         this.#render();
-    }
-
-    #bindEvents() {
-        this.querySelector("#list-form-form")!.addEventListener("submit", (e) => this.#handleSubmitForm(e))
     }
 
     async #handleSubmitForm(e : Event) {
@@ -40,6 +37,7 @@ export class ComponentListForm extends HTMLElement {
                 // listStore.updateList(list);     
             } else {
                 listStore.addList(list);
+                getTodoPage().updateListSelector();
             }            
 
             // hide popover
@@ -58,7 +56,7 @@ export class ComponentListForm extends HTMLElement {
                     <label for="color">${i18n.todoListFormFieldColor}</label>
                     <input type="color" name="color" placeholder="List color">
 
-                    <input type="submit" value="${i18n.todoListFormSubmitButton}">
+                    <input type="submit" value="${i18n.todoListFormInputSubmit}">
                 </form>
             </div>
 
@@ -79,6 +77,8 @@ export class ComponentListForm extends HTMLElement {
                 }
             </style>
         `
+
+        this.querySelector("#list-form-form")!.addEventListener("submit", (e) => this.#handleSubmitForm(e))
     }
 }
 

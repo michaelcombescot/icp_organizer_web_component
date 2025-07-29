@@ -5,15 +5,18 @@ import { enumValues } from "../../../utils/enums";
 import { Todo, TodoPriority, todoPriorityValues } from "../models/todo";
 import { stringToEpoch } from "../../../utils/date";
 import { getTodoPage } from "./component_todo_page";
+import { listStore } from "../models/list_store";
 
 class ComponentTodoForm extends HTMLElement {
     todo: Todo | null = null;
     isEditMode: boolean = false;
+    currentListUUID: string
 
-    constructor(todo : Todo | null) {
+    constructor(todo : Todo | null, currentListUUID : string) {
         super();
         this.todo = todo;
         this.isEditMode = !!todo;
+        this.currentListUUID = currentListUUID
     }
 
     connectedCallback() {
@@ -43,7 +46,7 @@ class ComponentTodoForm extends HTMLElement {
                             priorityValue === "medium" ? { medium: null } :
                             { high: null },
                 status: { 'pending' : null },
-                listUUID: formData.get("todoListUUID") as string
+                listUUID: formData.get("listUUID") as string
             });
 
             // update or create new todo
@@ -64,10 +67,12 @@ class ComponentTodoForm extends HTMLElement {
     // RENDER
     //
 
-    #render() {
+    async #render() {
         const priorityValue = this.todo ?
                                 Object.keys(this.todo!.priority)[0]
                                 : "medium";
+
+        const lists = await listStore.getLists()
 
         this.innerHTML = /*html*/`
             <div id="todo-form">
@@ -91,6 +96,20 @@ class ComponentTodoForm extends HTMLElement {
                                     ${i18n.todoFormPriorities[value]}
                                 </option>
                             `)
+                        }
+                    </select>
+
+                    <label for="listUUID">${i18n.todoFormFieldList}</label>
+                    <select name="listUUID">
+                        <option value=""></option>
+                        ${
+                            lists.map( list => 
+                                /*html*/`
+                                    <option value="${list.uuid}" ${list.uuid === this.todo?.listUUID || list.uuid === this.currentListUUID ? "selected" : ""}>
+                                        ${list.name}
+                                    </option>
+                                `
+                            )
                         }
                     </select>
                     

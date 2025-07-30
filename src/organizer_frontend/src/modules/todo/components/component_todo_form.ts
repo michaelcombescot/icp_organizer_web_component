@@ -68,7 +68,7 @@ class ComponentTodoForm extends HTMLElement {
     async #render() {
         const priorityValue = this.todo ?
                                 Object.keys(this.todo!.priority)[0]
-                                : "medium";
+                                : "low";
 
         const lists = await listStore.getLists()
 

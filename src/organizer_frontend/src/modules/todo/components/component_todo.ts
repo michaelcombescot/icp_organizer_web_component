@@ -40,7 +40,7 @@ class ComponentTodo extends HTMLElement {
                         </div>
                     ` : ""
                 }
-                <div id="todo-item-resume" class="${this.#todo.priority}">${this.#todo!.resume}</div>
+                <div id="todo-item-resume" class="${Object.keys(this.#todo.priority)[0]}">${this.#todo!.resume}</div>
                 <div id="todo-item-actions">
                     <button id="todo-item-action-edit">Edit</button>
                     <button id="todo-item-action-delete">Delete</button>
@@ -65,13 +65,13 @@ class ComponentTodo extends HTMLElement {
                         justify-content: space-between;
                     }
 
-                    .todo-date {
+                    #todo-item-date {
                         display: flex;
                         gap: 1em;
                         justify-content: space-between;
                     }
 
-                    .todo-resume {
+                    #todo-item-resume {
                         &.high { background-color: red; }
                         &.medium { background-color: yellow; }
                     }

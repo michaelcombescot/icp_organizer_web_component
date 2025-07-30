@@ -1,0 +1,1 @@
+export const cardFontSize = "0.7em"

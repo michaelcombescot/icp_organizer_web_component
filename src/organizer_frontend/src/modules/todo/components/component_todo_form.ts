@@ -2,7 +2,7 @@ import { i18n } from "../../../i18n/i18n";
 import { todoStore } from "../models/todo_store";
 import { closeModal } from "../../../components/modal";
 import { enumValues } from "../../../utils/enums";
-import { Todo, TodoPriority, todoPriorityValues } from "../models/todo";
+import { Todo, priorityValues } from "../models/todo";
 import { stringToEpoch } from "../../../utils/date";
 import { getTodoPage } from "./component_todo_page";
 import { listStore } from "../models/list_store";
@@ -35,15 +35,13 @@ class ComponentTodoForm extends HTMLElement {
             const formData = new FormData(formElement);
             formElement.reset();
 
-            const priorityValue = formData.get("priority") as keyof TodoPriority
-
             const todo = new Todo({
                 uuid: this.todo ? this.todo.uuid : crypto.randomUUID(),
                 resume: formData.get("resume") as string,
                 description: formData.get("description") as string,
                 scheduledDate: stringToEpoch(formData.get("scheduledDate") as string),
-                priority:   priorityValue === "low" ? { low: null } :
-                            priorityValue === "medium" ? { medium: null } :
+                priority:   formData.get("priority") === "low" ? { low: null } :
+                            formData.get("priority") === "medium" ? { medium: null } :
                             { high: null },
                 status: { 'pending' : null },
                 listUUID: formData.get("listUUID") as string
@@ -91,7 +89,7 @@ class ComponentTodoForm extends HTMLElement {
                     <label for="priority">${i18n.todoFormFieldPriority}</label>
                     <select name="priority">
                         ${
-                            todoPriorityValues.map( value => /*html*/`
+                            priorityValues.map( value => /*html*/`
                                 <option value="${value}" ${value === priorityValue ? "selected" : ""}>
                                     ${i18n.todoFormPriorities[value]}
                                 </option>

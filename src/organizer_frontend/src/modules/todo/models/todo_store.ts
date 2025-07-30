@@ -1,8 +1,6 @@
 import { todoStoreName } from "../../../db/store_names";
 import { DB } from "../../../db/db";
 import { Todo } from "./todo";
-import { ComponentTodoList } from "../components/component_todo_list";
-import { TodoPriority } from "./todo";
 import { actor } from "../../../components/auth/auth";
 import { listStore } from "./list_store";
 

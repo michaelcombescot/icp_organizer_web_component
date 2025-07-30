@@ -11,7 +11,7 @@ import { ComponentTodoList } from "./component_todo_list";
 class ComponentTodoPage extends HTMLElement {
     #currentListUUID: string
     set currentListUUID(listUUID: string) {
-        this.#currentListUUID = listUUID        
+        this.#currentListUUID = listUUID
         this.update()
     }
 
@@ -42,17 +42,9 @@ class ComponentTodoPage extends HTMLElement {
             }
         }
 
+        // update lists
         (this.querySelector("#todo-list-priority")! as ComponentTodoList).list = sortByPriority(priorityTodos);
         (this.querySelector("#todo-list-scheduled")! as ComponentTodoList).list = sortByScheduledDate(scheduledTodos);
-    }
-
-    async updateListSelector() {
-        const lists = await listStore.getLists()
-        const select = this.querySelector("#todo-select-list")! as HTMLSelectElement
-        select.innerHTML = ""
-
-        select.append( new Option("", "") )
-        lists.forEach( element => select.append( new Option(element.name, element.uuid) ) );
     }
 
     #render() {
@@ -63,8 +55,7 @@ class ComponentTodoPage extends HTMLElement {
                     <button id="todo-open-modal-new-list">${ i18n.todoListCreateButton }</button>
                 </div>
 
-                <select id="todo-select-list" name="todo-select-list">
-                </select>
+                <component-lists-cards id="component-lists-card"></component-lists-cards>
 
                 <div id="todo-lists">
                     <component-todo-list id="todo-list-priority" listType="priority"></component-todo-list>
@@ -76,7 +67,7 @@ class ComponentTodoPage extends HTMLElement {
                 #todo-page {
                     display: flex;
                     flex-direction: column;
-                    gap: 2em;
+                    gap: 1.5em;
 
                     #todo-page-buttons {
                         display: flex
@@ -110,9 +101,6 @@ class ComponentTodoPage extends HTMLElement {
 
         this.querySelector("#todo-open-modal-new-task")!.addEventListener("click", () => openModalWithElement(new ComponentTodoForm(null, this.#currentListUUID)))
         this.querySelector("#todo-open-modal-new-list")!.addEventListener("click", () => openModalWithElement(new ComponentListForm(null)))
-        this.querySelector("#todo-select-list")!.addEventListener("change", (e) => this.currentListUUID = (e.target as HTMLSelectElement).value)
-
-        this.updateListSelector()
     }
 }
 

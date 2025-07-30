@@ -38,8 +38,6 @@ class ComponentTodoList extends HTMLElement {
                     display: flex;
                     flex-direction: column;
                     gap: 1em;
-                    padding: 1em;
-                    background-color: rgb(3, 252, 194, 0.1); 
                 }
 
                 .todo-list-items {
@@ -51,7 +49,10 @@ class ComponentTodoList extends HTMLElement {
         `;
 
         this.#list.forEach(item => {
-            this.querySelector(".todo-list-items")!.appendChild(new ComponentTodo(item))
+            const newTodo = new ComponentTodo(item)
+            newTodo.setAttribute("data-uuid", item.uuid)
+            newTodo.setAttribute("data-list-uuid", item.listUUID)
+            this.querySelector(".todo-list-items")!.appendChild(newTodo)
         })
     }
 }

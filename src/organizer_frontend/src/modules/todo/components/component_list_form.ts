@@ -2,7 +2,8 @@ import { i18n } from "../../../i18n/i18n";
 import { List } from "../models/list";
 import { closeModal } from "../../../components/modal";
 import { listStore } from "../models/list_store";
-import { getTodoPage } from "./component_todo_page";
+import { getListsCards } from "./component_list_cards";
+import { ComponentListCard } from "./component_list_card";
 
 export class ComponentListForm extends HTMLElement {
     #list: List | null = null
@@ -34,10 +35,11 @@ export class ComponentListForm extends HTMLElement {
 
             // update or create new todo
             if (this.#isEditMode) {
-                // listStore.updateList(list);     
+                await listStore.updateList(list);
+                (document.querySelector(`[data-uuid="${list.uuid}"]`)! as ComponentListCard).update(list);
             } else {
-                listStore.addList(list);
-                getTodoPage().updateListSelector();
+                await listStore.addList(list);
+                getListsCards().update();
             }            
 
             // hide popover
@@ -47,14 +49,14 @@ export class ComponentListForm extends HTMLElement {
     #render() {
         this.innerHTML = /*html*/`
             <div id="list-form">
-                <h2>Create a new list</h2>
+                ${this.#isEditMode ? `<h2>${i18n.todoListFormTitleEdit}</h2>` : `<h2>${i18n.todoListFormTitleNew}</h2>`}
 
                 <form id="list-form-form">
-                    <label for="name">${i18n.todoListFormFieldName}</label>
-                    <input type="text" name="name" placeholder="${i18n.todoListFormFieldNamePlaceholder}">
+                    <label for="name" class="required">${i18n.todoListFormFieldName}</label>
+                    <input type="text" name="name" value="${this.#list ? this.#list.name : ""}" required>
 
-                    <label for="color">${i18n.todoListFormFieldColor}</label>
-                    <input type="color" name="color" placeholder="List color">
+                    <label for="color" class="required">${i18n.todoListFormFieldColor}</label>
+                    <input type="color" name="color" value="${this.#list ? this.#list.color : "#000000"}">
 
                     <input type="submit" value="${i18n.todoListFormInputSubmit}">
                 </form>
@@ -73,6 +75,10 @@ export class ComponentListForm extends HTMLElement {
                         gap: 1em;
                         width: 70vw;
                         max-width: 60em;
+
+                        .required::after { content: "*"; color: red; }
+
+                        input[type="submit"] { grid-column: -2 / -1; justify-self: right;}
                     }
                 }
             </style>

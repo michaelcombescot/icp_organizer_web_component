@@ -41,4 +41,8 @@ export const french: Language = {
     todoListFormFieldNamePlaceholder: "Nom de la liste",
     todoListFormFieldColor: "Couleur",
     todoListFormInputSubmit: "Enregistrer",
+
+    // list card
+    todoListCardConfirmDelete: "Voulez-vous vraiment supprimer cette liste ? Cette action est irreversible et supprimera toutes les tâches associées.",
+    todoListCardSeeAll: "Voir toutes les tâches",
 }

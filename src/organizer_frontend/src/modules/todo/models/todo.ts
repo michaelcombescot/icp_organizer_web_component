@@ -1,5 +1,5 @@
 import dayjs from "../../../utils/date";
-import {organizer_backend} from "../../../../../declarations/organizer_backend";
+import { TodoPriority , TodoStatus } from "../../../../../declarations/organizer_backend/organizer_backend.did";
 import {List} from "./list";
 
 export interface TodoFormData {
@@ -13,11 +13,7 @@ export interface TodoFormData {
     list?: List
 }
 
-export type TodoPriority = Parameters<typeof organizer_backend.addTodo>[0]["priority"];
-export const todoPriorityValues = ['low', 'medium', 'high']
-
-export type TodoStatus = Parameters<typeof organizer_backend.addTodo>[0]["status"];
-
+export const priorityValues = ["low", "medium", "high"]
 
 export class Todo {
     uuid: string;

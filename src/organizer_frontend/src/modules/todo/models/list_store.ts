@@ -1,10 +1,9 @@
 import { todoStoreName } from "../../../db/store_names";
 import { DB } from "../../../db/db";
-import { ComponentTodoList } from "../components/component_todo_list";
-import { TodoPriority } from "./todo";
 import { actor } from "../../../components/auth/auth";
 import { List } from "./list";
 import { listStoreName } from "../../../db/store_names";
+import { todoStore } from "./todo_store";
 
 export class ListStore {
     constructor() {}
@@ -36,48 +35,52 @@ export class ListStore {
         })
     }
 
-    // async deleteTodo(uuid: string) {
-    //     // delete from backend
-    //     try {
-    //         await actor.removeTodo(uuid);
-    //     } catch (error) {
-    //         console.error("Failed to add todo:", error);
-    //         return
-    //     }
+    async deleteList(uuid: string) : Promise<void> {
+        const todos = await todoStore.getTodos();
 
-    //     const transaction = this.#dbConn.transaction([todoStoreName], "readwrite");
-    //     const store = transaction.objectStore(todoStoreName);
-    //     store.delete(uuid);
+        return new Promise(async (resolve, reject) => {
+            // delete from backend
+            // try {
+            //     await actor.removeTodo(uuid);
+            // } catch (error) {
+            //     console.error("Failed to add todo:", error);
+            //     return
+            // }
 
-    //     transaction.oncomplete = () => {
-    //         document.querySelector(`#todo-${uuid}`)!.remove();
-    //     };
-    //     transaction.onerror = () => {
-    //         console.error("IndexedDB error:", transaction.error);
-    //     };
-    // }
+            const transaction = DB.transaction([listStoreName, todoStoreName], "readwrite")
+            const listObjStore = transaction.objectStore(listStoreName);
+            const todoObjStore = transaction.objectStore(todoStoreName);
 
-    // async updateTodo(todo: Todo) {
-    //     // delete from backend
-    //     try {
-    //         await actor.updateTodo(todo);
-    //     } catch (error) {
-    //         console.error("Failed to add todo:", error);
-    //         return
-    //     }
+            listObjStore.delete(uuid);
 
-    //     // update db
-    //     const transaction = this.#dbConn.transaction([todoStoreName], "readwrite");
-    //     const store = transaction.objectStore(todoStoreName);
-    //     store.put(todo);
+            todos.forEach(todo => {
+                if (todo.listUUID === uuid) {
+                    todoObjStore.delete(todo.uuid);
+                }
+            });
+            
+            transaction.oncomplete = () => resolve();
+            transaction.onerror = () => reject(transaction.error);
+        })
+    }
 
-    //     transaction.oncomplete = () => {
-    //         this.#updateUI()
-    //     };
-    //     transaction.onerror = () => {
-    //         console.error("IndexedDB error:", transaction.error);
-    //     };
-    // }
+    async updateList(list: List) : Promise<void> {
+        return new Promise((resolve, reject) => {
+             // delete from backend
+            // try {
+            //     await actor.updateTodo(todo);
+            // } catch (error) {
+            //     console.error("Failed to add todo:", error);
+            //     return
+            // }
+
+            // update db
+            const store = DB.transaction([listStoreName], "readwrite").objectStore(listStoreName);
+            const req = store.put(list);
+            req.onsuccess = () => resolve()
+            req.onerror = () => reject(req.error)
+        })
+    }
 }
 
 export const listStore = new ListStore()

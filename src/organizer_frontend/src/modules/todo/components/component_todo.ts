@@ -14,6 +14,8 @@ class ComponentTodo extends HTMLElement {
 
     constructor(todo: Todo) {
         super()
+        this.attachShadow({ mode: "open" });
+
         this.#todo = todo
         this.id = `todo-${todo.uuid}`
     }
@@ -22,44 +24,39 @@ class ComponentTodo extends HTMLElement {
         this.#render();
     }
 
-    #handleDone(): void { this.querySelector(`#${this.#todo.uuid}`)!.classList.toggle("done") }
-
-    #handleOpenEdit(): void { openModalWithElement(new ComponentTodoForm(this.#todo, this.#todo.listUUID)) }
-
-    #handleOpenShow(): void { openModalWithElement(new ComponentTodoShow(this.#todo)) }
-
-    #handleDelete(): void {
-        todoStore.deleteTodo(this.#todo.uuid)
-        this.remove();
+    update(color: string) {
+        this.#todo.list!.color = color
+        this.#render()
     }
 
     #render() {
-        this.innerHTML = /*html*/`
-            <div class="todo-item">
+        this.shadowRoot!.innerHTML = /*html*/`
+            <div id="todo-item">
                 ${this.#todo.scheduledDate != BigInt(0) ?
                     /*html*/`
-                        <div id="todo-date">
+                        <div id="todo-item-date">
                             <span>${stringDateFromEpoch(this.#todo.scheduledDate)}</span>
                             <span>${remainingTimeFromEpoch(this.#todo.scheduledDate)}</span>
                         </div>
                     ` : ""
                 }
-                <div id="todo-resume" class="${this.#todo.priority}">${this.#todo!.resume}</div>
+                <div id="todo-item-resume" class="${this.#todo.priority}">${this.#todo!.resume}</div>
                 <div id="todo-item-actions">
-                    <button id="todo-action-edit">Edit</button>
-                    <button id="todo-action-delete">Delete</button>
-                    <button id="todo-action-done">Done</button>
+                    <button id="todo-item-action-edit">Edit</button>
+                    <button id="todo-item-action-delete">Delete</button>
+                    <button id="todo-item-action-done">Done</button>
                 </div>
             </div>
 
             <style>
-                .todo-item {
+                #todo-item {
                     box-sizing: border-box;
                     display: flex;
                     flex-direction: column;
                     gap: 1em;
                     background-color: white;
                     padding: 1em;
+                    border: 3px solid ${this.#todo.list?.color || "black"};
                     
                     &.done { background-color: green; }
                     
@@ -82,10 +79,16 @@ class ComponentTodo extends HTMLElement {
             </style>
         `
 
-        this.querySelector("#todo-resume")!.addEventListener("click", () => this.#handleOpenShow());
-        this.querySelector("#todo-action-done")!.addEventListener("click", () => this.#handleDone());
-        this.querySelector("#todo-action-edit")!.addEventListener("click", () => this.#handleOpenEdit());
-        this.querySelector("#todo-action-delete")!.addEventListener("click", () => this.#handleDelete());
+        this.shadowRoot!.querySelector("#todo-item-resume")!.addEventListener("click", () => openModalWithElement(new ComponentTodoShow(this.#todo)) );
+
+        this.shadowRoot!.querySelector("#todo-item-action-done")!.addEventListener("click", () => this.querySelector(`#${this.#todo.uuid}`)!.classList.toggle("done") );
+
+        this.shadowRoot!.querySelector("#todo-item-action-edit")!.addEventListener("click", () => openModalWithElement(new ComponentTodoForm(this.#todo, this.#todo.listUUID))  );
+
+        this.shadowRoot!.querySelector("#todo-item-action-delete")!.addEventListener("click", () => {
+            todoStore.deleteTodo(this.#todo.uuid)
+            this.remove();
+        });
     }
 }
 

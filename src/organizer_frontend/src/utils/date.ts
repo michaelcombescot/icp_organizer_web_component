@@ -18,3 +18,7 @@ export function remainingTimeFromEpoch(dateEpoch: bigint): string {
 export function stringDateFromEpoch(dateEpoch: bigint): string {
         return dayjs(Number(dateEpoch)).format("DD/MM/YYYY HH:mm")
     }
+
+export function epochToStringRFC3339(dateEpoch: bigint): string {
+    return dayjs(Number(dateEpoch)).format("YYYY-MM-DDTHH:mm:ss")
+}

@@ -1,11 +1,11 @@
 import { i18n } from "../../../i18n/i18n";
 import { todoStore } from "../models/todo_store";
 import { closeModal } from "../../../components/modal";
-import { enumValues } from "../../../utils/enums";
 import { Todo, priorityValues } from "../models/todo";
 import { stringToEpoch } from "../../../utils/date";
 import { getTodoPage } from "./component_todo_page";
 import { listStore } from "../models/list_store";
+import { epochToStringRFC3339 } from "../../../utils/date";
 
 class ComponentTodoForm extends HTMLElement {
     todo: Todo | null = null;
@@ -84,7 +84,7 @@ class ComponentTodoForm extends HTMLElement {
                     <textarea type="text" name="description" placeholder="${i18n.todoFormFieldDescriptionPlaceholder}">${this.todo?.description ||  ""}</textarea>
 
                     <label for="scheduledDate">${i18n.todoFormFieldScheduledDate}</label>
-                    <input type="datetime-local" name="scheduledDate" value="${this.todo?.scheduledDate ||  ""}" />
+                    <input type="datetime-local" name="scheduledDate" value="${this.todo?.scheduledDate ? epochToStringRFC3339(this.todo.scheduledDate) : ""}" />
 
                     <label for="priority">${i18n.todoFormFieldPriority}</label>
                     <select name="priority">

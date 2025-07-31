@@ -36,10 +36,12 @@ export class ComponentListForm extends HTMLElement {
             // update or create new todo
             if (this.#isEditMode) {
                 await listStore.updateList(list);
-                (document.querySelector(`[data-uuid="${list.uuid}"]`)! as ComponentListCard).update(list);
+                (document.querySelector(`[data-uuid="${list.uuid}"]`)! as ComponentListCard).list = list;
             } else {
                 await listStore.addList(list);
-                getListsCards().update();
+                let lists = getListsCards().lists
+                lists.push(list)
+                getListsCards().lists = lists
             }            
 
             // hide popover
@@ -49,8 +51,8 @@ export class ComponentListForm extends HTMLElement {
     #render() {
         this.innerHTML = /*html*/`
             <div id="list-form">
-                ${this.#isEditMode ? `<h2>${i18n.todoListFormTitleEdit}</h2>` : `<h2>${i18n.todoListFormTitleNew}</h2>`}
-
+                <h3>${this.#isEditMode ? i18n.todoListFormTitleEdit : i18n.todoListFormTitleNew}</h3>
+                
                 <form id="list-form-form">
                     <label for="name" class="required">${i18n.todoListFormFieldName}</label>
                     <input type="text" name="name" value="${this.#list ? this.#list.name : ""}" required>

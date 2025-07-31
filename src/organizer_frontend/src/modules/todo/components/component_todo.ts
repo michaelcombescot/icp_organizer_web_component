@@ -4,6 +4,7 @@ import { ComponentTodoForm } from "./component_todo_form";
 import { ComponentTodoShow } from "./component_todo_show";
 import { openModalWithElement } from "../../../components/modal";
 import { remainingTimeFromEpoch, stringDateFromEpoch } from "../../../utils/date";
+import { borderRadius } from "../models/css";
 
 class ComponentTodo extends HTMLElement {
     #todo: Todo
@@ -12,21 +13,22 @@ class ComponentTodo extends HTMLElement {
         this.#render()
     }
 
+    #color: string
+    set color(color: string) {
+        this.#todo.list!.color = color
+        this.#render()
+    }
+
     constructor(todo: Todo) {
         super()
         this.attachShadow({ mode: "open" });
 
         this.#todo = todo
-        this.id = `todo-${todo.uuid}`
+        this.#color = this.#todo.list!.color
     }
 
     connectedCallback() {
         this.#render();
-    }
-
-    update(color: string) {
-        this.#todo.list!.color = color
-        this.#render()
     }
 
     #render() {
@@ -42,9 +44,9 @@ class ComponentTodo extends HTMLElement {
                 }
                 <div id="todo-item-resume" class="${Object.keys(this.#todo.priority)[0]}">${this.#todo!.resume}</div>
                 <div id="todo-item-actions">
-                    <button id="todo-item-action-edit">Edit</button>
-                    <button id="todo-item-action-delete">Delete</button>
-                    <button id="todo-item-action-done">Done</button>
+                    <img id="todo-item-action-edit" src="/assets/edit.svg">
+                    <img id="todo-item-action-done" src="/assets/done.svg">
+                    <img id="todo-item-action-delete" src="/assets/trash.svg">
                 </div>
             </div>
 
@@ -54,15 +56,20 @@ class ComponentTodo extends HTMLElement {
                     display: flex;
                     flex-direction: column;
                     gap: 1em;
-                    background-color: white;
+                    background-color: ${this.#todo.list?.color || "#fefee2"};
                     padding: 1em;
-                    border: 3px solid ${this.#todo.list?.color || "black"};
+                    border-radius: ${borderRadius};
+    
                     
-                    &.done { background-color: green; }
-                    
-                    .todo-item-actions {
+                    #todo-item-actions {
                         display: flex;
                         justify-content: space-between;
+
+                        img {
+                            width: 1em;
+                            filter: brightness(0) invert(1);
+                            cursor: pointer;
+                        }
                     }
 
                     #todo-item-date {
@@ -72,6 +79,9 @@ class ComponentTodo extends HTMLElement {
                     }
 
                     #todo-item-resume {
+                        background-color: white;
+                        padding: 0.5em;
+                        border-radius: ${borderRadius};
                         &.high { background-color: red; }
                         &.medium { background-color: yellow; }
                     }

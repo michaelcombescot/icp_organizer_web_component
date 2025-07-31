@@ -5,34 +5,41 @@ import { listStore } from "../models/list_store";
 import { i18n } from "../../../i18n/i18n";
 import { getTodoPage } from "./component_todo_page";
 import { ComponentTodo } from "./component_todo";
-import { cardFontSize } from "../models/css";
+import { borderRadius, cardFontSize } from "../models/css";
+import { getListsCards } from "./component_list_cards";
 
 export class ComponentListCard extends HTMLElement {
     #list: List
+    set list(list: List) {
+        this.#list = list
+        this.#render()
 
-    constructor(list: List) {
+        document.querySelectorAll(`[data-list-uuid="${this.#list.uuid}"]`).forEach((todo) => {
+            (todo as ComponentTodo).color = this.#list.color
+        })
+    }
+
+    #isSelected: boolean
+    set isSelected(isSelected: boolean) {
+        getTodoPage().currentListUUID = this.#list.uuid
+        getListsCards().selectedListUUID = this.#list.uuid
+    }
+
+    constructor(list: List, isSelected: boolean) {
         super();
         this.attachShadow({ mode: "open" });
 
         this.#list = list
+        this.#isSelected = isSelected
     }
 
     connectedCallback() {
         this.#render();
     }
 
-    update(list: List) {
-        this.#list = list
-        this.#render()
-
-        document.querySelectorAll(`[data-list-uuid="${this.#list.uuid}"]`).forEach((todo) => {
-            (todo as ComponentTodo).update(this.#list.color)
-        })
-    }
-
     #render() {
         this.shadowRoot!.innerHTML = /*html*/`
-            <div class="todo-list-card" style="background-color: ${this.#list.color}">
+            <div class="todo-list-card ${this.#isSelected ? "selected" : ""}" style="background-color: ${this.#list.color}">
                 <span class="todo-list-card-name">${this.#list.name}</span>
                 <div class="todo-list-card-actions">
                     <img class="todo-list-card-edit" src="/assets/edit.svg">
@@ -49,7 +56,7 @@ export class ComponentListCard extends HTMLElement {
                     font-size: ${cardFontSize};
                     color: white;
                     padding: 0.5em;
-                    border-radius: 8px;
+                    border-radius: ${borderRadius};
 
                     .todo-list-card-name {
                         cursor: pointer;
@@ -66,13 +73,17 @@ export class ComponentListCard extends HTMLElement {
                             cursor: pointer;
                         }
                     }
+
+                    &.selected {
+                        transform: scale(1.2);
+                    }
                 }
             </style>
         `
 
         this.shadowRoot!.querySelector(".todo-list-card-name")!.addEventListener( "click", (e) => {
             e.stopPropagation()
-            getTodoPage().currentListUUID = this.#list.uuid
+            this.isSelected = true
         })
 
         this.shadowRoot!.querySelector(".todo-list-card-edit")!.addEventListener( "click", (e) => {

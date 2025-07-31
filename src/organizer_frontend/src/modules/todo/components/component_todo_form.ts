@@ -74,7 +74,7 @@ class ComponentTodoForm extends HTMLElement {
 
         this.innerHTML = /*html*/`
             <div id="todo-form">
-                <h2>${this.isEditMode ? i18n.todoFormTitleEdit : i18n.todoFormTitleNew}</h2>
+                <h3>${this.isEditMode ? i18n.todoFormTitleEdit : i18n.todoFormTitleNew}</h3>
 
                 <form id="todo-form-form">
                     <label for="resume" class="required">${i18n.todoFormFieldResume}</label>

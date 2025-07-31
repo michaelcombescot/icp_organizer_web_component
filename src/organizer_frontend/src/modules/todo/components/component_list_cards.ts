@@ -5,19 +5,27 @@ import { ComponentListCard } from "./component_list_card";
 import { getTodoPage } from "./component_todo_page";
 import { cardFontSize } from "../models/css";
 
-class ComponentListsCards extends HTMLElement {
+export class ComponentListsCards extends HTMLElement {
     #lists: List[]
+    get lists() { return this.#lists }
+    set lists(lists: List[]) {
+        this.#lists = lists 
+        this.#render()
+    }
+
+    #selectedListUUID = ""
+    set selectedListUUID(listUUID: string) {
+        this.#selectedListUUID = listUUID
+        this.#render()
+    }
 
     constructor() {
         super();
         this.#lists = []
+        this.#selectedListUUID = this.getAttribute("data-selected-list-uuid")!
     }
 
     connectedCallback() {
-        this.#render()
-    }
-
-    update() {
         this.#render()
     }
 
@@ -33,7 +41,7 @@ class ComponentListsCards extends HTMLElement {
                 #todo-lists-cards {
                     display: flex;
                     flex-wrap: wrap;
-                    gap: 0.5em;
+                    gap: 0.8em;
 
                     #todo-list-card-all {
                         font-size: ${cardFontSize};
@@ -47,12 +55,15 @@ class ComponentListsCards extends HTMLElement {
         `
 
         this.#lists.forEach(list => {
-            let newCard = new ComponentListCard(list)
+            let newCard = new ComponentListCard(list, this.#selectedListUUID === list.uuid)
             newCard.setAttribute("data-uuid", list.uuid)
             this.querySelector("#todo-lists-cards")!.appendChild(newCard)
         })
 
-        this.querySelector("#todo-list-card-all")!.addEventListener("click", element => getTodoPage().currentListUUID = "" )
+        this.querySelector("#todo-list-card-all")!.addEventListener("click", element => {
+            getTodoPage().currentListUUID = ""
+            this.selectedListUUID = ""
+        })
     }
 }
 

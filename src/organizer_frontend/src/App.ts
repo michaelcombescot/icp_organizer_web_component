@@ -55,7 +55,6 @@ class App extends HTMLElement {
                         justify-content: space-between;
                         align-items: center;
                         gap: 2em;
-                        background-color: rgb(3, 252, 194, 0.1);
 
                         #auth-links {
                             #login-button {

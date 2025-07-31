@@ -7,6 +7,7 @@ import { listStore } from "../models/list_store";
 import { ComponentListForm } from "./component_list_form";
 import { Todo, sortByPriority, sortByScheduledDate } from "../models/todo";
 import { ComponentTodoList } from "./component_todo_list";
+import { ComponentListsCards } from "./component_list_cards";
 
 class ComponentTodoPage extends HTMLElement {
     #currentListUUID: string
@@ -55,7 +56,7 @@ class ComponentTodoPage extends HTMLElement {
                     <button id="todo-open-modal-new-list">${ i18n.todoListCreateButton }</button>
                 </div>
 
-                <component-lists-cards id="component-lists-card"></component-lists-cards>
+                <component-lists-cards data-selected-list-uuid="${ this.#currentListUUID }" id="component-lists-card"></component-lists-cards>
 
                 <div id="todo-lists">
                     <component-todo-list id="todo-list-priority" listType="priority"></component-todo-list>

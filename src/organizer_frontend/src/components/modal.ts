@@ -1,3 +1,5 @@
+import { borderRadius } from "../modules/todo/models/css";
+
 class ComponentModal extends HTMLElement {
     constructor() {
         super();
@@ -47,6 +49,7 @@ class ComponentModal extends HTMLElement {
                         z-index: 1;
                         transform: translate(-50%, -50%);
                         background-color: white;
+                        border-radius: ${borderRadius};
                         padding: 2em;
 
                         #close-btn {

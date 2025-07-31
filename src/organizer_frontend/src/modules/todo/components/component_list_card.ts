@@ -5,7 +5,7 @@ import { listStore } from "../models/list_store";
 import { i18n } from "../../../i18n/i18n";
 import { getTodoPage } from "./component_todo_page";
 import { ComponentTodo } from "./component_todo";
-import { borderRadius, cardFontSize } from "../models/css";
+import { borderRadius, cardFontSize, scaleOnHover } from "../models/css";
 import { getListsCards } from "./component_list_cards";
 
 export class ComponentListCard extends HTMLElement {
@@ -39,11 +39,11 @@ export class ComponentListCard extends HTMLElement {
 
     #render() {
         this.shadowRoot!.innerHTML = /*html*/`
-            <div class="todo-list-card ${this.#isSelected ? "selected" : ""}" style="background-color: ${this.#list.color}">
+            <div class="todo-list-card ${this.#isSelected ? "selected" : ""}">
                 <span class="todo-list-card-name">${this.#list.name}</span>
                 <div class="todo-list-card-actions">
-                    <img class="todo-list-card-edit" src="/assets/edit.svg">
-                    <img class="todo-list-card-delete" src="/assets/trash.svg">
+                    <img class="todo-list-card-edit" src="/edit.svg">
+                    <img class="todo-list-card-delete" src="/trash.svg">
                 </div>
             </div>
 
@@ -57,6 +57,8 @@ export class ComponentListCard extends HTMLElement {
                     color: white;
                     padding: 0.5em;
                     border-radius: ${borderRadius};
+                    border: 0.3em solid ;
+                    background-color: ${this.#list.color};
 
                     .todo-list-card-name {
                         cursor: pointer;
@@ -75,7 +77,11 @@ export class ComponentListCard extends HTMLElement {
                     }
 
                     &.selected {
-                        transform: scale(1.2);
+                        border: 0.3em solid black;
+                    }
+
+                    &:hover {
+                        transform: scale(${scaleOnHover});
                     }
                 }
             </style>

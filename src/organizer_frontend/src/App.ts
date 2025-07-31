@@ -34,7 +34,7 @@ class App extends HTMLElement {
                             `
                             : /*html*/`
                                 <a href="#" id="login-button">
-                                    <img src="/assets/icp-logo.svg" alt="icp-logo" />
+                                    <img src="/icp-logo.svg" alt="icp-logo" />
                                 </a>
                             `
                         }                        

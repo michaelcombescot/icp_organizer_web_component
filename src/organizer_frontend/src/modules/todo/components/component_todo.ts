@@ -4,7 +4,7 @@ import { ComponentTodoForm } from "./component_todo_form";
 import { ComponentTodoShow } from "./component_todo_show";
 import { openModalWithElement } from "../../../components/modal";
 import { remainingTimeFromEpoch, stringDateFromEpoch } from "../../../utils/date";
-import { borderRadius } from "../models/css";
+import { borderRadius, scaleOnHover } from "../models/css";
 
 class ComponentTodo extends HTMLElement {
     #todo: Todo
@@ -44,20 +44,20 @@ class ComponentTodo extends HTMLElement {
                 }
                 <div id="todo-item-resume" class="${Object.keys(this.#todo.priority)[0]}">${this.#todo!.resume}</div>
                 <div id="todo-item-actions">
-                    <img id="todo-item-action-edit" src="/assets/edit.svg">
-                    <img id="todo-item-action-done" src="/assets/done.svg">
-                    <img id="todo-item-action-delete" src="/assets/trash.svg">
+                    <img id="todo-item-action-edit" src="/edit.svg">
+                    <img id="todo-item-action-done" src="/done.svg">
+                    <img id="todo-item-action-delete" src="/trash.svg">
                 </div>
             </div>
 
             <style>
                 #todo-item {
-                    box-sizing: border-box;
                     display: flex;
                     flex-direction: column;
                     gap: 1em;
                     background-color: ${this.#todo.list?.color || "#fefee2"};
                     padding: 1em;
+                    min-width: 15em;
                     border-radius: ${borderRadius};
     
                     
@@ -69,6 +69,10 @@ class ComponentTodo extends HTMLElement {
                             width: 1em;
                             filter: brightness(0) invert(1);
                             cursor: pointer;
+
+                            &:hover {
+                                transform: scale(${scaleOnHover});
+                            }
                         }
                     }
 

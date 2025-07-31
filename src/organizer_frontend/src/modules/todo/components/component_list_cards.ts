@@ -3,7 +3,7 @@ import { List } from "../models/list";
 import { listStore } from "../models/list_store";
 import { ComponentListCard } from "./component_list_card";
 import { getTodoPage } from "./component_todo_page";
-import { cardFontSize } from "../models/css";
+import { cardFontSize, scaleOnHover } from "../models/css";
 
 export class ComponentListsCards extends HTMLElement {
     #lists: List[]
@@ -44,11 +44,19 @@ export class ComponentListsCards extends HTMLElement {
                     gap: 0.8em;
 
                     #todo-list-card-all {
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
                         font-size: ${cardFontSize};
                         width: max-content;
                         padding: 0.5em;
                         border-radius: 8px;
                         border: 1px solid black;
+                        vertical-align: middle;
+                        
+                        &:hover {
+                            transform: scale(${scaleOnHover});
+                        }
                     }
                 }
             </style>

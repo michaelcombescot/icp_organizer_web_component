@@ -8,6 +8,7 @@ import { ComponentListForm } from "./component_list_form";
 import { Todo, sortByPriority, sortByScheduledDate } from "../models/todo";
 import { ComponentTodoList } from "./component_todo_list";
 import { ComponentListsCards } from "./component_list_cards";
+import { borderRadius } from "../models/css";
 
 class ComponentTodoPage extends HTMLElement {
     #currentListUUID: string
@@ -52,8 +53,8 @@ class ComponentTodoPage extends HTMLElement {
         this.innerHTML = /*html*/`
             <div id="todo-page">
                 <div id="todo-page-buttons">
-                    <button id="todo-open-modal-new-task">${ i18n.todoCreateNewButton }</button>
-                    <button id="todo-open-modal-new-list">${ i18n.todoListCreateButton }</button>
+                    <button id="todo-open-modal-new-task"><img src="/plus.svg"><span>${ i18n.todoCreateNewButton }</span></button>
+                    <button id="todo-open-modal-new-list"><img src="/plus.svg"><span>${ i18n.todoListCreateButton }</span></button>
                 </div>
 
                 <component-lists-cards data-selected-list-uuid="${ this.#currentListUUID }" id="component-lists-card"></component-lists-cards>
@@ -71,15 +72,36 @@ class ComponentTodoPage extends HTMLElement {
                     gap: 1.5em;
 
                     #todo-page-buttons {
-                        display: flex
-                        gap: 1em;
+                        display: flex;
+                        gap: 1.5em;
 
-                        #todo-open-modal-new-task {
+                        button {
+                            font-size: 0.8em;
+                            padding: 0.5em 1em;
+                            text-align: center;
                             width: max-content;
-                        }
-                        
-                        #todo-open-modal-new-list {
-                            width: max-content;
+                            border-radius: ${borderRadius};
+                            background-color: lightblue;
+                            cursor: pointer;
+
+                            img {
+                                vertical-align: middle;
+                                width: 1.5em;
+                                margin-right: 0.5em;
+                            }
+
+                            span {
+                                vertical-align: middle;
+                            }
+
+                            &:hover {
+                                background-color: darkblue;
+                                color: white;
+
+                                img {
+                                    filter: invert(1);
+                                }
+                            }
                         }
                     }
                     

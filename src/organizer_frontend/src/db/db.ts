@@ -1,4 +1,4 @@
-import { listStoreName, todoStoreName } from "./store_names";
+import { listStoreName, todoStoreName, updateListStoreName, userDataStoreName } from "./store_names";
 
 class OrganizerDB {
     static #name: string = "organizerDB";
@@ -12,6 +12,8 @@ class OrganizerDB {
                 db = (event.target as IDBOpenDBRequest).result;
                 db.createObjectStore(todoStoreName, { keyPath: "uuid" });
                 db.createObjectStore(listStoreName, { keyPath: "uuid" });
+                db.createObjectStore(updateListStoreName, { keyPath: "uuid" });
+                db.createObjectStore(userDataStoreName, { keyPath: "uuid" });
             };
 
             req.onsuccess = (event: Event) => {

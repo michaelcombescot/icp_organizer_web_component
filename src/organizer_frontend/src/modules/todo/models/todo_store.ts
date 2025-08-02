@@ -12,13 +12,9 @@ class TodoStore {
             let todos: Todo[] = [];
 
             if (fromBackend) {
-                // try {
-                //     const todos = await actor.getTodos();
-                //     resolve(todos);
-                // } catch (error) {
-                //     console.error("Failed to get todos:", error);
-                //     reject(error);
-                // }
+                // const todos = await getTodoFromBackend()
+                resolve(todos)
+                return
             }
 
             // get Todos from indexedDB
@@ -38,14 +34,9 @@ class TodoStore {
     }
 
     async addTodo(todo: Todo) : Promise<void> {
-        return new Promise((resolve, reject) => {
+        return new Promise(async (resolve, reject) => {
             // save to backend
-            // try {
-            //     await actor.addTodo(todo);
-            // } catch (error) {
-            //     console.error("Failed to add todo:", error);
-            //     return
-            // }
+            await addTodoTobackend(todo)
 
             // indexedDB
             const transaction = DB.transaction([todoStoreName], "readwrite");
@@ -56,14 +47,9 @@ class TodoStore {
     }
 
     async updateTodo(todo: Todo) : Promise<void> {
-        return new Promise((resolve, reject) => {
+        return new Promise(async (resolve, reject) => {
             // delete from backend
-            // try {
-            //     await actor.updateTodo(todo);
-            // } catch (error) {
-            //     console.error("Failed to add todo:", error);
-            //     return
-            // }
+            await updateTodoInBackend(todo)
 
             // indexedDB
             const transaction = DB.transaction([todoStoreName], "readwrite");
@@ -74,14 +60,9 @@ class TodoStore {
     }
 
     async deleteTodo(uuid: string) : Promise<void> {
-        return new Promise((resolve, reject) => {
+        return new Promise(async (resolve, reject) => {
             // delete from backend
-            // try {
-            //     await actor.removeTodo(uuid);
-            // } catch (error) {
-            //     console.error("Failed to add todo:", error);
-            //     return
-            // }
+            await deleteTodoFromBackend(uuid)
 
             // indexedDB
             const transaction = DB.transaction([todoStoreName], "readwrite")
@@ -93,3 +74,39 @@ class TodoStore {
 }
 
 export const todoStore = new TodoStore()
+
+export const addTodoTobackend = async (todo: Todo) => {
+    try {
+        await actor.addTodo(todo);
+    } catch (error) {
+        console.error("Failed to add todo:", error);
+    }
+}
+
+export const updateTodoInBackend = async (todo: Todo) => {
+    try {
+        await actor.updateTodo(todo);
+    } catch (error) {
+        console.error("Failed to update todo:", error);
+    }
+}
+
+// export const getTodoFromBackend = async (): Promise<Todo[]> => {
+//     return new Promise(async (resolve, reject) => {
+//         try {
+//             const todos = await actor.getTodos();
+//             resolve(todos)
+//         } catch (error) {
+//             console.error("Failed to get todos:", error);
+//             reject(error)
+//         }
+//     })
+// }
+
+export const deleteTodoFromBackend = async (uuid: string) => {
+    try {
+        await actor.removeTodo(uuid);
+    } catch (error) {
+        console.error("Failed to delete todo:", error);
+    }
+}

@@ -90,6 +90,17 @@ persistent actor {
     // TODO LIST INTERFACE
     /////
 
+    public query ({ caller }) func getTodoLists() : async ([Todo.TodoList]) {
+        switch (Map.get(todoLists, phash, caller)) {
+            case null [];
+            case (?todoLists) {
+                Map.toArrayMap(todoLists, func(_ : Text, value: Todo.TodoList) : ?Todo.TodoList {
+                    ?value
+                })
+            };
+        };
+    };
+
     public shared ({ caller }) func createTodoList(todoList: Todo.TodoList) : async Result.Result<(), Text> {
         switch (Map.get(todoLists, phash, caller)) {
             case null {
@@ -109,6 +120,33 @@ persistent actor {
             };
         };
     };
+
+    public shared ({ caller}) func updateTodoList(todoList: Todo.TodoList) : async Result.Result<(), Text> {
+        switch (Map.get(todoLists, phash, caller)) {
+            case null #err("Todo list not found");
+            case (?todoLists) {
+                switch (Map.get(todoLists, thash, todoList.uuid)) {
+                    case null #err("Todo list not found");
+                    case (?_) {
+                        Map.set(todoLists, thash, todoList.uuid, todoList);
+                        #ok
+                    };
+                };
+            };
+        };
+    };
+
+    public shared ({ caller }) func removeTodoList(uuid: Text) : async Result.Result<(), Text> {
+        switch (Map.get(todoLists, phash, caller)) {
+            case null #err("Todo list not found");
+            case (?todoLists) {
+                Map.delete(todoLists, thash, uuid);
+                #ok
+            };
+        };
+    };
+
+
 
     /////
     // auth interface

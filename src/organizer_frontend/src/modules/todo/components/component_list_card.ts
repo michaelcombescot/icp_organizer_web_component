@@ -1,21 +1,21 @@
-import { List } from "../models/list";
 import { openModalWithElement } from "../../../components/modal";
 import { ComponentListForm } from "./component_list_form";
-import { listStore } from "../models/list_store";
+import { listStore } from "../stores/store_todo_lists";
 import { i18n } from "../../../i18n/i18n";
 import { getTodoPage } from "./component_todo_page";
 import { ComponentTodo } from "./component_todo";
-import { borderRadius, cardFontSize, scaleOnHover } from "../models/css";
+import { borderRadius, cardFontSize, scaleOnHover } from "../../../css/css";
 import { getListsCards } from "./component_list_cards";
+import { Todo, TodoList } from "../../../../../declarations/organizer_backend/organizer_backend.did";
 
 export class ComponentListCard extends HTMLElement {
-    #list: List
-    set list(list: List) {
+    #list: TodoList
+    set list(list: TodoList) {
         this.#list = list
         this.#render()
 
         document.querySelectorAll(`[data-list-uuid="${this.#list.uuid}"]`).forEach((todo) => {
-            (todo as ComponentTodo).color = this.#list.color
+            (todo as ComponentTodo).list = this.#list
         })
     }
 
@@ -25,7 +25,7 @@ export class ComponentListCard extends HTMLElement {
         getListsCards().selectedListUUID = this.#list.uuid
     }
 
-    constructor(list: List, isSelected: boolean) {
+    constructor(list: TodoList, isSelected: boolean) {
         super();
         this.attachShadow({ mode: "open" });
 
@@ -101,7 +101,8 @@ export class ComponentListCard extends HTMLElement {
             e.stopPropagation()
 
             if ( !confirm(i18n.todoListCardConfirmDelete) ) return
-            await listStore.deleteList(this.#list.uuid)
+
+            await (await listStore).apiDeleteTodoList(this.#list.uuid)
             this.remove()
             getTodoPage().currentListUUID = ""
         })

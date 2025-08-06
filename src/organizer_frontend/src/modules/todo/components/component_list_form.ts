@@ -1,15 +1,15 @@
 import { i18n } from "../../../i18n/i18n";
-import { List } from "../models/list";
+import { TodoList } from "../../../../../declarations/organizer_backend/organizer_backend.did";
 import { closeModal } from "../../../components/modal";
-import { listStore } from "../models/list_store";
+import { listStore } from "../stores/store_todo_lists";
 import { getListsCards } from "./component_list_cards";
 import { ComponentListCard } from "./component_list_card";
 
 export class ComponentListForm extends HTMLElement {
-    #list: List | null = null
+    #list: TodoList | null = null
     #isEditMode: boolean
 
-    constructor(list: List | null = null) {
+    constructor(list: TodoList | null = null) {
         super();
         this.#list = list
         this.#isEditMode = !!list
@@ -27,11 +27,11 @@ export class ComponentListForm extends HTMLElement {
             const formData = new FormData(formElement);
             formElement.reset();
 
-            const list = new List({
+            const list: TodoList = {
                 uuid:this.#list ? this.#list.uuid : crypto.randomUUID(),
                 name: formData.get("name") as string,
                 color: formData.get("color") as string
-            });
+            }
 
             // update or create new todo
             if (this.#isEditMode) {

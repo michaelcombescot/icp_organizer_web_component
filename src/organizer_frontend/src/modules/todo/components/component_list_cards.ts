@@ -1,14 +1,14 @@
 import { i18n } from "../../../i18n/i18n";
-import { List } from "../models/list";
-import { listStore } from "../models/list_store";
+import { TodoList } from "../../../../../declarations/organizer_backend/organizer_backend.did";
+import { listStore } from "../stores/store_todo_lists";
 import { ComponentListCard } from "./component_list_card";
 import { getTodoPage } from "./component_todo_page";
-import { cardFontSize, scaleOnHover } from "../models/css";
+import { cardFontSize, scaleOnHover } from "../../../css/css";
 
 export class ComponentListsCards extends HTMLElement {
-    #lists: List[]
+    #lists: TodoList[]
     get lists() { return this.#lists }
-    set lists(lists: List[]) {
+    set lists(lists: TodoList[]) {
         this.#lists = lists 
         this.#render()
     }
@@ -22,7 +22,7 @@ export class ComponentListsCards extends HTMLElement {
     constructor() {
         super();
         this.#lists = []
-        this.#selectedListUUID = this.getAttribute("data-selected-list-uuid")!
+        this.#selectedListUUID = this.getAttribute("selectedListUUID")!
     }
 
     connectedCallback() {

@@ -1,11 +1,13 @@
 import { i18n } from "../../../i18n/i18n";
-import { todoStore } from "../models/todo_store";
+import { todoStore } from "../stores/store_todos";
 import { closeModal } from "../../../components/modal";
-import { Todo, priorityValues } from "../models/todo";
+import { Todo } from "../../../../../declarations/organizer_backend/organizer_backend.did";
+import { priorityValues } from "../stores/helpers";
 import { stringToEpoch } from "../../../utils/date";
 import { getTodoPage } from "./component_todo_page";
-import { listStore } from "../models/list_store";
+import { listStore } from "../stores/store_todo_lists";
 import { epochToStringRFC3339 } from "../../../utils/date";
+import { getComponentTodoListPriority, getComponentTodoListScheduled } from "./component_todo_list";
 
 class ComponentTodoForm extends HTMLElement {
     todo: Todo | null = null;
@@ -35,8 +37,8 @@ class ComponentTodoForm extends HTMLElement {
             const formData = new FormData(formElement);
             formElement.reset();
 
-            const todo = new Todo({
-                uuid: this.todo ? this.todo.uuid : crypto.randomUUID(),
+            const todo: Todo = {
+                uuid: this.todo?.uuid || crypto.randomUUID(),
                 resume: formData.get("resume") as string,
                 description: formData.get("description") as string,
                 scheduledDate: stringToEpoch(formData.get("scheduledDate") as string),
@@ -44,18 +46,23 @@ class ComponentTodoForm extends HTMLElement {
                             formData.get("priority") === "medium" ? { medium: null } :
                             { high: null },
                 status: { 'pending' : null },
-                listUUID: formData.get("listUUID") as string
-            });
+                todoListUUID: formData.get("listUUID") as string,
+                createdAt: this.todo?.createdAt || BigInt(Date.now())
+            }
 
             // update or create new todo
             if (this.isEditMode) {
-                todoStore.updateTodo(todo);     
+                todoStore.updateTodo(todo);
+
+                getComponentTodoListScheduled().todos = await todoStore.getTodos();
+
             } else {
                 todoStore.addTodo(todo);
-            }
 
-            // update the todo page
-            getTodoPage().update();
+                getComponentTodoListScheduled().todos = [...getComponentTodoListScheduled().todos, todo]
+                getComponentTodoListPriority().todos = [...getComponentTodoListPriority().todos, todo]
+            }
+            
 
             // hide popover
             closeModal()
@@ -103,7 +110,7 @@ class ComponentTodoForm extends HTMLElement {
                         ${
                             lists.map( list => 
                                 /*html*/`
-                                    <option value="${list.uuid}" ${list.uuid === this.todo?.listUUID || list.uuid === this.currentListUUID ? "selected" : ""}>
+                                    <option value="${list.uuid}" ${list.uuid === this.todo?.todoListUUID || list.uuid === this.currentListUUID ? "selected" : ""}>
                                         ${list.name}
                                     </option>
                                 `

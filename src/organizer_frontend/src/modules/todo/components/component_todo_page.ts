@@ -2,19 +2,14 @@ import "./component_todo_list";
 import { ComponentTodoForm } from "./component_todo_form";
 import { openModalWithElement } from "../../../components/modal";
 import { i18n } from "../../../i18n/i18n";
-import { todoStore } from "../models/todo_store";
-import { listStore } from "../models/list_store";
 import { ComponentListForm } from "./component_list_form";
-import { Todo, sortByPriority, sortByScheduledDate } from "../models/todo";
-import { ComponentTodoList } from "./component_todo_list";
-import { ComponentListsCards } from "./component_list_cards";
-import { borderRadius } from "../models/css";
+import { borderRadius } from "../../../css/css";
 
 class ComponentTodoPage extends HTMLElement {
     #currentListUUID: string
     set currentListUUID(listUUID: string) {
         this.#currentListUUID = listUUID
-        this.update()
+        this.#render()
     }
 
     constructor() {
@@ -24,29 +19,6 @@ class ComponentTodoPage extends HTMLElement {
 
     async connectedCallback() {
         this.#render()
-        this.update()
-    }
-
-    async update() {
-        const todos = await todoStore.getTodos()
-        let priorityTodos: Todo[] = []
-        let scheduledTodos: Todo[] = []
-
-        for ( const todo of todos ) {
-            if ( this.#currentListUUID != "" && this.#currentListUUID !== todo.listUUID ) {
-                continue
-            }
-
-            if (!todo.scheduledDate) {
-                priorityTodos.push(todo)
-            } else {
-                scheduledTodos.push(todo)
-            }
-        }
-
-        // update lists
-        (this.querySelector("#todo-list-priority")! as ComponentTodoList).list = sortByPriority(priorityTodos);
-        (this.querySelector("#todo-list-scheduled")! as ComponentTodoList).list = sortByScheduledDate(scheduledTodos);
     }
 
     #render() {
@@ -57,11 +29,11 @@ class ComponentTodoPage extends HTMLElement {
                     <button id="todo-open-modal-new-list"><img src="/plus.svg"><span>${ i18n.todoListCreateButton }</span></button>
                 </div>
 
-                <component-lists-cards data-selected-list-uuid="${ this.#currentListUUID }" id="component-lists-card"></component-lists-cards>
+                <component-lists-cards selectedListUUID="${ this.#currentListUUID }" id="component-lists-card"></component-lists-cards>
 
                 <div id="todo-lists">
-                    <component-todo-list id="todo-list-priority" listType="priority"></component-todo-list>
-                    <component-todo-list id="todo-list-scheduled" listType="scheduled"></component-todo-list>
+                    <component-todo-list id="todo-list-priority" listType="priority" currentListUUID="${ this.#currentListUUID }"></component-todo-list>
+                    <component-todo-list id="todo-list-scheduled" listType="scheduled" currentListUUID="${ this.#currentListUUID }"></component-todo-list>
                 </div>
             </div>
 

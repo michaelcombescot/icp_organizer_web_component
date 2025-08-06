@@ -1,6 +1,16 @@
 import { updateListStoreName } from "../../../db/store_names";
 import { DB } from "../../../db/db";
-import { UpdateListType } from "./update_list";
+import { Todo, TodoList } from "../../../../../declarations/organizer_backend/organizer_backend.did";
+
+export type UpdateListType =  
+    {"addTodo": Todo} 
+    | {"deleteTodo": string}
+    | {"updateTodo": Todo} 
+    | {"addList": TodoList}
+    | {"deleteList": string} 
+    | {"updateList": TodoList}
+
+export let updateList: UpdateListType[]
 
 class UpdateListStore {
     getUpdatesList() {

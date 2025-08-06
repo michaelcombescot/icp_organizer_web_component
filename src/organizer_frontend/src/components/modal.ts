@@ -1,4 +1,4 @@
-import { borderRadius } from "../modules/todo/models/css";
+import { borderRadius } from "../css/css";
 
 class ComponentModal extends HTMLElement {
     constructor() {

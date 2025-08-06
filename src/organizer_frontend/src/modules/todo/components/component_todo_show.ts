@@ -1,5 +1,4 @@
-import { ComponentTodo } from "./component_todo";
-import { Todo } from "../models/todo";
+import { Todo } from "../../../../../declarations/organizer_backend/organizer_backend.did";
 import { i18n } from "../../../i18n/i18n";
 import { stringDateFromEpoch } from "../../../utils/date";
 

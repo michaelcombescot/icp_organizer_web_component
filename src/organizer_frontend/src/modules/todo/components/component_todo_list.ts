@@ -1,26 +1,37 @@
-import { todoStore } from "../models/todo_store";
-import { Todo } from "../models/todo";
-import { TodoListType } from "../models/todo";
+import { Todo, TodoList } from "../../../../../declarations/organizer_backend/organizer_backend.did";
 import { ComponentTodo } from "./component_todo";
+import { storeTodo } from "../stores/store_todos";  
+import { storeList } from "../stores/store_todo_lists";
+
+const listTypes = ["scheduled", "priority"]
 
 class ComponentTodoList extends HTMLElement {
-    #list: Todo[]
-    set list(list: Todo[]) {
-        this.#list = list;
+    #type: string
+
+    #currentListUUID = this.getAttribute("listUUID")
+
+    #todos: Todo[]
+    set todos(todos: Todo[]) {
+        this.#todos = todos;
         this.#render()
-    }
-    get list() {
-        return this.#list
     }
 
     constructor() {
-        super();
-        this.#list = []
+        super()
     }
 
     async connectedCallback() {
+        this.#type = this.getAttribute("listType")!
+        if (!listTypes.includes(this.#type) ) { throw new Error(`listType attribute is required, is ${this.#type}`) }
+
+        this.#currentListUUID = this.getAttribute("listUUID")
+
+        this.#todos = this.#type == "scheduled" ? await storeTodo.getOrderedByScheduledDateTodos(this.#currentListUUID) : await storeTodo.getOrderedByPriorityTodos(this.#currentListUUID)
+
         this.#render()
     }
+
+
 
     //
     // RENDER
@@ -48,10 +59,10 @@ class ComponentTodoList extends HTMLElement {
             </style>
         `;
 
-        this.#list.forEach(item => {
-            const newTodo = new ComponentTodo(item)
+        this.#todos.forEach(item => {
+            const newTodo = new ComponentTodo(item, this.#list)
             newTodo.setAttribute("data-uuid", item.uuid)
-            newTodo.setAttribute("data-list-uuid", item.listUUID)
+            newTodo.setAttribute("data-list-uuid", item.todoListUUID)
             this.querySelector(".todo-list-items")!.appendChild(newTodo)
         })
     }
@@ -60,3 +71,6 @@ class ComponentTodoList extends HTMLElement {
 customElements.define("component-todo-list", ComponentTodoList);
 
 export { ComponentTodoList }
+
+export const getComponentTodoListScheduled = () => document.querySelector("todo-list-scheduled")! as ComponentTodoList
+export const getComponentTodoListPriority = () => document.querySelector("todo-list-priority")! as ComponentTodoList

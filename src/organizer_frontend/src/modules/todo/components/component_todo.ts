@@ -1,10 +1,10 @@
-import { todoStore } from "../models/todo_store";
-import { Todo } from "../models/todo";
+import { storeTodo } from "../stores/store_todos";
+import { Todo, TodoList } from "../../../../../declarations/organizer_backend/organizer_backend.did";
 import { ComponentTodoForm } from "./component_todo_form";
 import { ComponentTodoShow } from "./component_todo_show";
 import { openModalWithElement } from "../../../components/modal";
 import { remainingTimeFromEpoch, stringDateFromEpoch } from "../../../utils/date";
-import { borderRadius, scaleOnHover } from "../models/css";
+import { borderRadius, scaleOnHover } from "../../../css/css";
 
 class ComponentTodo extends HTMLElement {
     #todo: Todo
@@ -13,18 +13,18 @@ class ComponentTodo extends HTMLElement {
         this.#render()
     }
 
-    #color: string
-    set color(color: string) {
-        this.#todo.list!.color = color
+    #list: TodoList | null
+    set list(list: TodoList | null) {
+        this.#list = list
         this.#render()
     }
 
-    constructor(todo: Todo) {
+    constructor(todo: Todo, list: TodoList | null) {
         super()
         this.attachShadow({ mode: "open" });
 
         this.#todo = todo
-        this.#color = this.#todo.list!.color
+        this.#list = list
     }
 
     connectedCallback() {
@@ -55,7 +55,7 @@ class ComponentTodo extends HTMLElement {
                     display: flex;
                     flex-direction: column;
                     gap: 1em;
-                    background-color: ${this.#todo.list?.color || "#fefee2"};
+                    background-color: ${this.#list?.color || "#fefee2"};
                     padding: 1em;
                     min-width: 15em;
                     border-radius: ${borderRadius};
@@ -97,10 +97,10 @@ class ComponentTodo extends HTMLElement {
 
         this.shadowRoot!.querySelector("#todo-item-action-done")!.addEventListener("click", () => this.querySelector(`#${this.#todo.uuid}`)!.classList.toggle("done") );
 
-        this.shadowRoot!.querySelector("#todo-item-action-edit")!.addEventListener("click", () => openModalWithElement(new ComponentTodoForm(this.#todo, this.#todo.listUUID))  );
+        this.shadowRoot!.querySelector("#todo-item-action-edit")!.addEventListener("click", () => openModalWithElement(new ComponentTodoForm(this.#todo, this.#todo.todoListUUID))  );
 
         this.shadowRoot!.querySelector("#todo-item-action-delete")!.addEventListener("click", () => {
-            todoStore.deleteTodo(this.#todo.uuid)
+            storeTodo.apiDeleteTodo(this.#todo.uuid)
             this.remove();
         });
     }

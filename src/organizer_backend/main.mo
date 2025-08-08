@@ -35,7 +35,7 @@ persistent actor {
     public shared ({ caller }) func addTodo(todo: Todo.Todo) : async Result.Result<(), Text> {
         // if ( Principal.isAnonymous(caller) ) { return #err("Not logged in"); };
 
-        let callerTodosMap =   switch ( Map.get(todos, phash, caller) ) {
+        let callerTodosMap =    switch ( Map.get(todos, phash, caller) ) {
                                     case null Map.new<Text, Todo.Todo>();
                                     case ( ?callerTodosMap ) callerTodosMap;
                                 };
@@ -120,7 +120,7 @@ persistent actor {
     };
 
     public shared ({ caller}) func updateTodoList(list: Todo.TodoList) : async Result.Result<(), Text> {
-        if ( Principal.isAnonymous(caller) ) { return #err("Not logged in"); };
+        // if ( Principal.isAnonymous(caller) ) { return #err("Not logged in"); };
 
         let ?callerTodoLists = Map.get(todoLists, phash, caller) else return #err("Todo list not found");
         let ?todoList = Map.get(callerTodoLists, thash, list.uuid) else return #err("Todo list not found");
@@ -128,7 +128,7 @@ persistent actor {
     };
 
     public shared ({ caller }) func removeTodoList(uuid: Text) : async Result.Result<(), Text> {
-        if ( Principal.isAnonymous(caller) ) { return #err("Not logged in"); };
+        // if ( Principal.isAnonymous(caller) ) { return #err("Not logged in"); };
 
         let ?callerTodoLists = Map.get(todoLists, phash, caller) else return #err("Todo list not found");
         Map.delete(callerTodoLists, thash, uuid);

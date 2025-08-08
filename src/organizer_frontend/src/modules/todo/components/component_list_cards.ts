@@ -1,40 +1,44 @@
 import { i18n } from "../../../i18n/i18n";
 import { TodoList } from "../../../../../declarations/organizer_backend/organizer_backend.did";
-import { listStore } from "../stores/store_todo_lists";
-import { ComponentListCard } from "./component_list_card";
+import { storeList } from "../stores/store_todo_lists";
+import "./component_list_card";
 import { getTodoPage } from "./component_todo_page";
 import { cardFontSize, scaleOnHover } from "../../../css/css";
 
 export class ComponentListsCards extends HTMLElement {
-    #lists: TodoList[]
+    #lists!: TodoList[]
     get lists() { return this.#lists }
     set lists(lists: TodoList[]) {
-        this.#lists = lists 
+        this.#lists = lists
         this.#render()
     }
 
-    #selectedListUUID = ""
-    set selectedListUUID(listUUID: string) {
-        this.#selectedListUUID = listUUID
+    #currentListUUID!: string | null
+    set currentListUUID(listUUID: string) {
+        this.#currentListUUID = listUUID
         this.#render()
     }
 
     constructor() {
         super();
-        this.#lists = []
-        this.#selectedListUUID = this.getAttribute("selectedListUUID")!
+        this.attachShadow({ mode: "open" });
     }
 
-    connectedCallback() {
+    async connectedCallback() {
+        this.#currentListUUID = this.getAttribute("currentListUUID")
+        this.#lists = await storeList.apiGetTodoLists()
         this.#render()
     }
 
-    async #render() {
-        this.#lists = await listStore.getLists()
-
-        this.innerHTML = /*html*/`
+    #render() {
+        this.shadowRoot!.innerHTML = /*html*/`
             <div id="todo-lists-cards">
                 <span id="todo-list-card-all">${i18n.todoListCardSeeAll}</span>
+                ${
+                    this.#lists.map(list => /*html*/`
+                        <component-list-card list="${encodeURIComponent(JSON.stringify(list))}" currentListUUID="${this.#currentListUUID}"></component-list-card>
+                    `).join("")
+                }
             </div>
 
             <style>
@@ -62,19 +66,13 @@ export class ComponentListsCards extends HTMLElement {
             </style>
         `
 
-        this.#lists.forEach(list => {
-            let newCard = new ComponentListCard(list, this.#selectedListUUID === list.uuid)
-            newCard.setAttribute("data-uuid", list.uuid)
-            this.querySelector("#todo-lists-cards")!.appendChild(newCard)
-        })
-
-        this.querySelector("#todo-list-card-all")!.addEventListener("click", element => {
+        this.shadowRoot!.querySelector("#todo-list-card-all")!.addEventListener("click", element => {
             getTodoPage().currentListUUID = ""
-            this.selectedListUUID = ""
+            this.#currentListUUID = ""
         })
     }
 }
 
 customElements.define("component-lists-cards", ComponentListsCards)
 
-export const getListsCards = () => document.querySelector("component-lists-cards")! as ComponentListsCards
+export const getListsCards = () => getTodoPage().shadowRoot!.querySelector("component-lists-cards")! as ComponentListsCards

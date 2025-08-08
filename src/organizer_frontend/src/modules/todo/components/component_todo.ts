@@ -7,27 +7,27 @@ import { remainingTimeFromEpoch, stringDateFromEpoch } from "../../../utils/date
 import { borderRadius, scaleOnHover } from "../../../css/css";
 
 class ComponentTodo extends HTMLElement {
-    #todo: Todo
+    #todo!: Todo
     set todo(todo: Todo) {
         this.#todo = todo
         this.#render()
     }
 
-    #list: TodoList | null
+    #list!: TodoList | null
     set list(list: TodoList | null) {
         this.#list = list
         this.#render()
     }
 
-    constructor(todo: Todo, list: TodoList | null) {
+    constructor() {
         super()
         this.attachShadow({ mode: "open" });
-
-        this.#todo = todo
-        this.#list = list
     }
 
     connectedCallback() {
+        try { this.#todo = JSON.parse(this.getAttribute("todo")!) } catch { throw new Error("todo attribute is required, or malformed") }
+        try { this.#list = JSON.parse(this.getAttribute("list")!) } catch { null }
+
         this.#render();
     }
 

@@ -1,15 +1,15 @@
 import { openModalWithElement } from "../../../components/modal";
 import { ComponentListForm } from "./component_list_form";
-import { listStore } from "../stores/store_todo_lists";
 import { i18n } from "../../../i18n/i18n";
 import { getTodoPage } from "./component_todo_page";
 import { ComponentTodo } from "./component_todo";
 import { borderRadius, cardFontSize, scaleOnHover } from "../../../css/css";
 import { getListsCards } from "./component_list_cards";
 import { Todo, TodoList } from "../../../../../declarations/organizer_backend/organizer_backend.did";
+import { storeList } from "../stores/store_todo_lists";
 
 export class ComponentListCard extends HTMLElement {
-    #list: TodoList
+    #list!: TodoList
     set list(list: TodoList) {
         this.#list = list
         this.#render()
@@ -19,21 +19,20 @@ export class ComponentListCard extends HTMLElement {
         })
     }
 
-    #isSelected: boolean
+    #isSelected!: boolean
     set isSelected(isSelected: boolean) {
         getTodoPage().currentListUUID = this.#list.uuid
-        getListsCards().selectedListUUID = this.#list.uuid
     }
 
-    constructor(list: TodoList, isSelected: boolean) {
+    constructor() {
         super();
         this.attachShadow({ mode: "open" });
-
-        this.#list = list
-        this.#isSelected = isSelected
     }
 
     connectedCallback() {
+        try {this.#list = JSON.parse(decodeURIComponent(this.getAttribute("list")!)) } catch { throw new Error("list attribute is required, or malformed") }
+        this.#isSelected = this.getAttribute("isSelected") === "true"
+
         this.#render();
     }
 
@@ -102,7 +101,7 @@ export class ComponentListCard extends HTMLElement {
 
             if ( !confirm(i18n.todoListCardConfirmDelete) ) return
 
-            await (await listStore).apiDeleteTodoList(this.#list.uuid)
+            await (await storeList).apiDeleteTodoList(this.#list.uuid)
             this.remove()
             getTodoPage().currentListUUID = ""
         })

@@ -121,4 +121,4 @@ export class StoreTodoList {
     }
 }
 
-export const storeList = StoreTodoList.create()
+export const storeList = await StoreTodoList.create()

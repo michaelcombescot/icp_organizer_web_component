@@ -1,44 +1,41 @@
 import { i18n } from "../../../i18n/i18n";
-import { todoStore } from "../stores/store_todos";
+import { storeTodo } from "../stores/store_todos";
 import { closeModal } from "../../../components/modal";
 import { Todo } from "../../../../../declarations/organizer_backend/organizer_backend.did";
-import { priorityValues } from "../stores/helpers";
 import { stringToEpoch } from "../../../utils/date";
 import { getTodoPage } from "./component_todo_page";
-import { listStore } from "../stores/store_todo_lists";
+import { storeList } from "../stores/store_todo_lists";
 import { epochToStringRFC3339 } from "../../../utils/date";
 import { getComponentTodoListPriority, getComponentTodoListScheduled } from "./component_todo_list";
 
 class ComponentTodoForm extends HTMLElement {
-    todo: Todo | null = null;
-    isEditMode: boolean = false;
-    currentListUUID: string
+    #todo: Todo | null = null;
+    #isEditMode: boolean = false;
+    #currentListUUID: string
 
     constructor(todo : Todo | null, currentListUUID : string) {
         super();
-        this.todo = todo;
-        this.isEditMode = !!todo;
-        this.currentListUUID = currentListUUID
+        this.attachShadow({ mode: "open" });
+
+        this.#todo = todo;
+        this.#isEditMode = !!todo;
+        this.#currentListUUID = currentListUUID
     }
 
     connectedCallback() {
         this.#render();
     }
 
-    #bindEvents() {
-        this.querySelector("#todo-form-form")!.addEventListener("submit", this.handleSubmitForm.bind(this));
-    }
-
     private async handleSubmitForm(e : Event) {
             e.preventDefault();
 
             // extract form data and create a new todo
-            const formElement = this.querySelector("#todo-form-form") as HTMLFormElement;
+            const formElement = this.shadowRoot!.querySelector("#todo-form-form") as HTMLFormElement;
             const formData = new FormData(formElement);
             formElement.reset();
 
             const todo: Todo = {
-                uuid: this.todo?.uuid || crypto.randomUUID(),
+                uuid: this.#todo?.uuid || crypto.randomUUID(),
                 resume: formData.get("resume") as string,
                 description: formData.get("description") as string,
                 scheduledDate: stringToEpoch(formData.get("scheduledDate") as string),
@@ -47,22 +44,13 @@ class ComponentTodoForm extends HTMLElement {
                             { high: null },
                 status: { 'pending' : null },
                 todoListUUID: formData.get("listUUID") as string,
-                createdAt: this.todo?.createdAt || BigInt(Date.now())
+                createdAt: this.#todo?.createdAt || BigInt(Date.now())
             }
 
-            // update or create new todo
-            if (this.isEditMode) {
-                todoStore.updateTodo(todo);
-
-                getComponentTodoListScheduled().todos = await todoStore.getTodos();
-
-            } else {
-                todoStore.addTodo(todo);
-
-                getComponentTodoListScheduled().todos = [...getComponentTodoListScheduled().todos, todo]
-                getComponentTodoListPriority().todos = [...getComponentTodoListPriority().todos, todo]
-            }
-            
+            // update or create new todo, in both cases we reload the two lists, it's easier to manage
+            // if one day the need for optimization arise, we can always check if some properties have changed (especially shceduledDate) and target a specific list
+            getComponentTodoListScheduled().todos = [...getComponentTodoListScheduled().todos, todo]
+            getComponentTodoListPriority().todos = [...getComponentTodoListPriority().todos, todo]            
 
             // hide popover
             closeModal()
@@ -73,30 +61,28 @@ class ComponentTodoForm extends HTMLElement {
     //
 
     async #render() {
-        const priorityValue = this.todo ?
-                                Object.keys(this.todo!.priority)[0]
-                                : "low";
+        const priorityValue = this.#todo ? Object.keys(this.#todo!.priority)[0] : "low";
 
-        const lists = await listStore.getLists()
+        const lists = await storeList.apiGetTodoLists()
 
-        this.innerHTML = /*html*/`
+        this.shadowRoot!.innerHTML = /*html*/`
             <div id="todo-form">
-                <h3>${this.isEditMode ? i18n.todoFormTitleEdit : i18n.todoFormTitleNew}</h3>
+                <h3>${this.#isEditMode ? i18n.todoFormTitleEdit : i18n.todoFormTitleNew}</h3>
 
                 <form id="todo-form-form">
                     <label for="resume" class="required">${i18n.todoFormFieldResume}</label>
-                    <input type="text" name="resume" value="${this.todo?.resume ||  ""}" placeholder="${i18n.todoFormFieldResumePlaceholder}" required />
+                    <input type="text" name="resume" value="${this.#todo?.resume ||  ""}" placeholder="${i18n.todoFormFieldResumePlaceholder}" required />
 
                     <label for="description">${i18n.todoFormFieldDescription}</label>
-                    <textarea type="text" name="description" placeholder="${i18n.todoFormFieldDescriptionPlaceholder}">${this.todo?.description ||  ""}</textarea>
+                    <textarea type="text" name="description" placeholder="${i18n.todoFormFieldDescriptionPlaceholder}">${this.#todo?.description ||  ""}</textarea>
 
                     <label for="scheduledDate">${i18n.todoFormFieldScheduledDate}</label>
-                    <input type="datetime-local" name="scheduledDate" value="${this.todo?.scheduledDate ? epochToStringRFC3339(this.todo.scheduledDate) : ""}" />
+                    <input type="datetime-local" name="scheduledDate" value="${this.#todo?.scheduledDate ? epochToStringRFC3339(this.#todo.scheduledDate) : ""}" />
 
                     <label for="priority">${i18n.todoFormFieldPriority}</label>
                     <select name="priority">
                         ${
-                            priorityValues.map( value => /*html*/`
+                            storeTodo.defTodoPriorities.map( value => /*html*/`
                                 <option value="${value}" ${value === priorityValue ? "selected" : ""}>
                                     ${i18n.todoFormPriorities[value]}
                                 </option>
@@ -110,7 +96,7 @@ class ComponentTodoForm extends HTMLElement {
                         ${
                             lists.map( list => 
                                 /*html*/`
-                                    <option value="${list.uuid}" ${list.uuid === this.todo?.todoListUUID || list.uuid === this.currentListUUID ? "selected" : ""}>
+                                    <option value="${list.uuid}" ${list.uuid === this.#todo?.todoListUUID || list.uuid === this.#currentListUUID ? "selected" : ""}>
                                         ${list.name}
                                     </option>
                                 `
@@ -150,7 +136,7 @@ class ComponentTodoForm extends HTMLElement {
             </style>
         `
 
-        this.#bindEvents();
+        this.shadowRoot!.querySelector("#todo-form-form")!.addEventListener("submit", this.handleSubmitForm.bind(this));
     }
 }
 

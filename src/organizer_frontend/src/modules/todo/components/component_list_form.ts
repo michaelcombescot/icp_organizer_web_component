@@ -1,7 +1,7 @@
 import { i18n } from "../../../i18n/i18n";
 import { TodoList } from "../../../../../declarations/organizer_backend/organizer_backend.did";
 import { closeModal } from "../../../components/modal";
-import { listStore } from "../stores/store_todo_lists";
+import { storeList } from "../stores/store_todo_lists";
 import { getListsCards } from "./component_list_cards";
 import { ComponentListCard } from "./component_list_card";
 
@@ -11,6 +11,8 @@ export class ComponentListForm extends HTMLElement {
 
     constructor(list: TodoList | null = null) {
         super();
+        this.attachShadow({ mode: "open" });
+        
         this.#list = list
         this.#isEditMode = !!list
     }
@@ -35,10 +37,10 @@ export class ComponentListForm extends HTMLElement {
 
             // update or create new todo
             if (this.#isEditMode) {
-                await listStore.updateList(list);
+                await storeList.apiUpdateTodoList(list);
                 (document.querySelector(`[data-uuid="${list.uuid}"]`)! as ComponentListCard).list = list;
             } else {
-                await listStore.addList(list);
+                await storeList.apiAddTodoList(list);
                 let lists = getListsCards().lists
                 lists.push(list)
                 getListsCards().lists = lists
@@ -49,7 +51,7 @@ export class ComponentListForm extends HTMLElement {
     }
 
     #render() {
-        this.innerHTML = /*html*/`
+        this.shadowRoot!.innerHTML = /*html*/`
             <div id="list-form">
                 <h3>${this.#isEditMode ? i18n.todoListFormTitleEdit : i18n.todoListFormTitleNew}</h3>
                 

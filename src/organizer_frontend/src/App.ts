@@ -9,15 +9,16 @@ import { login, logout, whoami, isAuthenticated } from './components/auth/auth'
 class App extends HTMLElement {
     constructor() {
         super()
+        this.attachShadow({ mode: "open" })
     }
 
     connectedCallback() {
         this.#render()
-        navigateTo(window.location.pathname);
+        setTimeout(() => { navigateTo(window.location.pathname) }, 0) // element is not fully rendered without the timeout, and we cannot find the #page for the router
     }
 
     #render() {
-        this.innerHTML = /*html*/`       
+        this.shadowRoot!.innerHTML = /*html*/`       
             <div id="main-app">
                 <header>
                     <div id="pages-links">
@@ -72,10 +73,13 @@ class App extends HTMLElement {
             </style>
         `
 
-        this.querySelector("#whoami-button")?.addEventListener("click", () => whoami().then(r => console.log(r)))
-        this.querySelector("#login-button")?.addEventListener("click", () => login())
-        this.querySelector("#log-out-link")?.addEventListener("click", () => logout())
+        this.shadowRoot!.querySelector("#whoami-button")?.addEventListener("click", () => whoami().then(r => console.log(r)))
+        this.shadowRoot!.querySelector("#login-button")?.addEventListener("click", () => login())
+        this.shadowRoot!.querySelector("#log-out-link")?.addEventListener("click", () => logout())
     }
 }
 
 customElements.define('main-app', App)
+
+export const getMainApp = () => document.querySelector("main-app")!
+export const getPage = () => getMainApp().shadowRoot!.querySelector("#page")!

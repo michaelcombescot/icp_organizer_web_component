@@ -4,32 +4,31 @@ import { Todo, TodoPriority } from "../../../../../declarations/organizer_backen
 import { actor } from "../../../components/auth/auth";
 
 class StoreTodo {
-    todoPriorities = ["low", "medium", "high"];
-
     //
     // HELPERS
     //
 
-    helperSortTodosByPriority(todos: Todo[], currentListUUID: string | null): Todo[] {
-        let priorityTodos = todos.filter((todo) => todo.scheduledDate === BigInt(0))
-        priorityTodos = currentListUUID ? priorityTodos.filter((todo) => todo.todoListUUID === currentListUUID) : priorityTodos
+    defTodoPriorities = ["low", "medium", "high"];
+
+    async helperGetTodosByPriority(currentListUUID: string | null): Promise<Todo[]> {
+        const todos         = await this.apiGetTodos()
+        const priorityTodos = todos.filter((todo) => todo.scheduledDate === BigInt(0) && todo.todoListUUID === currentListUUID)
 
         return priorityTodos.sort((a, b) => {
-            const aLevel = this.todoPriorities.indexOf(Object.keys(a.priority)[0] as keyof TodoPriority);
-            const bLevel = this.todoPriorities.indexOf(Object.keys(b.priority)[0] as keyof TodoPriority);
+            const aLevel = this.defTodoPriorities.indexOf(Object.keys(a.priority)[0] as keyof TodoPriority);
+            const bLevel = this.defTodoPriorities.indexOf(Object.keys(b.priority)[0] as keyof TodoPriority);
             return bLevel - aLevel; // descending (high → low)
         })
     }
 
-    helperSortTodosByScheduledDate(todos: Todo[], currentListUUID: string | null): Todo[] {
-        let scheduledTodos = todos.filter((todo) => todo.scheduledDate !== BigInt(0))
-        scheduledTodos = currentListUUID ? scheduledTodos.filter((todo) => todo.todoListUUID === currentListUUID) : scheduledTodos
-
+    async helperGetTodosByScheduledDate(currentListUUID: string | null): Promise<Todo[]> {
+        const todos = await this.apiGetTodos()
+        const scheduledTodos = todos.filter((todo) => todo.scheduledDate !== BigInt(0) && todo.todoListUUID === currentListUUID)
         return scheduledTodos.sort((a, b) => Number(a.scheduledDate) - Number(b.scheduledDate))
     }
 
     //
-    // METHODS
+    // API CALLS
     //
 
     constructor() {}

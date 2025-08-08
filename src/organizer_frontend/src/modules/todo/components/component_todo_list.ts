@@ -2,33 +2,38 @@ import { Todo, TodoList } from "../../../../../declarations/organizer_backend/or
 import { ComponentTodo } from "./component_todo";
 import { storeTodo } from "../stores/store_todos";  
 import { storeList } from "../stores/store_todo_lists";
+import { getTodoPage } from "./component_todo_page";
 
 const listTypes = ["scheduled", "priority"]
 
 class ComponentTodoList extends HTMLElement {
-    #type: string
+    #listType!: string
+    #currentListUUID : string | null = null
 
-    #currentListUUID = this.getAttribute("listUUID")
-
-    #todos: Todo[]
+    #todos: Todo[] = []
     set todos(todos: Todo[]) {
         this.#todos = todos;
         this.#render()
     }
+    get todos() { return this.#todos }
 
     constructor() {
         super()
+        this.attachShadow({ mode: "open" })
     }
 
     async connectedCallback() {
-        this.#type = this.getAttribute("listType")!
-        if (!listTypes.includes(this.#type) ) { throw new Error(`listType attribute is required, is ${this.#type}`) }
-
-        this.#currentListUUID = this.getAttribute("listUUID")
-
-        this.#todos = this.#type == "scheduled" ? await storeTodo.getOrderedByScheduledDateTodos(this.#currentListUUID) : await storeTodo.getOrderedByPriorityTodos(this.#currentListUUID)
+        this.#currentListUUID   = this.getAttribute("currentListUUID")
+        this.#listType          = this.getAttribute("listType") || (() => {throw new Error(`listType attribute is required`)})()
+        this.#todos             = await this.#loadList()
 
         this.#render()
+    }
+
+    async #loadList(): Promise<Todo[]> {
+        return  this.#listType == "scheduled" ? 
+                    await storeTodo.helperGetTodosByScheduledDate(this.#currentListUUID)
+                    : await storeTodo.helperGetTodosByPriority(this.#currentListUUID)
     }
 
 
@@ -38,9 +43,12 @@ class ComponentTodoList extends HTMLElement {
     //
 
     async #render() {
-        this.innerHTML = /*html*/`
+        this.shadowRoot!.innerHTML = /*html*/`
             <div class="todo-list">
                 <div class="todo-list-items">
+                    ${
+                        this.#todos.map(item => `<component-todo uuid="${item.uuid}" listUUID="${item.todoListUUID}" todo="${JSON.stringify(item)}"></component-todo>`).join("")
+                    }
                 </div>
             </div>
 
@@ -58,13 +66,6 @@ class ComponentTodoList extends HTMLElement {
                 }
             </style>
         `;
-
-        this.#todos.forEach(item => {
-            const newTodo = new ComponentTodo(item, this.#list)
-            newTodo.setAttribute("data-uuid", item.uuid)
-            newTodo.setAttribute("data-list-uuid", item.todoListUUID)
-            this.querySelector(".todo-list-items")!.appendChild(newTodo)
-        })
     }
 }
 
@@ -72,5 +73,5 @@ customElements.define("component-todo-list", ComponentTodoList);
 
 export { ComponentTodoList }
 
-export const getComponentTodoListScheduled = () => document.querySelector("todo-list-scheduled")! as ComponentTodoList
-export const getComponentTodoListPriority = () => document.querySelector("todo-list-priority")! as ComponentTodoList
+export const getComponentTodoListScheduled = () => getTodoPage().shadowRoot!.querySelector("#todo-list-scheduled")! as ComponentTodoList
+export const getComponentTodoListPriority = () => getTodoPage().shadowRoot!.querySelector("todo-list-priority")! as ComponentTodoList

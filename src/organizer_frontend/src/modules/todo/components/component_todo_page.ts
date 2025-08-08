@@ -4,6 +4,7 @@ import { openModalWithElement } from "../../../components/modal";
 import { i18n } from "../../../i18n/i18n";
 import { ComponentListForm } from "./component_list_form";
 import { borderRadius } from "../../../css/css";
+import { getPage } from "../../../App";
 
 class ComponentTodoPage extends HTMLElement {
     #currentListUUID: string
@@ -14,6 +15,8 @@ class ComponentTodoPage extends HTMLElement {
 
     constructor() {
         super()
+        this.attachShadow({ mode: "open" })
+
         this.#currentListUUID = ""
     }
 
@@ -22,14 +25,14 @@ class ComponentTodoPage extends HTMLElement {
     }
 
     #render() {
-        this.innerHTML = /*html*/`
+        this.shadowRoot!.innerHTML = /*html*/`
             <div id="todo-page">
                 <div id="todo-page-buttons">
                     <button id="todo-open-modal-new-task"><img src="/plus.svg"><span>${ i18n.todoCreateNewButton }</span></button>
                     <button id="todo-open-modal-new-list"><img src="/plus.svg"><span>${ i18n.todoListCreateButton }</span></button>
                 </div>
 
-                <component-lists-cards selectedListUUID="${ this.#currentListUUID }" id="component-lists-card"></component-lists-cards>
+                <component-lists-cards currentListUUID="${ this.#currentListUUID }" id="component-lists-card"></component-lists-cards>
 
                 <div id="todo-lists">
                     <component-todo-list id="todo-list-priority" listType="priority" currentListUUID="${ this.#currentListUUID }"></component-todo-list>
@@ -94,11 +97,11 @@ class ComponentTodoPage extends HTMLElement {
             </style>
         `;
 
-        this.querySelector("#todo-open-modal-new-task")!.addEventListener("click", () => openModalWithElement(new ComponentTodoForm(null, this.#currentListUUID)))
-        this.querySelector("#todo-open-modal-new-list")!.addEventListener("click", () => openModalWithElement(new ComponentListForm(null)))
+        this.shadowRoot!.querySelector("#todo-open-modal-new-task")!.addEventListener("click", () => openModalWithElement(new ComponentTodoForm(null, this.#currentListUUID)))
+        this.shadowRoot!.querySelector("#todo-open-modal-new-list")!.addEventListener("click", () => openModalWithElement(new ComponentListForm(null)))
     }
 }
 
 customElements.define("component-todo-page", ComponentTodoPage)
 
-export const getTodoPage = () => document.querySelector("component-todo-page")! as ComponentTodoPage
+export const getTodoPage = () => getPage().querySelector("component-todo-page")! as ComponentTodoPage

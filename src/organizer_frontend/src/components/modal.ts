@@ -1,3 +1,4 @@
+import { getMainApp } from "../App";
 import { borderRadius } from "../css/css";
 
 class ComponentModal extends HTMLElement {
@@ -80,12 +81,12 @@ class ComponentModal extends HTMLElement {
 customElements.define('component-modal', ComponentModal);
 
 const openModalWithElement = (content: HTMLElement) => {
-    const modal = document.querySelector("main-app")!.querySelector("component-modal") as ComponentModal;
+    const modal = getMainApp().shadowRoot!.querySelector("component-modal") as ComponentModal;
     modal.show(content);
 }
 
 const closeModal = () => {
-    const modal = document.querySelector("main-app")!.querySelector("component-modal") as ComponentModal;
+    const modal = getMainApp().shadowRoot!.querySelector("component-modal") as ComponentModal;
     modal.hide();
 }
 

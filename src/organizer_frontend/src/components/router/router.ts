@@ -1,3 +1,4 @@
+import { getPage } from "../../App.js";
 import "../../modules/todo/components/component_todo_page.js";
 
 export const routes = {
@@ -5,7 +6,7 @@ export const routes = {
 }
 
 export const navigateTo = (path: string) => {
-    const page = document.querySelector("#page")!
+    const page = getPage()
     let element: HTMLElement | HTMLDivElement 
 
     switch (path) {

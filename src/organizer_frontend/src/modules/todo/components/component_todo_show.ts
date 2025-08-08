@@ -7,6 +7,8 @@ export class ComponentTodoShow extends HTMLElement {
 
     constructor(todo: Todo) {
         super();
+        this.attachShadow({ mode: "open" })
+
         this.#todo = todo
     }
 
@@ -15,7 +17,7 @@ export class ComponentTodoShow extends HTMLElement {
     }
 
     #render() {
-        this.innerHTML = /*html*/`
+        this.shadowRoot!.innerHTML = /*html*/`
             <div id="todo-show">
                 <div>${i18n.todoFormFieldResume}</div>
                 <div>${this.#todo!.resume}</div>

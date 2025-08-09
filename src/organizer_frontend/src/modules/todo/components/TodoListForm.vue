@@ -24,44 +24,43 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, computed } from "vue";
-import { i18n } from "../../../i18n/i18n";
-import { closeModal } from "../../../components/modal/Modal.vue";
-import { storeList } from "../stores/store_todo_lists";
-import { getListsCards } from "./TodoListCards.vue";
-import { getCard } from "./TodoListCard.vue";
-import type { TodoList } from "../../../../../declarations/organizer_backend/organizer_backend.did";
+    import { reactive, computed } from "vue";
+    import { i18n } from "../../../i18n/i18n";
+    import { storeList } from "../stores/store_todo_lists";
+    import { getListsCards } from "./TodoListsCards.vue";
+    import { getCard } from "./TodoListCard.vue";
+    import type { TodoList } from "../../../../../declarations/organizer_backend/organizer_backend.did";
 
-interface Props {
-    list?: TodoList | null;
-}
-
-const props = defineProps<Props>();
-
-const isEditMode = computed(() => !!props.list);
-
-const form = reactive({
-    name: props.list?.name ?? "",
-    color: props.list?.color ?? "#000000"
-});
-
-async function handleSubmitForm() {
-    const list: TodoList = {
-        uuid: props.list ? props.list.uuid : crypto.randomUUID(),
-        name: form.name,
-        color: form.color
-    };
-
-    if (isEditMode.value) {
-        await storeList.apiUpdateTodoList(list);
-        getCard(props.list!.uuid).list = list;
-    } else {
-        await storeList.apiAddTodoList(list);
-        getListsCards().lists = [...getListsCards().lists, list];
+    interface Props {
+        list?: TodoList | null;
     }
 
-    closeModal();
-}
+    const props = defineProps<Props>();
+
+    const isEditMode = computed(() => !!props.list);
+
+    const form = reactive({
+        name: props.list?.name ?? "",
+        color: props.list?.color ?? "#000000"
+    });
+
+    async function handleSubmitForm() {
+        const list: TodoList = {
+            uuid: props.list ? props.list.uuid : crypto.randomUUID(),
+            name: form.name,
+            color: form.color
+        };
+
+        if (isEditMode.value) {
+            await storeList.apiUpdateTodoList(list);
+            getCard(props.list!.uuid).list = list;
+        } else {
+            await storeList.apiAddTodoList(list);
+            getListsCards().lists = [...getListsCards().lists, list];
+        }
+
+        closeModal();
+    }
 </script>
 
 <style scoped>

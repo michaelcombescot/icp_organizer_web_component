@@ -48,16 +48,19 @@ persistent actor {
             case (?_) return #err("Todo already exists with this uuid");
         };
 
-        if ( todo.todoListUUID != "" ) {
-            let callerTodoOnTodoList =  switch ( Map.get(todoOnTodoList, phash, caller) ) {
-                                            case null Map.new<Text, [Text]>();
-                                            case (?callerTodoOnTodoList) callerTodoOnTodoList;
-                                        };
+        switch (todo.todoListUUID) {
+            case null {};
+            case (?listUUID) {
+                let callerTodoOnTodoList =  switch ( Map.get(todoOnTodoList, phash, caller) ) {
+                                                case null Map.new<Text, [Text]>();
+                                                case (?callerTodoOnTodoList) callerTodoOnTodoList;
+                                            };
 
-            switch ( Map.get(callerTodoOnTodoList, thash, todo.todoListUUID) ) {
-                case null Map.set(callerTodoOnTodoList, thash, todo.todoListUUID, [todo.uuid]);
-                case (?associatedTodos) Map.set(callerTodoOnTodoList, thash, todo.todoListUUID, Array.append(associatedTodos, [todo.uuid]));
-            };
+                switch ( Map.get(callerTodoOnTodoList, thash, listUUID) ) {
+                    case null Map.set(callerTodoOnTodoList, thash, listUUID, [todo.uuid]);
+                    case (?associatedTodos) Map.set(callerTodoOnTodoList, thash, listUUID, Array.append(associatedTodos, [todo.uuid]));
+                };
+            }
         };
 
         #ok

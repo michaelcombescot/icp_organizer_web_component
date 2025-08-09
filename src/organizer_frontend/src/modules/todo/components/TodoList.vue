@@ -24,7 +24,7 @@
 import { ref, onMounted, watch } from "vue";
 import { storeTodo } from "../stores/store_todos";
 import { storeList } from "../stores/store_todo_lists";
-import Todo from "./Todo.vue"; // assuming you have a Vue version of ComponentTodo
+import Todo from "./Todo.vue";
 
 import type { Todo } from "../../../../../declarations/organizer_backend/organizer_backend.did";
 

@@ -30,7 +30,6 @@
     import TodoForm from "./TodoForm.vue";
     import ListForm from "./TodoListForm.vue";
     import { useModalStore } from "../../../components/modal/modal_store";
-    import { useTodoPageStore } from "./todoPageStore";
     import { h } from "vue"
 
     const modalStore = useModalStore();

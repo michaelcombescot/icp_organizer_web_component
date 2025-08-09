@@ -7,7 +7,6 @@
             <input
                 type="text"
                 name="resume"
-                v-model="form.resume"
                 :placeholder="i18n.todoFormFieldResumePlaceholder"
                 required
             />
@@ -15,7 +14,6 @@
             <label for="description">{{ i18n.todoFormFieldDescription }}</label>
             <textarea
                 name="description"
-                v-model="form.description"
                 :placeholder="i18n.todoFormFieldDescriptionPlaceholder"
             ></textarea>
 
@@ -23,22 +21,19 @@
             <input
                 type="datetime-local"
                 name="scheduledDate"
-                v-model="form.scheduledDate"
             />
 
             <label for="priority">{{ i18n.todoFormFieldPriority }}</label>
-            <select name="priority" v-model="form.priority">
+            <select name="priority">
                 <option
-                    v-for="value in storeTodo.defTodoPriorities"
-                    :key="value"
-                    :value="value"
+                    v-for="value in storeTodo.defTodoPriorities" :key="value" :value="value"
                 >
                     {{ i18n.todoFormPriorities[value] }}
                 </option>
             </select>
 
             <label for="listUUID">{{ i18n.todoFormFieldList }}</label>
-            <select name="listUUID" v-model="form.listUUID">
+            <select name="listUUID">
                 <option value=""></option>
                 <option
                     v-for="list in lists"
@@ -64,36 +59,34 @@
     import { i18n } from "../../../i18n/i18n";
     import { storeTodo } from "../stores/store_todos";
     import { useModalStore } from "../../../components/modal/modal_store";
-    import { storeList } from "../stores/store_todo_lists";
+    import { useTodoListStore } from "./todoListStore";
     import { stringToEpoch, epochToStringRFC3339 } from "../../../utils/date";
 
-    import type { Todo } from "../../../../../declarations/organizer_backend/organizer_backend.did";
+    import type { Todo, TodoPriority } from "../../../../../declarations/organizer_backend/organizer_backend.did";
 
     const props = defineProps<{
         todo: Todo | null;
     }>();
 
-    const listStore = useListStore();
+    const listStore = useTodoListStore();
     const isEditMode = !!props.todo;
     const lists = listStore.getLists();
 
-    const form = ref<todoInterface>({
-        resume: props.todo?.resume || "",
-        description: props.todo?.description || "",
-        scheduledDate:
-            props.todo?.scheduledDate && props.todo?.scheduledDate !== BigInt(0)
-                ? epochToStringRFC3339(props.todo.scheduledDate)
-                : "",
-        priority: props.todo ? Object.keys(props.todo.priority)[0] as keyof TodoPriority : "low",
-        listUUID: props.todo?.todoListUUID || props.currentListUUID || ""
-    });
+    const handleSubmitForm = async (event: Event) => {
+        event.preventDefault();
+        const form = event.target as HTMLFormElement;
+        const formData = new FormData(form);
+        form.reset();
 
-    const submitForm = async () => {
-        const todo = await storeTodo.addTodo(form.value);
-        if (todo) {
-            useModalStore().close();
+        const todo: todoInterface = {
+            resume:         formData.get("resume") as string,
+            description:    formData.get("description") as string,
+            scheduledDate:  formData.get("scheduledDate") === "" ? [] : [stringToEpoch(formData.get("scheduledDate") as string)],
+            priority:       { [formData.get("priority") as string]: null },
+            todoListUUID: formData.get("listUUID") as string,
+            createdAt: props.todo?.createdAt ?? BigInt(Date.now())
         }
-    };
-
-    useModalStore().close();
+    
+        useModalStore().close();
+    }
 </script>

@@ -7,11 +7,11 @@ module {
         uuid: Text;
         resume: Text;
         description: Text;
-        scheduledDate: Time.Time;
+        scheduledDate: ?Time.Time;
         priority: TodoPriority;
         status: TodoStatus;
         createdAt: Time.Time;
-        todoListUUID: Text;
+        todoListUUID: ?Text;
     };
 
     type TodoPriority = {

@@ -1,5 +1,5 @@
-import { getPage } from "../../App.js";
-import "../../modules/todo/components/component_todo_page.js";
+import { getPage } from "../../App.vue";
+import "../../modules/todo/components/TodoPage.vue";
 
 export const routes = {
     home: "/",

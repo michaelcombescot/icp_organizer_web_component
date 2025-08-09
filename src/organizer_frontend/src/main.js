@@ -1,4 +1,4 @@
-import './App';
+import './App.vue';
 import { DB } from './db/db';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';

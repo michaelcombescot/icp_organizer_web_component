@@ -10,9 +10,8 @@ class StoreTodo {
 
     defTodoPriorities = ["low", "medium", "high"];
 
-    async helperGetTodosByPriority(currentListUUID: string | null): Promise<Todo[]> {
-        const todos         = await this.apiGetTodos()
-        const priorityTodos = todos.filter((todo) => todo.scheduledDate === BigInt(0) && todo.todoListUUID === currentListUUID)
+    helperSortTodosByPriority(todos: Todo[], currentListUUID: string | null): Todo[] {
+        const priorityTodos = todos.filter( (todo) => todo.scheduledDate === BigInt(0) && (!currentListUUID || todo.todoListUUID === currentListUUID) )
 
         return priorityTodos.sort((a, b) => {
             const aLevel = this.defTodoPriorities.indexOf(Object.keys(a.priority)[0] as keyof TodoPriority);
@@ -21,9 +20,8 @@ class StoreTodo {
         })
     }
 
-    async helperGetTodosByScheduledDate(currentListUUID: string | null): Promise<Todo[]> {
-        const todos = await this.apiGetTodos()
-        const scheduledTodos = todos.filter((todo) => todo.scheduledDate !== BigInt(0) && todo.todoListUUID === currentListUUID)
+    helperSortTodosByScheduledDate(todos: Todo[], currentListUUID: string | null): Todo[] {
+        const scheduledTodos = todos.filter( (todo) => todo.scheduledDate !== BigInt(0) && (!currentListUUID || todo.todoListUUID === currentListUUID) )
         return scheduledTodos.sort((a, b) => Number(a.scheduledDate) - Number(b.scheduledDate))
     }
 
@@ -58,7 +56,7 @@ class StoreTodo {
     async apiAddTodo(todo: Todo) : Promise<void> {
         return new Promise(async (resolve, reject) => {
             // save to backend
-            await this.apiBackendAddTodo(todo)
+            await this.apiBackendAddTodo(todo)    
 
             // indexedDB
             const transaction = DB.transaction([todoStoreName], "readwrite");

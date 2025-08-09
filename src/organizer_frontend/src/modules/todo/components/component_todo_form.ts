@@ -6,7 +6,7 @@ import { stringToEpoch } from "../../../utils/date";
 import { getTodoPage } from "./component_todo_page";
 import { storeList } from "../stores/store_todo_lists";
 import { epochToStringRFC3339 } from "../../../utils/date";
-import { getComponentTodoListPriority, getComponentTodoListScheduled } from "./component_todo_list";
+import { getComponentTodoLists } from "./component_todo_lists";
 
 class ComponentTodoForm extends HTMLElement {
     #todo: Todo | null = null;
@@ -47,10 +47,14 @@ class ComponentTodoForm extends HTMLElement {
                 createdAt: this.#todo?.createdAt || BigInt(Date.now())
             }
 
-            // update or create new todo, in both cases we reload the two lists, it's easier to manage
-            // if one day the need for optimization arise, we can always check if some properties have changed (especially shceduledDate) and target a specific list
-            getComponentTodoListScheduled().todos = [...getComponentTodoListScheduled().todos, todo]
-            getComponentTodoListPriority().todos = [...getComponentTodoListPriority().todos, todo]            
+            // update or create todo
+            if (this.#isEditMode) {
+                await storeTodo.apiUpdateTodo(todo)
+            } else {
+                await storeTodo.apiAddTodo(todo)
+            }
+
+            getComponentTodoLists().update()
 
             // hide popover
             closeModal()
@@ -77,7 +81,7 @@ class ComponentTodoForm extends HTMLElement {
                     <textarea type="text" name="description" placeholder="${i18n.todoFormFieldDescriptionPlaceholder}">${this.#todo?.description ||  ""}</textarea>
 
                     <label for="scheduledDate">${i18n.todoFormFieldScheduledDate}</label>
-                    <input type="datetime-local" name="scheduledDate" value="${this.#todo?.scheduledDate ? epochToStringRFC3339(this.#todo.scheduledDate) : ""}" />
+                    <input type="datetime-local" name="scheduledDate" value="${this.#todo?.scheduledDate && this.#todo?.scheduledDate != BigInt(0) ? epochToStringRFC3339(this.#todo!.scheduledDate) : null}" />
 
                     <label for="priority">${i18n.todoFormFieldPriority}</label>
                     <select name="priority">

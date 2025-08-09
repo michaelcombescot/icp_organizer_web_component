@@ -3,7 +3,7 @@ import { TodoList } from "../../../../../declarations/organizer_backend/organize
 import { closeModal } from "../../../components/modal";
 import { storeList } from "../stores/store_todo_lists";
 import { getListsCards } from "./component_list_cards";
-import { ComponentListCard } from "./component_list_card";
+import { ComponentListCard, getCard } from "./component_list_card";
 
 export class ComponentListForm extends HTMLElement {
     #list: TodoList | null = null
@@ -25,7 +25,7 @@ export class ComponentListForm extends HTMLElement {
             e.preventDefault();
 
             // extract form data and create a new list
-            const formElement = this.querySelector("#list-form-form") as HTMLFormElement;
+            const formElement = this.shadowRoot!.querySelector("#list-form-form") as HTMLFormElement;
             const formData = new FormData(formElement);
             formElement.reset();
 
@@ -38,12 +38,10 @@ export class ComponentListForm extends HTMLElement {
             // update or create new todo
             if (this.#isEditMode) {
                 await storeList.apiUpdateTodoList(list);
-                (document.querySelector(`[data-uuid="${list.uuid}"]`)! as ComponentListCard).list = list;
+                getCard(this.#list!.uuid).list = list;
             } else {
                 await storeList.apiAddTodoList(list);
-                let lists = getListsCards().lists
-                lists.push(list)
-                getListsCards().lists = lists
+                getListsCards().lists = [...getListsCards().lists, list];
             }            
 
             // hide popover
@@ -88,7 +86,7 @@ export class ComponentListForm extends HTMLElement {
             </style>
         `
 
-        this.querySelector("#list-form-form")!.addEventListener("submit", (e) => this.#handleSubmitForm(e))
+        this.shadowRoot!.querySelector("#list-form-form")!.addEventListener("submit", (e) => this.#handleSubmitForm(e))
     }
 }
 

@@ -1,12 +1,17 @@
-import "./component_todo_list";
+import "./component_todo_lists";
 import { ComponentTodoForm } from "./component_todo_form";
 import { openModalWithElement } from "../../../components/modal";
 import { i18n } from "../../../i18n/i18n";
 import { ComponentListForm } from "./component_list_form";
 import { borderRadius } from "../../../css/css";
 import { getPage } from "../../../App";
+import { storeTodo } from "../stores/store_todos";
+import { storeList } from "../stores/store_todo_lists";
 
 class ComponentTodoPage extends HTMLElement {
+    #todos: Todo[]
+    #lists: TodoList[]
+
     #currentListUUID: string
     set currentListUUID(listUUID: string) {
         this.#currentListUUID = listUUID
@@ -22,6 +27,9 @@ class ComponentTodoPage extends HTMLElement {
 
     async connectedCallback() {
         this.#render()
+
+        this.#todos = await storeTodo.apiGetTodos()
+        this.#lists = await storeList.apiGetTodoLists()
     }
 
     #render() {
@@ -35,8 +43,7 @@ class ComponentTodoPage extends HTMLElement {
                 <component-lists-cards currentListUUID="${ this.#currentListUUID }" id="component-lists-card"></component-lists-cards>
 
                 <div id="todo-lists">
-                    <component-todo-list id="todo-list-priority" listType="priority" currentListUUID="${ this.#currentListUUID }"></component-todo-list>
-                    <component-todo-list id="todo-list-scheduled" listType="scheduled" currentListUUID="${ this.#currentListUUID }"></component-todo-list>
+                    <component-todo-lists currentListUUID="${ this.#currentListUUID }"></component-todo-lists>
                 </div>
             </div>
 
@@ -82,16 +89,6 @@ class ComponentTodoPage extends HTMLElement {
                     
                     #todo-select-list {
                         width: max-content;
-                    }
-
-                    #todo-lists {
-                        display: flex;
-                        justify-content: space-around;
-                        gap: 5em;
-
-                        todo-list {
-                            flex: 1;
-                        }
                     }
                 }
             </style>

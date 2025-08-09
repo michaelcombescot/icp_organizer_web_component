@@ -24,21 +24,21 @@ export class ComponentListCard extends HTMLElement {
         getTodoPage().currentListUUID = this.#list.uuid
     }
 
-    constructor() {
+    constructor(list: TodoList, isSelected: boolean = false) {
         super();
         this.attachShadow({ mode: "open" });
+
+        this.#list = list
+        this.#isSelected = isSelected
     }
 
     connectedCallback() {
-        try {this.#list = JSON.parse(decodeURIComponent(this.getAttribute("list")!)) } catch { throw new Error("list attribute is required, or malformed") }
-        this.#isSelected = this.getAttribute("isSelected") === "true"
-
         this.#render();
     }
 
     #render() {
         this.shadowRoot!.innerHTML = /*html*/`
-            <div class="todo-list-card ${this.#isSelected ? "selected" : ""}">
+            <div data-list-uuid="${this.#list.uuid}" class="todo-list-card ${this.#isSelected ? "selected" : ""}">
                 <span class="todo-list-card-name">${this.#list.name}</span>
                 <div class="todo-list-card-actions">
                     <img class="todo-list-card-edit" src="/edit.svg">
@@ -109,3 +109,5 @@ export class ComponentListCard extends HTMLElement {
 }
 
 customElements.define("component-list-card", ComponentListCard);
+
+export const getCard = (uuid: string) => getListsCards().shadowRoot!.querySelector(`component-list-card[list-uuid="${uuid}"]`) as ComponentListCard

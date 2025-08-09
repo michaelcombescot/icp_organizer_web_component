@@ -4,6 +4,7 @@ import { storeList } from "../stores/store_todo_lists";
 import "./component_list_card";
 import { getTodoPage } from "./component_todo_page";
 import { cardFontSize, scaleOnHover } from "../../../css/css";
+import { ComponentListCard } from "./component_list_card";
 
 export class ComponentListsCards extends HTMLElement {
     #lists!: TodoList[]
@@ -34,11 +35,6 @@ export class ComponentListsCards extends HTMLElement {
         this.shadowRoot!.innerHTML = /*html*/`
             <div id="todo-lists-cards">
                 <span id="todo-list-card-all">${i18n.todoListCardSeeAll}</span>
-                ${
-                    this.#lists.map(list => /*html*/`
-                        <component-list-card list="${encodeURIComponent(JSON.stringify(list))}" currentListUUID="${this.#currentListUUID}"></component-list-card>
-                    `).join("")
-                }
             </div>
 
             <style>
@@ -65,6 +61,14 @@ export class ComponentListsCards extends HTMLElement {
                 }
             </style>
         `
+
+        this.shadowRoot!.querySelector("#todo-lists-cards")!.append(
+            ...this.#lists.map((list) => {
+                const card = new ComponentListCard(list, list.uuid === this.#currentListUUID)
+                card.setAttribute("list-uuid", list.uuid)
+                return card
+            })
+        )
 
         this.shadowRoot!.querySelector("#todo-list-card-all")!.addEventListener("click", element => {
             getTodoPage().currentListUUID = ""

@@ -12,6 +12,7 @@ class ComponentTodoForm extends HTMLElement {
     #todo: Todo | null = null;
     #isEditMode: boolean = false;
     #currentListUUID: string
+    #validationErrors: Record<string, string[]> = {};
 
     constructor(todo : Todo | null, currentListUUID : string) {
         super();
@@ -32,18 +33,17 @@ class ComponentTodoForm extends HTMLElement {
             // extract form data and create a new todo
             const formElement = this.shadowRoot!.querySelector("#todo-form-form") as HTMLFormElement;
             const formData = new FormData(formElement);
-            formElement.reset();
 
             const todo: Todo = {
                 uuid: this.#todo?.uuid || crypto.randomUUID(),
                 resume: formData.get("resume") as string,
                 description: formData.get("description") as string,
-                scheduledDate: stringToEpoch(formData.get("scheduledDate") as string),
+                scheduledDate: formData.get("scheduledDate") == "" ? [] : [stringToEpoch(formData.get("scheduledDate") as string)],
                 priority:   formData.get("priority") === "low" ? { low: null } :
                             formData.get("priority") === "medium" ? { medium: null } :
                             { high: null },
                 status: { 'pending' : null },
-                todoListUUID: formData.get("listUUID") as string,
+                todoListUUID: formData.get("listUUID") == "" ? [] : [formData.get("listUUID") as string],
                 createdAt: this.#todo?.createdAt || BigInt(Date.now())
             }
 
@@ -75,13 +75,13 @@ class ComponentTodoForm extends HTMLElement {
 
                 <form id="todo-form-form">
                     <label for="resume" class="required">${i18n.todoFormFieldResume}</label>
-                    <input type="text" name="resume" value="${this.#todo?.resume ||  ""}" placeholder="${i18n.todoFormFieldResumePlaceholder}" required />
+                    <input type="text" name="resume" value="${this.#todo?.resume ||  ""}" placeholder="${i18n.todoFormFieldResumePlaceholder}" maxLength="100" required />
 
                     <label for="description">${i18n.todoFormFieldDescription}</label>
-                    <textarea type="text" name="description" placeholder="${i18n.todoFormFieldDescriptionPlaceholder}">${this.#todo?.description ||  ""}</textarea>
+                    <textarea type="text" name="description" placeholder="${i18n.todoFormFieldDescriptionPlaceholder}" maxLength="3000">${this.#todo?.description ||  ""}</textarea>
 
                     <label for="scheduledDate">${i18n.todoFormFieldScheduledDate}</label>
-                    <input type="datetime-local" name="scheduledDate" value="${this.#todo?.scheduledDate && this.#todo?.scheduledDate != BigInt(0) ? epochToStringRFC3339(this.#todo!.scheduledDate) : null}" />
+                    <input type="datetime-local" name="scheduledDate" value="${ this.#todo && this.#todo?.scheduledDate.length != 0 ? epochToStringRFC3339(this.#todo!.scheduledDate[0] as bigint) : null }" min="${new Date().toISOString().slice(0, 16)}"/>
 
                     <label for="priority">${i18n.todoFormFieldPriority}</label>
                     <select name="priority">
@@ -100,11 +100,11 @@ class ComponentTodoForm extends HTMLElement {
                         ${
                             lists.map( list => 
                                 /*html*/`
-                                    <option value="${list.uuid}" ${list.uuid === this.#todo?.todoListUUID || list.uuid === this.#currentListUUID ? "selected" : ""}>
+                                    <option value="${list.uuid}" ${list.uuid === this.#todo?.todoListUUID[0] || list.uuid === this.#currentListUUID ? "selected" : ""}>
                                         ${list.name}
                                     </option>
                                 `
-                            )
+                            ).join("")
                         }
                     </select>
                     

@@ -55,10 +55,10 @@ export class ComponentListForm extends HTMLElement {
                 
                 <form id="list-form-form">
                     <label for="name" class="required">${i18n.todoListFormFieldName}</label>
-                    <input type="text" name="name" value="${this.#list ? this.#list.name : ""}" required>
+                    <input type="text" name="name" value="${this.#list ? this.#list.name : ""}" maxLenght="30" required>
 
                     <label for="color" class="required">${i18n.todoListFormFieldColor}</label>
-                    <input type="color" name="color" value="${this.#list ? this.#list.color : "#000000"}">
+                    <input type="color" name="color" value="${this.#list?.color}" required>
 
                     <input type="submit" value="${i18n.todoListFormInputSubmit}">
                 </form>

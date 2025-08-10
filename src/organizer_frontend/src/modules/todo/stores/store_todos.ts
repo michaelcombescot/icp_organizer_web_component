@@ -1,9 +1,16 @@
-import { todoStoreName } from "../../../db/store_names";
+import { listStoreName, todoStoreName } from "../../../db/store_names";
 import { DB } from "../../../db/db";
-import { Todo, TodoPriority } from "../../../../../declarations/organizer_backend/organizer_backend.did";
+import { Todo, TodoList, TodoPriority } from "../../../../../declarations/organizer_backend/organizer_backend.did";
 import { actor } from "../../../components/auth/auth";
+import { format } from "path";
+
+export interface TodoWithList extends Todo {
+  todoList: TodoList | null
+}
 
 class StoreTodo {
+    #updateBackend = true
+
     //
     // HELPERS
     //
@@ -11,7 +18,7 @@ class StoreTodo {
     defTodoPriorities = ["low", "medium", "high"];
 
     helperSortTodosByPriority(todos: Todo[], currentListUUID: string | null): Todo[] {
-        const priorityTodos = todos.filter( (todo) => todo.scheduledDate === BigInt(0) && (!currentListUUID || todo.todoListUUID === currentListUUID) )
+        const priorityTodos = todos.filter( (todo) => todo.scheduledDate.length === 0 && (!currentListUUID || todo.todoListUUID[0] === currentListUUID) )
 
         return priorityTodos.sort((a, b) => {
             const aLevel = this.defTodoPriorities.indexOf(Object.keys(a.priority)[0] as keyof TodoPriority);
@@ -21,7 +28,7 @@ class StoreTodo {
     }
 
     helperSortTodosByScheduledDate(todos: Todo[], currentListUUID: string | null): Todo[] {
-        const scheduledTodos = todos.filter( (todo) => todo.scheduledDate !== BigInt(0) && (!currentListUUID || todo.todoListUUID === currentListUUID) )
+        const scheduledTodos = todos.filter( (todo) => todo.scheduledDate.length != 0 && (!currentListUUID || todo.todoListUUID[0] === currentListUUID) )
         return scheduledTodos.sort((a, b) => Number(a.scheduledDate) - Number(b.scheduledDate))
     }
 
@@ -31,15 +38,9 @@ class StoreTodo {
 
     constructor() {}
 
-    async apiGetTodos(fromBackend = false): Promise<Todo[]> {
+    async apiGetTodos(): Promise<TodoWithList[]> {
         return new Promise(async (resolve, reject) => {
-            let todos: Todo[] = [];
-
-            if (fromBackend) {
-                // const todos = await getTodoFromBackend()
-                resolve(todos)
-                return
-            }
+            let todos: TodoWithList[] = [];
 
             // get Todos from indexedDB
             const store = DB.transaction([todoStoreName], "readonly").objectStore(todoStoreName);
@@ -47,7 +48,15 @@ class StoreTodo {
 
             req.onsuccess = async () => {
                 req.result.map((item) => todos.push(item))
-                resolve(todos)
+
+                const reqList = DB.transaction([listStoreName], "readonly").objectStore(listStoreName);
+                const reqListAll = reqList.getAll();
+                reqListAll.onsuccess = async () => {
+                    todos.forEach( (todo) => todo.todoList = reqListAll.result.find((list) => list.uuid == todo.todoListUUID[0]) )
+                    
+                    resolve(todos)
+                }
+                reqListAll.onerror = () => { reject(reqListAll.error) }
             }
             req.onerror = () => { reject(req.error) }
         })
@@ -56,7 +65,7 @@ class StoreTodo {
     async apiAddTodo(todo: Todo) : Promise<void> {
         return new Promise(async (resolve, reject) => {
             // save to backend
-            await this.apiBackendAddTodo(todo)    
+            if (this.#updateBackend) { await this.apiBackendAddTodo(todo) } 
 
             // indexedDB
             const transaction = DB.transaction([todoStoreName], "readwrite");
@@ -68,8 +77,8 @@ class StoreTodo {
 
     apiUpdateTodo = async (todo: Todo) : Promise<void> => {
         return new Promise(async (resolve, reject) => {
-            // delete from backend
-            await this.apiBackendUpdateTodo(todo)
+            // update in backend
+            if (this.#updateBackend) { await this.apiBackendUpdateTodo(todo) }
 
             // indexedDB
             const transaction = DB.transaction([todoStoreName], "readwrite");
@@ -82,13 +91,13 @@ class StoreTodo {
     apiDeleteTodo = async (uuid: string) : Promise<void> => {
         return new Promise(async (resolve, reject) => {
             // delete from backend
-            await this.apiBackendDeleteTodo(uuid)
+            if (this.#updateBackend) { await this.apiBackendDeleteTodo(uuid) }
 
             // indexedDB
             const transaction = DB.transaction([todoStoreName], "readwrite")
             const req = transaction.objectStore(todoStoreName).delete(uuid);
             req.onsuccess = () => { resolve() }
-            req.onerror = () => { reject(req.error) };    
+            req.onerror = () => { reject(req.error) };
         })
     }
 

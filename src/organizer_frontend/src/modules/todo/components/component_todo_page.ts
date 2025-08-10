@@ -9,9 +9,6 @@ import { storeTodo } from "../stores/store_todos";
 import { storeList } from "../stores/store_todo_lists";
 
 class ComponentTodoPage extends HTMLElement {
-    #todos: Todo[]
-    #lists: TodoList[]
-
     #currentListUUID: string
     set currentListUUID(listUUID: string) {
         this.#currentListUUID = listUUID
@@ -27,9 +24,6 @@ class ComponentTodoPage extends HTMLElement {
 
     async connectedCallback() {
         this.#render()
-
-        this.#todos = await storeTodo.apiGetTodos()
-        this.#lists = await storeList.apiGetTodoLists()
     }
 
     #render() {

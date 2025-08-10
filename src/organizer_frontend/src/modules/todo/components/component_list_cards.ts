@@ -44,6 +44,7 @@ export class ComponentListsCards extends HTMLElement {
                     gap: 0.8em;
 
                     #todo-list-card-all {
+                        cursor: pointer;
                         display: flex;
                         align-items: center;
                         justify-content: center;

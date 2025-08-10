@@ -3,9 +3,11 @@ import { DB } from "../../../db/db";
 import { actor } from "../../../components/auth/auth";
 import { TodoList } from "../../../../../declarations/organizer_backend/organizer_backend.did";
 import { listStoreName } from "../../../db/store_names";
-import { storeTodo } from "./store_todos";
+import { storeTodo, TodoWithList } from "./store_todos";
 
 export class StoreTodoList {
+    #updateBackend = true
+
     //
     // Methods
     //
@@ -37,9 +39,9 @@ export class StoreTodoList {
     }
 
     apiAddTodoList = async (list: TodoList): Promise<void> => {
-        return new Promise((resolve, reject) => {
+        return new Promise(async (resolve, reject) => {
             // save to backend
-            this.apiBackendAddList(list)
+            if (this.#updateBackend) { await this.apiBackendAddList(list) }
 
             // indexedDB
             const store = DB.transaction([listStoreName], "readwrite").objectStore(listStoreName);
@@ -50,9 +52,9 @@ export class StoreTodoList {
     }
 
     apiUpdateTodoList =  async (list: TodoList) : Promise<void> => {
-        return new Promise((resolve, reject) => {
+        return new Promise(async (resolve, reject) => {
             // save to backend
-            this.apiBackendUpdateList(list)
+            if (this.#updateBackend) { await this.apiBackendUpdateList(list) }
 
             // update db
             const store = DB.transaction([listStoreName], "readwrite").objectStore(listStoreName);
@@ -65,18 +67,19 @@ export class StoreTodoList {
     apiDeleteTodoList = async(uuid: string) : Promise<void>  => {
         return new Promise(async (resolve, reject) => {
             // delete from backend
-            this.apiBackendDeleteList(uuid)
+            if (this.#updateBackend) { await this.apiBackendDeleteList(uuid) }
 
             // delete from indexedDB, once a list is deleted, all related todos must be deleted
+            const todos = await storeTodo.apiGetTodos();
+
             const transaction = DB.transaction([listStoreName, todoStoreName], "readwrite")
             const listObjStore = transaction.objectStore(listStoreName);
             const todoObjStore = transaction.objectStore(todoStoreName);
 
             listObjStore.delete(uuid);
 
-            const todos = await storeTodo.apiGetTodos()
             todos.forEach(todo => {
-                if (todo.todoListUUID === uuid) {
+                if (todo.todoListUUID[0] == uuid) {
                     todoObjStore.delete(todo.uuid);
                 }
             });

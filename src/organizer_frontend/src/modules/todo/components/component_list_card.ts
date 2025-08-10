@@ -2,7 +2,7 @@ import { openModalWithElement } from "../../../components/modal";
 import { ComponentListForm } from "./component_list_form";
 import { i18n } from "../../../i18n/i18n";
 import { getTodoPage } from "./component_todo_page";
-import { ComponentTodo } from "./component_todo";
+import { ComponentTodo, getComponentTodoOfList } from "./component_todo";
 import { borderRadius, cardFontSize, scaleOnHover } from "../../../css/css";
 import { getListsCards } from "./component_list_cards";
 import { Todo, TodoList } from "../../../../../declarations/organizer_backend/organizer_backend.did";
@@ -10,17 +10,20 @@ import { storeList } from "../stores/store_todo_lists";
 
 export class ComponentListCard extends HTMLElement {
     #list!: TodoList
+    // when a list is updated, we need to update the card itself, and ell ComponentTodo linked to this card (especially for the color)
     set list(list: TodoList) {
         this.#list = list
         this.#render()
 
-        document.querySelectorAll(`[data-list-uuid="${this.#list.uuid}"]`).forEach((todo) => {
-            (todo as ComponentTodo).list = this.#list
+        getComponentTodoOfList(this.#list.uuid).forEach((todo) => {
+            (todo as ComponentTodo).todoList = this.#list
         })
     }
 
     #isSelected!: boolean
     set isSelected(isSelected: boolean) {
+        if ( this.#isSelected == isSelected ) { return }
+
         getTodoPage().currentListUUID = this.#list.uuid
     }
 
@@ -101,7 +104,8 @@ export class ComponentListCard extends HTMLElement {
 
             if ( !confirm(i18n.todoListCardConfirmDelete) ) return
 
-            await (await storeList).apiDeleteTodoList(this.#list.uuid)
+            await storeList.apiDeleteTodoList(this.#list.uuid)
+            debugger
             this.remove()
             getTodoPage().currentListUUID = ""
         })

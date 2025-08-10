@@ -20,25 +20,25 @@ export class ComponentTodoShow extends HTMLElement {
         this.shadowRoot!.innerHTML = /*html*/`
             <div id="todo-show">
                 <div>${i18n.todoFormFieldResume}</div>
-                <div>${this.#todo!.resume}</div>
+                <div>${this.#todo.resume}</div>
 
                 <div>${i18n.todoFormFieldDescription}</div>
-                <div>${this.#todo!.description}</div>
+                <div>${this.#todo.description}</div>
 
                 ${
-                    this.#todo!.scheduledDate ? 
+                    this.#todo.scheduledDate.length != 0 ? 
                         /*html*/`
                             <div>${i18n.todoFormFieldScheduledDate}</div>
-                            <div>${stringDateFromEpoch(this.#todo!.scheduledDate)}</div>
+                            <div>${stringDateFromEpoch(this.#todo.scheduledDate[0])}</div>
                         ` :
                         ""
                 }                
 
                 <div>${i18n.todoFormFieldPriority}</div>
-                <div>${i18n.todoFormPriorities[Object.keys(this.#todo!.priority)[0]]}</div>
+                <div>${i18n.todoFormPriorities[Object.keys(this.#todo.priority)[0]]}</div>
 
                 <div>${i18n.todoFormFieldStatus}</div>
-                <div>${i18n.todoFormStatuses[Object.keys(this.#todo!.status)[0]]}</div>
+                <div>${i18n.todoFormStatuses[Object.keys(this.#todo.status)[0]]}</div>
             </div>
 
             <style>

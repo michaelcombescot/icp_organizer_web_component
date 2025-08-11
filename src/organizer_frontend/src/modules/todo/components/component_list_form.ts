@@ -4,6 +4,7 @@ import { closeModal } from "../../../components/modal";
 import { storeList } from "../stores/store_todo_lists";
 import { getListsCards } from "./component_list_cards";
 import { ComponentListCard, getCard } from "./component_list_card";
+import { getLoadingComponent } from "../../../components/loading";
 
 export class ComponentListForm extends HTMLElement {
     #list: TodoList | null = null
@@ -22,20 +23,20 @@ export class ComponentListForm extends HTMLElement {
     }
 
     async #handleSubmitForm(e : Event) {
-            e.preventDefault();
+        e.preventDefault();
 
-            // extract form data and create a new list
-            const formElement = this.shadowRoot!.querySelector("#list-form-form") as HTMLFormElement;
-            const formData = new FormData(formElement);
-            formElement.reset();
+        // extract form data and create a new list
+        const formElement = this.shadowRoot!.querySelector("#list-form-form") as HTMLFormElement;
+        const formData = new FormData(formElement);
+        formElement.reset();
 
-            const list: TodoList = {
-                uuid:this.#list ? this.#list.uuid : crypto.randomUUID(),
-                name: formData.get("name") as string,
-                color: formData.get("color") as string
-            }
+        const list: TodoList = {
+            uuid:this.#list ? this.#list.uuid : crypto.randomUUID(),
+            name: formData.get("name") as string,
+            color: formData.get("color") as string
+        }
 
-            // update or create new todo
+        getLoadingComponent().wrapAsync(async () => { 
             if (this.#isEditMode) {
                 await storeList.apiUpdateTodoList(list);
                 getCard(this.#list!.uuid).list = list;
@@ -44,8 +45,9 @@ export class ComponentListForm extends HTMLElement {
                 getListsCards().lists = [...getListsCards().lists, list];
             }            
 
-            // hide popover
+            getLoadingComponent().hide()
             closeModal()
+        })            
     }
 
     #render() {

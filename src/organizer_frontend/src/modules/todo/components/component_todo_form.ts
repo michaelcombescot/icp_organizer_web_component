@@ -7,6 +7,7 @@ import { getTodoPage } from "./component_todo_page";
 import { storeList } from "../stores/store_todo_lists";
 import { epochToStringRFC3339 } from "../../../utils/date";
 import { getComponentTodoLists } from "./component_todo_lists";
+import { getLoadingComponent } from "../../../components/loading";
 
 class ComponentTodoForm extends HTMLElement {
     #todo: Todo | null = null;
@@ -27,7 +28,7 @@ class ComponentTodoForm extends HTMLElement {
         this.#render();
     }
 
-    private async handleSubmitForm(e : Event) {
+    async #handleSubmitForm(e : Event) {
             e.preventDefault();
 
             // extract form data and create a new todo
@@ -37,7 +38,7 @@ class ComponentTodoForm extends HTMLElement {
             const todo: Todo = {
                 uuid: this.#todo?.uuid || crypto.randomUUID(),
                 resume: formData.get("resume") as string,
-                description: formData.get("description") as string,
+                description: formData.get("description") == "" ? [] : [formData.get("description") as string],
                 scheduledDate: formData.get("scheduledDate") == "" ? [] : [stringToEpoch(formData.get("scheduledDate") as string)],
                 priority:   formData.get("priority") === "low" ? { low: null } :
                             formData.get("priority") === "medium" ? { medium: null } :
@@ -47,17 +48,17 @@ class ComponentTodoForm extends HTMLElement {
                 createdAt: this.#todo?.createdAt || BigInt(Date.now())
             }
 
-            // update or create todo
-            if (this.#isEditMode) {
-                await storeTodo.apiUpdateTodo(todo)
-            } else {
-                await storeTodo.apiAddTodo(todo)
-            }
+            getLoadingComponent().wrapAsync(async () => {
+                if (this.#isEditMode) {
+                    await storeTodo.apiUpdateTodo(todo)
+                } else {
+                    await storeTodo.apiAddTodo(todo)
+                }
 
-            getComponentTodoLists().update()
+                getComponentTodoLists().update()
 
-            // hide popover
-            closeModal()
+                closeModal()
+            })
     }
 
     //
@@ -140,7 +141,7 @@ class ComponentTodoForm extends HTMLElement {
             </style>
         `
 
-        this.shadowRoot!.querySelector("#todo-form-form")!.addEventListener("submit", this.handleSubmitForm.bind(this));
+        this.shadowRoot!.querySelector("#todo-form-form")!.addEventListener("submit", this.#handleSubmitForm.bind(this));
     }
 }
 

@@ -49,14 +49,19 @@ class ComponentTodoLists extends HTMLElement {
             </div>
 
             <style>
-                #todo-lists { 
+                #todo-lists {
+                    width: 100%;
                     display: flex;
                     justify-content: space-around;
                     gap: 5em;
 
                     #todo-list-priority, #todo-list-scheduled {
+                        width: 100%;
+                        min-width: 15em;
                         display: flex;
                         flex-direction: column;
+                        align-items: center;
+                        justify-content: flex-start;
                         gap: 1em;
                     }
                 }

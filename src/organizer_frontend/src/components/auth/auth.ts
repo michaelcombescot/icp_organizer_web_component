@@ -1,6 +1,5 @@
 import { type _SERVICE } from '../../../../declarations/organizer_backend/organizer_backend.did'
 import { AuthClient } from '@dfinity/auth-client';
-import { type ActorSubclass } from '@dfinity/agent';
 import { createActor } from '../../../../declarations/organizer_backend';
 import { canisterId as backendCanisterID } from '../../../../declarations/organizer_backend';
 import { canisterId as canisterIdII } from '../../../../declarations/internet_identity/index';

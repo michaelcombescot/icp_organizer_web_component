@@ -1,5 +1,5 @@
 import { getMainApp } from "../App";
-import { borderRadius } from "../css/css";
+import { borderRadius, maskColor } from "../css/css";
 
 class ComponentModal extends HTMLElement {
     constructor() {
@@ -9,9 +9,6 @@ class ComponentModal extends HTMLElement {
 
     connectedCallback() {
         this.render();
-
-        this.shadowRoot!.querySelector('#close-btn')!.addEventListener('click', () => this.hide());
-        this.shadowRoot!.querySelector('#mask')!.addEventListener('click', () => this.hide());
     }
 
     show(content: HTMLElement) {
@@ -39,7 +36,7 @@ class ComponentModal extends HTMLElement {
                         position: fixed; top: 0; left: 0;
                         width: 100%; height: 100%;
                         z-index: 0;
-                        background-color: rgba(0, 0, 0, 0.5);
+                        background-color: ${maskColor};
                     }
 
                     #modal-body {
@@ -75,6 +72,9 @@ class ComponentModal extends HTMLElement {
                 }
             </style>
         `;
+
+        this.shadowRoot!.querySelector('#close-btn')!.addEventListener('click', () => this.hide());
+        // this.shadowRoot!.querySelector('#mask')!.addEventListener('click', () => this.hide());
     }
 }
 

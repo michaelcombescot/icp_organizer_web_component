@@ -45,10 +45,14 @@ class App extends HTMLElement {
                 <div id="page"></div>
 
                 <component-modal></component-modal>
+                <component-loading></component-loading>
             </div>
 
             <style>
                 #main-app {
+                    height: 100vh;
+                    width: 100vw;
+
                     header {
                         padding: 0 1em 0 1em;
                         height: 10vh;
@@ -68,6 +72,9 @@ class App extends HTMLElement {
 
                     #page {
                         padding: 1em;
+                        height: 100%;
+                        width: 100vw;
+                        box-sizing: border-box;
                     }
                 }
             </style>

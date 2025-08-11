@@ -5,14 +5,15 @@ import { i18n } from "../../../i18n/i18n";
 import { ComponentListForm } from "./component_list_form";
 import { borderRadius } from "../../../css/css";
 import { getPage } from "../../../App";
-import { storeTodo } from "../stores/store_todos";
-import { storeList } from "../stores/store_todo_lists";
+import { isAuthenticated } from "../../../components/auth/auth";
+import { getLoadingComponent } from "../../../components/loading";
 
 class ComponentTodoPage extends HTMLElement {
     #currentListUUID: string
     set currentListUUID(listUUID: string) {
         this.#currentListUUID = listUUID
-        this.#render()
+
+        getLoadingComponent().wrapAsync(async () => { this.#render() })
     }
 
     constructor() {
@@ -29,16 +30,24 @@ class ComponentTodoPage extends HTMLElement {
     #render() {
         this.shadowRoot!.innerHTML = /*html*/`
             <div id="todo-page">
-                <div id="todo-page-buttons">
-                    <button id="todo-open-modal-new-task"><img src="/plus.svg"><span>${ i18n.todoCreateNewButton }</span></button>
-                    <button id="todo-open-modal-new-list"><img src="/plus.svg"><span>${ i18n.todoListCreateButton }</span></button>
-                </div>
+                ${ 
+                    !isAuthenticated
+                    ?   /*html*/`
+                            <p>Not CONNECTED</p>
+                        `
+                    :   /*html*/`
+                            <div id="todo-page-buttons">
+                                <button id="todo-open-modal-new-task"><img src="/plus.svg"><span>${ i18n.todoCreateNewButton }</span></button>
+                                <button id="todo-open-modal-new-list"><img src="/plus.svg"><span>${ i18n.todoListCreateButton }</span></button>
+                            </div>
 
-                <component-lists-cards currentListUUID="${ this.#currentListUUID }" id="component-lists-card"></component-lists-cards>
+                            <component-lists-cards currentListUUID="${ this.#currentListUUID }" id="component-lists-card"></component-lists-cards>
 
-                <div id="todo-lists">
-                    <component-todo-lists currentListUUID="${ this.#currentListUUID }"></component-todo-lists>
-                </div>
+                            <div id="todo-lists">
+                                <component-todo-lists currentListUUID="${ this.#currentListUUID }"></component-todo-lists>
+                            </div>
+                        `
+                }
             </div>
 
             <style>
@@ -88,8 +97,11 @@ class ComponentTodoPage extends HTMLElement {
             </style>
         `;
 
-        this.shadowRoot!.querySelector("#todo-open-modal-new-task")!.addEventListener("click", () => openModalWithElement(new ComponentTodoForm(null, this.#currentListUUID)))
-        this.shadowRoot!.querySelector("#todo-open-modal-new-list")!.addEventListener("click", () => openModalWithElement(new ComponentListForm(null)))
+        if (isAuthenticated) {
+            this.shadowRoot!.querySelector("#todo-open-modal-new-task")!.addEventListener("click", () => openModalWithElement(new ComponentTodoForm(null, this.#currentListUUID)))
+            this.shadowRoot!.querySelector("#todo-open-modal-new-list")!.addEventListener("click", () => openModalWithElement(new ComponentListForm(null)))
+        }
+       
     }
 }
 

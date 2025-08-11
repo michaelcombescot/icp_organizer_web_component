@@ -23,7 +23,7 @@ export class ComponentTodoShow extends HTMLElement {
                 <div>${this.#todo.resume}</div>
 
                 <div>${i18n.todoFormFieldDescription}</div>
-                <div>${this.#todo.description}</div>
+                <div>${this.#todo.description[0]?.replace(/\n/g, "<br>") || ""}</div>
 
                 ${
                     this.#todo.scheduledDate.length != 0 ? 

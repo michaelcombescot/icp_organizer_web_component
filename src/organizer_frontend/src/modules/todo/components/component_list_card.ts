@@ -7,6 +7,8 @@ import { borderRadius, cardFontSize, scaleOnHover } from "../../../css/css";
 import { getListsCards } from "./component_list_cards";
 import { Todo, TodoList } from "../../../../../declarations/organizer_backend/organizer_backend.did";
 import { storeList } from "../stores/store_todo_lists";
+import { getContrastColor } from "../../../css/helpers";
+import { getLoadingComponent } from "../../../components/loading";
 
 export class ComponentListCard extends HTMLElement {
     #list!: TodoList
@@ -40,8 +42,10 @@ export class ComponentListCard extends HTMLElement {
     }
 
     #render() {
+        const contrastColor = getContrastColor(this.#list.color)
+
         this.shadowRoot!.innerHTML = /*html*/`
-            <div data-list-uuid="${this.#list.uuid}" class="todo-list-card ${this.#isSelected ? "selected" : ""}">
+            <div class="todo-list-card ${this.#isSelected ? "selected" : ""}">
                 <span class="todo-list-card-name">${this.#list.name}</span>
                 <div class="todo-list-card-actions">
                     <img class="todo-list-card-edit" src="/edit.svg">
@@ -56,10 +60,10 @@ export class ComponentListCard extends HTMLElement {
                     align-items: center;
                     width: max-content;
                     font-size: ${cardFontSize};
-                    color: white;
+                    color: ${contrastColor};
                     padding: 0.5em;
                     border-radius: ${borderRadius};
-                    border: 0.3em solid ;
+                    border: 0.3em solid transparent;
                     background-color: ${this.#list.color};
 
                     .todo-list-card-name {
@@ -73,7 +77,7 @@ export class ComponentListCard extends HTMLElement {
 
                         img {
                             width: 1em;
-                            filter: brightness(0) invert(1);
+                            filter: invert(${contrastColor === "black" ? 0 : 1});
                             cursor: pointer;
                         }
                     }
@@ -104,10 +108,14 @@ export class ComponentListCard extends HTMLElement {
 
             if ( !confirm(i18n.todoListCardConfirmDelete) ) return
 
-            await storeList.apiDeleteTodoList(this.#list.uuid)
-            debugger
-            this.remove()
-            getTodoPage().currentListUUID = ""
+            getLoadingComponent().wrapAsync( async () => {
+                await storeList.apiDeleteTodoList(this.#list.uuid)
+                this.remove()
+
+                if ( this.#isSelected) {
+                    getTodoPage().currentListUUID = ""
+                }
+            })
         })
     }
 }

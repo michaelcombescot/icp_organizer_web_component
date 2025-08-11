@@ -3,9 +3,11 @@ import { ComponentTodoForm } from "./component_todo_form";
 import { ComponentTodoShow } from "./component_todo_show";
 import { openModalWithElement } from "../../../components/modal";
 import { remainingTimeFromEpoch, stringDateFromEpoch } from "../../../utils/date";
-import { borderRadius, scaleOnHover } from "../../../css/css";
+import { baseCardColor, borderRadius, scaleOnHover } from "../../../css/css";
 import { TodoList } from "../../../../../declarations/organizer_backend/organizer_backend.did";
 import { getComponentTodoLists } from "./component_todo_lists";
+import { getContrastColor } from "../../../css/helpers";
+import { getLoadingComponent } from "../../../components/loading";
 
 export class ComponentTodo extends HTMLElement {
     #todo: TodoWithList
@@ -32,6 +34,8 @@ export class ComponentTodo extends HTMLElement {
     }
 
     #render() {
+        const contrastColor = getContrastColor(this.#todo.todoList?.color || baseCardColor)
+
         this.shadowRoot!.innerHTML = /*html*/`
             <div class="todo-item">
                 ${this.#todo.scheduledDate.length != 0 ?
@@ -55,9 +59,9 @@ export class ComponentTodo extends HTMLElement {
                     display: flex;
                     flex-direction: column;
                     gap: 1em;
-                    background-color: ${this.#todo.todoList?.color || "#fefee2"};
+                    background-color: ${this.#todo.todoList?.color || baseCardColor};
                     padding: 1em;
-                    min-width: 15em;
+                    width: 15em;
                     border-radius: ${borderRadius};
     
                     
@@ -67,7 +71,7 @@ export class ComponentTodo extends HTMLElement {
 
                         img {
                             width: 1em;
-                            /* filter: brightness(0) invert(1); */
+                            filter: invert(${contrastColor == "black" ? 0 : 1});
                             cursor: pointer;
 
                             &:hover {
@@ -77,6 +81,7 @@ export class ComponentTodo extends HTMLElement {
                     }
 
                     .todo-item-date {
+                        color: ${contrastColor};
                         display: flex;
                         gap: 1em;
                         justify-content: space-between;
@@ -93,6 +98,7 @@ export class ComponentTodo extends HTMLElement {
                         background-color: white;
                         padding: 0.5em;
                         border-radius: ${borderRadius};
+                        word-wrap: break-word;
                         &.high { background-color: red; }
                         &.medium { background-color: yellow; }
                     }
@@ -107,8 +113,11 @@ export class ComponentTodo extends HTMLElement {
         this.shadowRoot!.querySelector(".todo-item-action-edit")!.addEventListener("click", () => openModalWithElement(new ComponentTodoForm(this.#todo, this.#todo.todoListUUID[0] as string))  );
 
         this.shadowRoot!.querySelector(".todo-item-action-delete")!.addEventListener("click", () => {
-            storeTodo.apiDeleteTodo(this.#todo.uuid)
-            this.remove();
+            getLoadingComponent().wrapAsync(async () => {
+                await storeTodo.apiDeleteTodo(this.#todo.uuid)
+                this.remove();
+                getLoadingComponent().hide();
+            })
         });
     }
 }

@@ -9,11 +9,3 @@ module CheckAccess {
         principal == Principal.fromText(indexCanisterPrincipal)
     };
 };
-
-module ArrayHelpers {
-    public func removeDuplicates<T>(array: [T], compare: (T,T) -> Order.Order) : [T] {
-        let buf = Buffer.fromArray<T>(array);
-        Buffer.removeDuplicates<T>(buf, compare);
-        Buffer.toArray<T>(buf)
-    };
-};

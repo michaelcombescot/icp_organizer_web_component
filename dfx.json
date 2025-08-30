@@ -1,13 +1,12 @@
 {
   "canisters": {
-    "backend": {
-      "main": "src/organizer_backend/main.mo",
-      "type": "motoko",
-      "args" : "--enhanced-orthogonal-persistence"
+    "todo_backend": {
+      "main": "src/backend/todo/index_canister_todo.mo",
+      "type": "motoko"
     },
-    "frontend": {
+    "todo_frontend": {
       "dependencies": [
-        "organizer_backend"
+        "backend"
       ],
       "source": [
         "src/frontend/dist"

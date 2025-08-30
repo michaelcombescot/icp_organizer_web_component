@@ -10,8 +10,6 @@ import Nat "mo:core/Nat";
 import Nat32 "mo:core/Nat32";
 import Cycles "mo:base/ExperimentalCycles";
 import TodoBucket "./bucket_todo";
-import TodoListBucket "./bucket_todo_list";
-import TodoUserBucket "./bucket_todo_users_data";
 import Model "model";
 
 persistent actor {
@@ -28,11 +26,7 @@ persistent actor {
     // BUCKETS
     //
 
-    var todoBuckets = Map.empty<Nat, TodoBucket.TodoBucket>();
-
-    var userTodoDataBuckets = Map.empty<Nat32, TodoUserBucket.TodoUserBucket>();
-    
-    var todoListBuckets = Map.empty<Nat, TodoListBucket.TodoListBucket>();
+    var todoBuckets = Map.empty<Nat32, TodoBucket.TodoBucket>();
 
     //
     // QUERIES
@@ -41,9 +35,11 @@ persistent actor {
     public shared ({ caller }) func getUserTodosWithLists() : async ([Model.Todo.Todo]) {
         if ( Principal.isAnonymous(caller) ) { return []; };
 
+        // retrieve user todos data
         let ?userDataBucket = Map.get(userTodoDataBuckets, Nat32.compare, Principal.hash(caller)) else return [];
         let todosData = switch ( await userDataBucket.getCallerTodosWithPermissions(caller) ) { case (#ok todos) todos; case (#err err) return #err("cannot get user data: " # err); };
 
+        // find all buckets for user todos
         var todoBucketsIndexes = Array.map(todosData, func(data: (Nat, Todo.Todo.Permissions)) : Nat {
             return getIndexForTodoBucket(data.0);
         });

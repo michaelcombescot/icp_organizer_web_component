@@ -3,6 +3,7 @@ import Time "mo:base/Time";
 import Result "mo:base/Result";
 import Option "mo:base/Option";
 import Map "mo:core/Map";
+import List "mo:core/List";
 
 module Todo {
     //
@@ -18,6 +19,7 @@ module Todo {
         status: TodoStatus;
         createdAt: Time.Time;
         todoListUUID: ?Text;
+        permission: Permission;
     };
 
     public func validateTodo(todo: Todo) : Result.Result<(), Text> {
@@ -40,7 +42,7 @@ module Todo {
         #done;
     };
 
-    public type Permissions = {
+    public type Permission = {
         #owned;
         #read;
         #write;
@@ -51,7 +53,6 @@ module Todo {
     //
 
     public type TodoResponse = Todo and {
-        permission: Permissions;
         todoList: ?TodoList.TodoList;
     };
 };
@@ -70,8 +71,19 @@ module TodoList {
     };
 };
 
-module UserTodo {
-    public type userTodos = {
-        usersTodos: Map.Map<Nat, Todo.Permissions>;
+module UserTodoData {
+    public type userTodosData = {
+        todos: Map.Map<Nat, Todo.Todo>;
+        todosSharedWithUser: Map.Map<Principal, Map.Map<Nat, Todo.Permission>>; // todos shared with the user and the associated permission
+        todosSharedWithOthers: Map.Map<Principal, Map.Map<Nat, Todo.Permission>>; // todos that the user has shared, used to find which association to delete if one todo is deleted
+        
+        todoLists: Map.Map<Nat, TodoList.TodoList>;
+        todoListsSharedWithUser: Map.Map<Principal, Map.Map<Nat, TodoList.TodoList>>;
+        todoListsSharedWithOthers: Map.Map<Principal, Map.Map<Nat, TodoList.TodoList>>;
+    };
+
+    public type sharableUserData = {
+        todos: [Todo.Todo];
+        todosSharedWithUser: [(Principal, Nat, Todo.Permission)];
     };
 }

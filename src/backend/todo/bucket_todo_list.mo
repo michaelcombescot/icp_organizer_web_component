@@ -1,3 +1,0 @@
-persistent actor class TodoListBucket() {
-
-};

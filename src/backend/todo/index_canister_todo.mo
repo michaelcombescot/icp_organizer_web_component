@@ -11,83 +11,114 @@ import Nat32 "mo:core/Nat32";
 import Cycles "mo:base/ExperimentalCycles";
 import TodoBucket "./bucket_todo";
 import Model "model";
+import Helpers "../helpers/helpers";
 
 persistent actor {
-    //
-    // VARIABLES
-    //
-
-    let newCanisterNumberCycle = 1_000_000_000;
-
-    var lastTodoId = 0;
-    var lastTodoListID = 0;
+    let MAX_NB_USERS_PER_CANISTER = 10_000;
+    let NEW_BUCKET_NB_CYCLES = 1_000_000_000;
     
+    var lastTodoId = 0;
+
+    //
+    // QUERY DATA
+    //
+
+    // map an object id with the owner principal
+    var todosOwners     = Map.empty<Nat, Principal>();
+    var todoListsOwners = Map.empty<Nat, Principal>();
+
     //
     // BUCKETS
     //
 
-    var todoBuckets = Map.empty<Nat32, TodoBucket.TodoBucket>();
+    var currentBucketData: {bucket: ?TodoBucket.TodoBucket; nbUsers: Nat} = {bucket = null; nbUsers = 0;};
+    var principalsOnBuckets = Map.empty<Principal, TodoBucket.TodoBucket>();
 
     //
-    // QUERIES
+    // USER 
     //
 
-    public shared ({ caller }) func getUserTodosWithLists() : async ([Model.Todo.Todo]) {
-        if ( Principal.isAnonymous(caller) ) { return []; };
+    // call this function when a user connect, create the bucket for the user if it doesn't exist
+    public shared ({ caller }) func createUser() : async Result.Result<(), Text> {
+        if ( Principal.isAnonymous(caller) ) { return #err("Not logged in"); };
 
-        // retrieve user todos data
-        let ?userDataBucket = Map.get(userTodoDataBuckets, Nat32.compare, Principal.hash(caller)) else return [];
-        let todosData = switch ( await userDataBucket.getCallerTodosWithPermissions(caller) ) { case (#ok todos) todos; case (#err err) return #err("cannot get user data: " # err); };
+        switch ( Map.get(principalsOnBuckets, Principal.compare, caller) ) {
+            case null {
+                if ( Option.isNull(currentBucketData.bucket) or currentBucketData.nbUsers >= MAX_NB_USERS_PER_CANISTER ) { // create a new bucket
+                    Cycles.add(NEW_BUCKET_NB_CYCLES);
+                    let bucket = await TodoBucket.TodoBucket();
+                    currentBucketData := { bucket = ?bucket; nbUsers = 0; };
+                } else {
+                    currentBucketData := {currentBucketData with nbUsers = currentBucketData.nbUsers + 1;};
+                };
 
-        // find all buckets for user todos
-        var todoBucketsIndexes = Array.map(todosData, func(data: (Nat, Todo.Todo.Permissions)) : Nat {
-            return getIndexForTodoBucket(data.0);
-        });
-        todoBucketsIndexes := Helpers.ArrayHelpers.removeDuplicates<Nat>(todoBuckets, Nat.compare);
+                let ?bucket = currentBucketData.bucket else return #err("No current bucket");
 
-        let todoCalls = Array.map(todoBucketsIndexes, func(index: Nat) : async ([Model.Todo.Todo]) {
-            let bucket = Map.get(todoBuckets, Nat.compare, index) else return null;
-            bucket.getTodos();
-        });
-
-        
+                Map.add( principalsOnBuckets, Principal.compare, caller, bucket );
+                
+                switch ( await bucket.createUserData(caller) ) {
+                    case (#ok) #ok;
+                    case (#err err) return #err(err);
+                }
+            };
+            case (?_) #ok;
+        }
     };
 
-    // public shared ({ caller }) func createTodo(todo: Model.Todo.Todo) : async Result.Result<Nat, Text> {
-    //     if ( Principal.isAnonymous(caller) ) { return #err("Not logged in"); };
+    public query ({ caller }) func getAllDataForUser() : async Result.Result<[Model.Todo.Todo], Text> {
+        if ( Principal.isAnonymous(caller) ) { return #err("Not logged in"); };
 
-    //     let todoWithId = { todo with id = lastTodoId + 1 };
+        // TODO
 
-    //     //add todo
-    //     let todoBucket = switch ( await getOrCreateTodoBucket(todoWithId.id)) { case (#ok bucket) bucket; case (#err err) return #err(err); };
-    //     switch ( await todoBucket.addTodo(todoWithId) ) {
-    //         case (#ok) lastTodoId += 1;
-    //         case (#err err) return #err(err);
-    //     };
+        #ok([])
+    };
 
-    //     // save link between todo and user
-    //     let userBucket = switch ( await getOrCreateUserDataBucket(caller)) { case (#ok bucket) bucket; case (#err err) return #err(err); };
-    //     switch ( await userBucket.createTodoForUser(todoWithId.id) ) { case (#ok) (); case (#err err) return #err(err); };
+    //
+    // TODO
+    //
 
-    //     #ok(todoWithId.id)
-    // };
+    public shared ({ caller }) func createTodo(todo: Model.Todo.Todo) : async Result.Result<Nat, Text> {
+        if ( Principal.isAnonymous(caller) ) { return #err("Not logged in"); };
 
-    // public shared ({ caller }) func updateTodo(todo: Todo.Todo) : async Result.Result<(), Text> {
-    //     if ( Principal.isAnonymous(caller) ) { return #err("Not logged in"); };
+        let listOwner = Map.get(todosOwners, Nat.compare, ?todo.todoListId);
+        let ?ownerBucket    = Map.get(todosBucketsIndexes, Nat.compare, ?todo.id) else return #err("No index for this todo");
 
-    //     let ?userDataBucket  = Map.get(userTodoDataBuckets, Nat32.compare, Principal.hash(caller)) else return #err("No user bucket");
-    //     switch ( await userDataBucket.getTodoPermission(todo.id) ) {
-    //         case (#ok todoPermissions) {
-    //             if ( todoPermissions != #owned and todoPermissions != #owned ) { return #err("No write permission"); };
-    //         };
-    //         case (#err err) return #err(err);
-    //     };
+        if ( Option.isSome(todo.todoListId) and ?listOwner != caller ) {
+            switch ( await ownerBucket.getPermissionForList({owner = ?listOwner; user = caller; listId = ?todo.todoListId}) ) {
+                case (#ok listPermission) if ( listPermission != #write ) { return #err("No write permission"); };
+                case (#err err) #err(err);
+            }
+        };
 
-    //     let ?todoBucket = Map.get(todoBuckets, Nat.compare, getIndexForTodoBucket(todo.id)) else return #err("No todo bucket");
-    //     switch (await todoBucket.updateTodo(todo)) { case (#ok) (); case (#err err) return #err(err); };
+        let todoWithId = { todo with id = lastTodoId + 1 };
 
-    //     #ok
-    // };
+        switch ( await ownerBucket.createTodo({principal = listOwner; todo = todoWithId}) ) {
+            case (#ok) {
+                Map.add(todosOwners, Nat.compare, todoWithId.id, listOwner);
+
+                #ok(todoWithId.id);
+            };
+            case (#err err) return #err(err);
+        }
+    };
+
+    public shared ({ caller }) func updateTodo(todo: Model.Todo.Todo) : async Result.Result<(), Text> {
+        if ( Principal.isAnonymous(caller) ) { return #err("Not logged in"); };
+
+        let ?bucket = getBucketForPrincipal(caller) else return #err("No bucket for user");
+
+        switch ( await bucket.getPrincipalForTodo(todo.id) ) {
+            case (#ok todoPermissions) {
+                if ( todoPermissions != #owned and todoPermissions != #owned ) { return #err("No write permission"); };
+            };
+            case (#err err) return #err(err);
+        };
+
+        let ?todoBucket = Map.get(todoBuckets, Nat.compare, getIndexForTodoBucket(todo.id)) else return #err("No todo bucket");
+        switch (await todoBucket.updateTodo(todo)) { case (#ok) (); case (#err err) return #err(err); };
+
+        #ok
+    };
 
     // public shared ({ caller }) func removeTodo(id: Nat) : async Result.Result<(), Text> {
     //     if ( Principal.isAnonymous(caller) ) { return #err("Not logged in"); };
@@ -142,53 +173,8 @@ persistent actor {
     //     #ok
     // };
 
-    // /////
-    // // helpers
-    // /////
-
-    // // func canUpdateTodo(caller: Principal, todo: Todo.Todo) : Bool {
-    // //     let ?userBucketIndex    = Map.get(userTodoBucketsIndexes, Principal.compare, caller) else return #err("No user bucket index");
-    // //     let userBucket          = userTodoBuckets[userBucketIndex] else return #err("No user bucket");
-    // //     let canEdit             = await userBucket.geTodoPermission(todo.id);
-
-    // //     switch 
-
-    // //     return canEdit.write;
-    // // };
-
-    // func getOrCreateUserDataBucket(caller: Principal) : async Result.Result<TodoUserBucket.TodoUserBucket, Text> {
-    //     let principalHash = Principal.hash(caller);
-
-    //     let bucket =    switch ( Map.get(userTodoDataBuckets, Nat32.compare, principalHash) ) {
-    //                         case null {
-    //                             Cycles.add(newCanisterNumberCycle);
-    //                             let newBucket = await TodoUserBucket.TodoUserBucket();
-    //                             Map.add(userTodoDataBuckets, Nat32.compare, principalHash, newBucket);
-    //                             newBucket
-    //                         };
-    //                         case (?bucket) bucket;
-    //                     };
-
-    //     #ok(bucket)
-    // };
-
-    // func getIndexForTodoBucket(id: Nat) : Nat {
-    //     id % 10000
-    // };
-
-    // func getOrCreateTodoBucket(id: Nat) : async Result.Result<TodoBucket.TodoBucket, Text> {
-    //     let index = getIndexForTodoBucket(id);
-    //     let bucket =    switch ( Map.get(todoBuckets, Nat.compare, index) ) {
-    //                         case null {
-    //                             Cycles.add(newCanisterNumberCycle);
-    //                             let newBucket = await TodoBucket.TodoBucket();
-    //                             Map.add(todoBuckets, Nat.compare, index, newBucket);
-    //                             newBucket
-    //                         };
-    //                         case (?bucket) bucket
-    //                     };
-
-    //     #ok(bucket)
-    // };
-}
+    //
+    // HELPERS LIST
+    //
+};
 

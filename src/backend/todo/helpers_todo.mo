@@ -1,6 +1,4 @@
 import Principal "mo:core/Principal";
-import Order "mo:core/Order";
-import Buffer "mo:base/Buffer";
 
 let indexCanisterPrincipal = "2vxsx-fae";
 

@@ -4,12 +4,11 @@ import Principal "mo:core/Principal";
 import Nat "mo:core/Nat";
 import Iter "mo:core/Iter";
 import Array "mo:core/Array";
-import Option "mo:base/Option";
 import Model "model";
 import Helpers "helpers_todo";
 
 persistent actor class TodoBucket() {
-    var usersData = Map.empty<Principal, Model.UserTodoData.userTodosData>();
+    var usersData = Map.empty<Principal, Model.User.UserData>();
 
     //
     // USER DATA
@@ -17,38 +16,47 @@ persistent actor class TodoBucket() {
 
     // this function retrieve all data relatives to one specific users, and all items the user has created.
     // if some todos has been shared with the user, the response will need subsequent query call to retrieve the shared items inside their owner Model.UserTodoData.userTodosData
-    public query ({ caller }) func getUserData(user: Principal) : async Result.Result<Model.UserTodoData.sharableUserData, Text> {
-        if ( not Helpers.CheckAccess.principalIsTodoIndexCanister(caller) ) { return #err("cannot be called but by the index canister"); };
+    // public query ({ caller }) func getUserData(user: Principal) : async Result.Result<Model.User.SharableUserData, Text> {
+    //     if ( not Helpers.CheckAccess.principalIsTodoIndexCanister(caller) ) { return #err("cannot be called but by the index canister"); };
 
-        let ?data = Map.get(usersData, Principal.compare, user) else return #err("No data for user");
+    //     let ?data = Map.get(usersData, Principal.compare, user) else return #err("No data for user");
         
-        let sharedWithUser =    Iter.toArray( 
-                                    Iter.flatMap( Map.entries(data.todosSharedWithUser), func ((principal, inner)) {
-                                        Iter.map( Map.entries(inner), func ((todoId, permission)) : (Principal, Nat, Model.Todo.Permission) {
-                                            (principal, todoId, permission)
-                                        })
-                                    })
-                                );
+    //     let todoSharedWithUser = Array.map( Iter.toArray(Map.entries(data.todosSharedWithUser)), func ((principal, inner)) {
+    //         {
+    //             principal = principal;
+    //             todosData = Iter.toArray( Map.entries(inner) );
+    //         }
+    //     });
 
-        let resp = {
-            todos               = Iter.toArray( Map.values(data.todos) );
-            todosSharedWithUser = sharedWithUser;
-        };
+    //     let listSharedWithUser = Array.map( Iter.toArray(Map.entries(data.todoListsSharedWithUser)), func ((principal, inner)) {
+    //         {
+    //             principal      = principal;
+    //             todosListsData = Iter.toArray( Map.entries(inner) );
+    //         }
+    //     });
 
-        #ok(resp)
-    };
+    //     let resp = {
+    //         todos               = Iter.toArray( Map.values(data.todos) );
+    //         todosSharedWithUser = todoSharedWithUser;
+
+    //         todoLists               = Iter.toArray( Map.values(data.todoLists) );
+    //         todoListsSharedWithUser = listSharedWithUser
+    //     };
+
+    //     #ok(resp)
+    // };
 
     public shared ({ caller }) func createUserData(user: Principal) : async Result.Result<(), Text> {
         if ( not Helpers.CheckAccess.principalIsTodoIndexCanister(caller) ) { return #err("cannot be called but by the index canister"); };
 
-        let data = {
+        let data: Model.User.UserData = {
             todos                   = Map.empty<Nat, Model.Todo.Todo>();
             todosSharedWithUser     = Map.empty<Principal, Map.Map<Nat, Model.Todo.Permission>>();
             todosSharedWithOthers   = Map.empty<Principal, Map.Map<Nat, Model.Todo.Permission>>();
 
             todoLists                   = Map.empty<Nat, Model.TodoList.TodoList>();
-            todoListsSharedWithUser     = Map.empty<Principal, Map.Map<Nat, Model.TodoList.TodoList>>();
-            todoListsSharedWithOthers   = Map.empty<Principal, Map.Map<Nat, Model.TodoList.TodoList>>();
+            todoListsSharedWithUser     = Map.empty<Principal, Map.Map<Nat, Model.TodoList.TodoListPermission>>();
+            todoListsSharedWithOthers   = Map.empty<Principal, Map.Map<Nat, Model.TodoList.TodoListPermission>>();
         };
 
         Map.add(usersData, Principal.compare, user, data);
@@ -80,7 +88,7 @@ persistent actor class TodoBucket() {
         }
     };
 
-    public shared ({ caller }) func createTodo(user: Principal, todo: Model.Todo.Todo) : async Result.Result<(), Text> {
+    public shared ({ caller }) func createTodo({user: Principal; todo: Model.Todo.Todo}) : async Result.Result<(), Text> {
         if ( not Helpers.CheckAccess.principalIsTodoIndexCanister(caller) ) { return #err("cannot be called but by the index canister"); };
 
         let ?data = Map.get(usersData, Principal.compare, user) else return #err("No data for user");
@@ -114,5 +122,43 @@ persistent actor class TodoBucket() {
     // TODO LISTS
     //
 
-    // WIP: do everything for lists
+    // public query ({ caller }) func getPermissionForList({owner: Principal; user: Principal; todoListId: Nat}) : async Result.Result<Model.TodoList.TodoListPermission, Text> {
+    //     if ( not Helpers.CheckAccess.principalIsTodoIndexCanister(caller) ) { return #err("cannot be called but by the index canister"); };
+
+    //     let ?data = Map.get(usersData, Principal.compare, owner) else return #err("No data for principal " #Principal.toText(owner));
+    //     switch ( Map.get(data.todoListsSharedWithOthers, Nat.compare, todoListId) ) {
+    //         case null { #err("") };
+    //         case (?todoList) #ok(todoList.permission);
+    //     }  
+    // };
+
+    // public shared ({ caller }) func createTodoList(user: Principal, todoList: Model.TodoList.TodoList) : async Result.Result<(), Text> {
+    //     if ( not Helpers.CheckAccess.principalIsTodoIndexCanister(caller) ) { return #err("cannot be called but by the index canister"); };
+
+    //     let ?data = Map.get(usersData, Principal.compare, user) else return #err("No data for user");
+
+    //     Map.add(data.todoLists, Nat.compare, todoList.id, todoList);
+
+    //     #ok
+    // };
+
+    // public shared ({ caller }) func updateTodoList(user: Principal, todoList: Model.TodoList.TodoList) : async Result.Result<(), Text> {
+    //     if ( not Helpers.CheckAccess.principalIsTodoIndexCanister(caller) ) { return #err("cannot be called but by the index canister"); };
+
+    //     let ?data = Map.get(usersData, Principal.compare, user) else return #err("No data for user");
+
+    //     Map.add(data.todoLists, Nat.compare, todoList.id, todoList);
+
+    //     #ok
+    // };
+
+    // public shared ({ caller }) func deleteTodoList(user: Principal, todoListId: Nat) : async Result.Result<(), Text> {
+    //     if ( not Helpers.CheckAccess.principalIsTodoIndexCanister(caller) ) { return #err("cannot be called but by the index canister"); };
+
+    //     let ?data = Map.get(usersData, Principal.compare, user) else return #err("No data for user");
+
+    //     Map.remove(data.todoLists, Nat.compare, todoListId);
+
+    //     #ok
+    // };
 };

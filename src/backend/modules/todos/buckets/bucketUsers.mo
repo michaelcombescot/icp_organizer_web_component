@@ -2,13 +2,12 @@ import Map "mo:core/Map";
 import Result "mo:core/Result";
 import Principal "mo:core/Principal";
 import Nat "mo:core/Nat";
-import Iter "mo:core/Iter";
 import Array "mo:core/Array";
-import List "mo:core/List";
 import Accesses "accesses";
 import Todo "../models/todo";
 import TodoList "../models/todoList";
 import User "../models/user";
+import Group "../models/group";
 
 persistent actor class BucketUsers({ _cycles: Nat}) {
     var usersData = Map.empty<Principal, User.UserData>();
@@ -23,6 +22,7 @@ persistent actor class BucketUsers({ _cycles: Nat}) {
         let userData = {
             todos     = Map.empty<Nat, Todo.Todo>();
             todoLists = Map.empty<Nat, TodoList.TodoList>();
+            groups    = Map.empty<Nat, ()>();
         };
 
         Map.add(usersData, Principal.compare, userPrincipal, userData);
@@ -50,11 +50,6 @@ persistent actor class BucketUsers({ _cycles: Nat}) {
     public shared ({ caller }) func createTodo(userPrincipal: Principal, todo: Todo.Todo) : async Result.Result<(), [Text]> {
         if ( not Accesses.principalIsTodoIndexCanister(caller) ) { return #err(["can only be called by the index canister"]); };
 
-        switch ( Todo.validateTodo(todo) ) {
-            case (#ok) ();
-            case (#err err) return #err(err);
-        };
-
         let ?userData = Map.get(usersData, Principal.compare, userPrincipal) else return #err(["No user data"]);
 
         Map.add(userData.todos, Nat.compare, todo.id, todo);
@@ -64,11 +59,6 @@ persistent actor class BucketUsers({ _cycles: Nat}) {
 
     public shared ({ caller }) func updateTodo(userPrincipal: Principal, todo: Todo.Todo) : async Result.Result<(), [Text]> {
         if ( not Accesses.principalIsTodoIndexCanister(caller) ) { return #err(["can only be called by the index canister"]); };
-
-        switch ( Todo.validateTodo(todo) ) {
-            case (#ok) ();
-            case (#err err) return #err(err);
-        };
 
         let ?userData = Map.get(usersData, Principal.compare, userPrincipal) else return #err(["No user data"]);
 
@@ -95,11 +85,6 @@ persistent actor class BucketUsers({ _cycles: Nat}) {
     public shared ({ caller }) func createTodoList(userPrincipal: Principal, todoList: TodoList.TodoList) : async Result.Result<(), [Text]> {
         if ( not Accesses.principalIsTodoIndexCanister(caller) ) { return #err(["can only be called by the index canister"]); };
 
-        switch ( TodoList.validateTodoList(todoList) ) {
-            case (#ok) ();
-            case (#err err) return #err(err);
-        };
-
         let ?userData = Map.get(usersData, Principal.compare, userPrincipal) else return #err(["No user data"]);
 
         Map.add(userData.todoLists, Nat.compare, todoList.id, todoList);
@@ -109,11 +94,6 @@ persistent actor class BucketUsers({ _cycles: Nat}) {
 
     public shared ({ caller }) func updateTodoList(userPrincipal: Principal, todoList: TodoList.TodoList) : async Result.Result<(), [Text]> {
         if ( not Accesses.principalIsTodoIndexCanister(caller) ) { return #err(["can only be called by the index canister"]); };
-
-        switch ( TodoList.validateTodoList(todoList) ) {
-            case (#ok) ();
-            case (#err err) return #err(err);
-        };
 
         let ?userData = Map.get(usersData, Principal.compare, userPrincipal) else return #err(["No user data"]);
 
@@ -128,6 +108,20 @@ persistent actor class BucketUsers({ _cycles: Nat}) {
         let ?userData = Map.get(usersData, Principal.compare, userPrincipal) else return #err(["No user data"]);
 
         Map.remove(userData.todoLists, Nat.compare, todoListId);
+
+        #ok
+    };
+
+    //
+    // GROUPS
+    //
+
+    public query ({ caller }) func addToGroup({ userPrincipal: Principal; groupId: Nat; }) : async Result.Result<(), [Text]> {
+        if ( not Accesses.principalIsTodoIndexCanister(caller) ) { return #err(["can only be called by the index canister"]); };
+
+        let ?userData = Map.get(usersData, Principal.compare, userPrincipal) else return #err(["No user data"]);
+
+        Map.add(userData.groups, Nat.compare, groupId, ());
 
         #ok
     };

@@ -4,7 +4,7 @@ import { ComponentTodoShow } from "./component_todo_show";
 import { openModalWithElement } from "../../../components/modal";
 import { remainingTimeFromEpoch, stringDateFromEpoch } from "../../../utils/date";
 import { baseCardColor, borderRadius, scaleOnHover } from "../../../css/css";
-import { TodoList } from "../../../../../declarations/organizer_backend/organizer_backend.did";
+import { TodoList } from "../../../../../declarations/backend/backend.did";
 import { getComponentTodoLists } from "./component_todo_lists";
 import { getContrastColor } from "../../../css/helpers";
 import { getLoadingComponent } from "../../../components/loading";

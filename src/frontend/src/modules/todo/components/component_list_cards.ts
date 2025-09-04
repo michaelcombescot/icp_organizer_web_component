@@ -1,5 +1,5 @@
 import { i18n } from "../../../i18n/i18n";
-import { TodoList } from "../../../../../declarations/organizer_backend/organizer_backend.did";
+import { TodoList } from "../../../../../declarations/backend/backend.did";
 import { storeList } from "../stores/store_todo_lists";
 import "./component_list_card";
 import { getTodoPage } from "./component_todo_page";

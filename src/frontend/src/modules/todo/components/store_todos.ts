@@ -88,14 +88,14 @@ class StoreTodo {
         })
     }
 
-    apiDeleteTodo = async (id: bigint) : Promise<void> => {
+    apiDeleteTodo = async (uuid: string) : Promise<void> => {
         return new Promise(async (resolve, reject) => {
             // delete from backend
-            if (this.#updateBackend) { await this.apiBackendDeleteTodo(id) }
+            if (this.#updateBackend) { await this.apiBackendDeleteTodo(uuid) }
 
             // indexedDB
             const transaction = DB.transaction([todoStoreName], "readwrite")
-            const req = transaction.objectStore(todoStoreName).delete(id);
+            const req = transaction.objectStore(todoStoreName).delete(uuid);
             req.onsuccess = () => { resolve() }
             req.onerror = () => { reject(req.error) };
         })
@@ -103,7 +103,7 @@ class StoreTodo {
 
     apiBackendGetTodos = async () => {
         try {
-            return await actor.getuserData();
+            return await actor.getTodos();
         } catch (error) {
             console.error("Failed to get todos:", error);
         }
@@ -111,7 +111,7 @@ class StoreTodo {
 
     apiBackendAddTodo = async (todo: Todo) => {
         try {
-            await actor.createTodo(todo);
+            await actor.addTodo(todo);
         } catch (error) {
             console.error("Failed to add todo:", error);
         }
@@ -125,9 +125,9 @@ class StoreTodo {
         }
     }
 
-    apiBackendDeleteTodo = async (id: bigint) => {
+    apiBackendDeleteTodo = async (uuid: string) => {
         try {
-            await actor.removeTodo(id);
+            await actor.removeTodo(uuid);
         } catch (error) {
             console.error("Failed to delete todo:", error);
         }

@@ -1,4 +1,4 @@
-import { Todo } from "../../../../../declarations/organizer_backend/organizer_backend.did";
+import { Todo } from "../../../../../declarations/backend/backend.did";
 import { i18n } from "../../../i18n/i18n";
 import { stringDateFromEpoch } from "../../../utils/date";
 

@@ -22,7 +22,7 @@ persistent actor class BucketGroups({ _cycles: Nat}) {
             name      = groupName;
             todos     = Map.empty<Nat, Todo.Todo>();
             todoLists = Map.empty<Nat, TodoList.TodoList>();
-            users     = Map.empty<Principal, Group.Permission>();
+            users     = Map.empty<Principal, Group.GroupPermission>();
         };
 
         switch ( Group.validateGroupData(groupName) ) {

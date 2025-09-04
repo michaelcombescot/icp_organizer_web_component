@@ -1,7 +1,7 @@
 import { i18n } from "../../../i18n/i18n";
 import { storeTodo } from "../stores/store_todos";
 import { closeModal } from "../../../components/modal";
-import { Todo } from "../../../../../declarations/organizer_backend/organizer_backend.did";
+import { Todo } from "../../../../../declarations/backend/backend.did";
 import { stringToEpoch } from "../../../utils/date";
 import { getTodoPage } from "./component_todo_page";
 import { storeList } from "../stores/store_todo_lists";

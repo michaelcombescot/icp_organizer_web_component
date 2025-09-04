@@ -1,12 +1,12 @@
-import { type _SERVICE } from '../../../../declarations/organizer_backend/organizer_backend.did'
+import { type _SERVICE } from '../../../../declarations/backend/backend.did'
 import { AuthClient } from '@dfinity/auth-client';
-import { createActor } from '../../../../declarations/organizer_backend';
-import { canisterId as backendCanisterID } from '../../../../declarations/organizer_backend';
-import { canisterId as canisterIdII } from '../../../../declarations/internet_identity/index';
+import { createActor } from '../../../../declarations/backend';
+import { canisterId as backendCanisterID } from '../../../../declarations/backend';
+import { canisterId as identityCanisterID } from '../../../../declarations/internet_identity/index';
 
 const identityProvider = process.env.DFX_NETWORK === 'ic' ?
                             'https://identity.ic0.app' // Mainnet
-                            : `http://${canisterIdII}.localhost:4943/`; // Local
+                            : `http://${identityCanisterID}.localhost:4943/`; // Local
 let authClient = await AuthClient.create();
 let identity = authClient.getIdentity();
 
@@ -42,9 +42,4 @@ export const login = async () => {
 export const logout = async () => {
     await authClient.logout()
     window.location.reload();
-};
-
-export const whoami = async () => {
-    const result = await actor.whoami();
-    return result
 };

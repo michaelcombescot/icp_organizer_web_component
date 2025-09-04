@@ -11,16 +11,16 @@ module {
         name: Text;
         todos: Map.Map<Nat, Todo.Todo>;
         todoLists: Map.Map<Nat, TodoList.TodoList>;
-        users: Map.Map<Principal, Permission>;
+        users: Map.Map<Principal, GroupPermission>;
     };
 
     public type GroupDataSharable = {
         name: Text;
         todoLists: [(Nat, TodoList.TodoList)];
-        users: [(Principal, Permission)];
+        users: [(Principal, GroupPermission)];
     };
 
-    public type Permission = { #admin; #read; #write; };
+    public type GroupPermission = { #admin; #read; #write; };
 
     public func validateGroupData(name: Text) : Result.Result<(), [Text]> {
         let errors = List.empty<Text>();

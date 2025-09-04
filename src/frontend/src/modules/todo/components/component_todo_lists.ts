@@ -1,4 +1,4 @@
-import { Todo, TodoList } from "../../../../../declarations/organizer_backend/organizer_backend.did";
+import { Todo, TodoList } from "../../../../../declarations/backend/backend.did";
 import "./component_todo";
 import { storeTodo,TodoWithList } from "../stores/store_todos";  
 import { storeList } from "../stores/store_todo_lists";

@@ -5,7 +5,7 @@ import { getTodoPage } from "./component_todo_page";
 import { ComponentTodo, getComponentTodoOfList } from "./component_todo";
 import { borderRadius, cardFontSize, scaleOnHover } from "../../../css/css";
 import { getListsCards } from "./component_list_cards";
-import { Todo, TodoList } from "../../../../../declarations/organizer_backend/organizer_backend.did";
+import { Todo, TodoList } from "../../../../../declarations/backend/backend.did";
 import { storeList } from "../stores/store_todo_lists";
 import { getContrastColor } from "../../../css/helpers";
 import { getLoadingComponent } from "../../../components/loading";

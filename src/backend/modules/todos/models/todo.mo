@@ -9,16 +9,16 @@ module {
         resume: Text;
         description: ?Text;
         scheduledDate: ?Time.Time;
-        priority: Priority;
-        status: Status;
+        priority: TodoPriority;
+        status: TodoStatus;
         createdAt: Time.Time;
         todoListId: ?Nat;
-        permission: Permission;
+        permission: TodoPermission;
     };
 
-    public type Priority    = { #high; #medium; #low; };
-    public type Status      = { #pending; #done; };
-    public type Permission  = { #owned; #read; #write; };
+    public type TodoPriority    = { #high; #medium; #low; };
+    public type TodoStatus      = { #pending; #done; };
+    public type TodoPermission  = { #owned; #read; #write; };
 
     public func validateTodo(todo: Todo) : Result.Result<(), [Text]> {
         let errors = List.empty<Text>();

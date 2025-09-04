@@ -13,7 +13,7 @@
   },
   "type": "module",
   "workspaces": [
-    "src/organizer_frontend"
+    "src/frontend"
   ],
   "dependencies": {
     "@dfinity/agent": "^3.0.0",

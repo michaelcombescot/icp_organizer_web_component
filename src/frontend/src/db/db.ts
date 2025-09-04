@@ -10,10 +10,10 @@ class OrganizerDB {
 
             req.onupgradeneeded = (event: IDBVersionChangeEvent) => {
                 db = (event.target as IDBOpenDBRequest).result;
-                db.createObjectStore(todoStoreName, { keyPath: "uuid" });
-                db.createObjectStore(listStoreName, { keyPath: "uuid" });
-                db.createObjectStore(updateListStoreName, { keyPath: "uuid" });
-                db.createObjectStore(userDataStoreName, { keyPath: "uuid" });
+                db.createObjectStore(todoStoreName, { keyPath: "id" });
+                db.createObjectStore(listStoreName, { keyPath: "id" });
+                db.createObjectStore(updateListStoreName, { keyPath: "id" });
+                db.createObjectStore(userDataStoreName, { keyPath: "id" });
             };
 
             req.onsuccess = (event: Event) => {

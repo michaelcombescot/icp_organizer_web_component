@@ -78,16 +78,16 @@ persistent actor {
     // TODO
     //
 
-    public shared ({ caller }) func createTodo(userPrincipal: Principal, todo: Todo.Todo) : async Result.Result<Nat, [Text]> {
+    public shared ({ caller }) func createTodo(todo: Todo.Todo) : async Result.Result<Nat, [Text]> {
         if ( Principal.isAnonymous(caller) ) { return #err(["Not logged in"]); };
 
         switch ( Todo.validateTodo(todo) ) { case (#ok) (); case (#err err) return #err(err); };
 
         let todoWithId = { todo with id = lastTodoId + 1; };
 
-        let ?bucket = Map.get(principalsOnBuckets, Principal.compare, userPrincipal) else return #err(["No bucket"]);
+        let ?bucket = Map.get(principalsOnBuckets, Principal.compare, caller) else return #err(["No bucket"]);
 
-        switch ( await bucket.createTodo(userPrincipal, todoWithId) ) {
+        switch ( await bucket.createTodo(caller, todoWithId) ) {
             case (#ok) {
                 lastTodoId := lastTodoId + 1;
                 #ok(todoWithId.id)
@@ -96,25 +96,25 @@ persistent actor {
         }
     };
 
-    public shared ({ caller }) func updateTodo(userPrincipal: Principal, todo: Todo.Todo) : async Result.Result<(), [Text]> {
+    public shared ({ caller }) func updateTodo(todo: Todo.Todo) : async Result.Result<(), [Text]> {
         if ( Principal.isAnonymous(caller) ) { return #err(["Not logged in"]); };
 
         switch ( Todo.validateTodo(todo) ) { case (#ok) (); case (#err err) return #err(err); };
 
-        let ?bucket = Map.get(principalsOnBuckets, Principal.compare, userPrincipal) else return #err(["No bucket"]);
+        let ?bucket = Map.get(principalsOnBuckets, Principal.compare, caller) else return #err(["No bucket"]);
 
-        switch ( await bucket.updateTodo(userPrincipal, todo) ) {
+        switch ( await bucket.updateTodo(caller, todo) ) {
             case (#ok) #ok;
             case (#err err) #err(err);
         }
     };
 
-    public shared ({ caller }) func removeTodo(userPrincipal: Principal, todoId: Nat) : async Result.Result<(), [Text]> {
+    public shared ({ caller }) func removeTodo(todoId: Nat) : async Result.Result<(), [Text]> {
         if ( Principal.isAnonymous(caller) ) { return #err(["Not logged in"]); };
 
-        let ?bucket = Map.get(principalsOnBuckets, Principal.compare, userPrincipal) else return #err(["No bucket"]);
+        let ?bucket = Map.get(principalsOnBuckets, Principal.compare, caller) else return #err(["No bucket"]);
 
-        switch ( await bucket.removeTodo(userPrincipal, todoId) ) {
+        switch ( await bucket.removeTodo(caller, todoId) ) {
             case (#ok) #ok;
             case (#err err) #err(err);
         }

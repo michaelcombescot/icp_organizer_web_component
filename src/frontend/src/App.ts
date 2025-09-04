@@ -3,7 +3,7 @@ import './components/modal'
 import './components/router/router_link'
 import { i18n } from './i18n/i18n'
 import { navigateTo, routes } from './components/router/router'
-import { login, logout, whoami, isAuthenticated } from './components/auth/auth'
+import { login, logout, isAuthenticated } from './components/auth/auth'
 // import { logo } from '../assets/icp-logo.svg'
 
 class App extends HTMLElement {
@@ -80,7 +80,6 @@ class App extends HTMLElement {
             </style>
         `
 
-        this.shadowRoot!.querySelector("#whoami-button")?.addEventListener("click", () => whoami().then(r => console.log(r)))
         this.shadowRoot!.querySelector("#login-button")?.addEventListener("click", () => login())
         this.shadowRoot!.querySelector("#log-out-link")?.addEventListener("click", () => logout())
     }

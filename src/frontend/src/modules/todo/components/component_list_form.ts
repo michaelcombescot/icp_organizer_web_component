@@ -1,5 +1,5 @@
 import { i18n } from "../../../i18n/i18n";
-import { TodoList } from "../../../../../declarations/organizer_backend/organizer_backend.did";
+import { TodoList } from "../../../../../declarations/backend/backend.did";
 import { closeModal } from "../../../components/modal";
 import { storeList } from "../stores/store_todo_lists";
 import { getListsCards } from "./component_list_cards";

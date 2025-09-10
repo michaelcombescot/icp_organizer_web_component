@@ -9,7 +9,7 @@ import TodoList "../models/todoList";
 import User "../models/user";
 import Group "../models/group";
 
-persistent actor class BucketUsers({ _cycles: Nat}) {
+persistent actor class BucketUsers() {
     var usersData = Map.empty<Principal, User.UserData>();
 
     //
@@ -30,15 +30,16 @@ persistent actor class BucketUsers({ _cycles: Nat}) {
         #ok
     };
 
-    public query ({ caller }) func getUserData(userPrincipal: Principal) : async Result.Result<{todos: [Todo.Todo]; todoLists: [TodoList.TodoList]}, Text> {
+    public query ({ caller }) func getUserData(userPrincipal: Principal) : async Result.Result<User.UserDataSharable, Text> {
         if ( not Accesses.principalIsTodoIndexCanister(caller) ) { return #err("can only be called by the index canister"); };
 
         let ?userData = Map.get(usersData, Principal.compare, userPrincipal) else return #err("No user data");
 
         #ok(
             {
-                todos = Array.fromIter( Map.values(userData.todos) );
-                todoLists = Array.fromIter( Map.values(userData.todoLists) );
+                todos       = Array.fromIter( Map.entries(userData.todos) );
+                todoLists   = Array.fromIter( Map.entries(userData.todoLists) );
+                groups      = Array.fromIter( Map.entries(userData.groups) );
             }
         )
     };

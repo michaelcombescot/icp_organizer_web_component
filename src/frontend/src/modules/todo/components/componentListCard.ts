@@ -1,40 +1,25 @@
 import { openModalWithElement } from "../../../components/modal";
-import { ComponentListForm } from "./component_list_form";
+import { ComponentListForm } from "./componentListForm";
 import { i18n } from "../../../i18n/i18n";
-import { getTodoPage } from "./component_todo_page";
-import { ComponentTodo, getComponentTodoOfList } from "./component_todo";
+import { getTodoPage } from "./componentTodoPage";
+import { ComponentTodo, getComponentTodoOfList } from "./componentTodo";
 import { borderRadius, cardFontSize, scaleOnHover } from "../../../css/css";
-import { getListsCards } from "./component_list_cards";
-import { Todo, TodoList } from "../../../../../declarations/backend/backend.did";
-import { storeList } from "../stores/store_todo_lists";
+import { getListsCards } from "./componentListCards";
+import { Todo, TodoList } from "../../../../../declarations/backend_todos/backend_todos.did";
+import { APITodoList } from "../apis/apiTodoLists";
 import { getContrastColor } from "../../../css/helpers";
 import { getLoadingComponent } from "../../../components/loading";
+import { StoreGlobal } from "../stores/storeGlobal";
+import { StoreTodoLists } from "../stores/storeTodoList";
 
 export class ComponentListCard extends HTMLElement {
-    #list!: TodoList
-    // when a list is updated, we need to update the card itself, and ell ComponentTodo linked to this card (especially for the color)
-    set list(list: TodoList) {
-        this.#list = list
-        this.#render()
+    #listId: bigint
 
-        getComponentTodoOfList(this.#list.uuid).forEach((todo) => {
-            (todo as ComponentTodo).todoList = this.#list
-        })
-    }
-
-    #isSelected!: boolean
-    set isSelected(isSelected: boolean) {
-        if ( this.#isSelected == isSelected ) { return }
-
-        getTodoPage().currentListUUID = this.#list.uuid
-    }
-
-    constructor(list: TodoList, isSelected: boolean = false) {
+    constructor(listId: bigint) {
         super();
         this.attachShadow({ mode: "open" });
 
-        this.#list = list
-        this.#isSelected = isSelected
+        this.#listId = listId
     }
 
     connectedCallback() {
@@ -42,11 +27,13 @@ export class ComponentListCard extends HTMLElement {
     }
 
     #render() {
-        const contrastColor = getContrastColor(this.#list.color)
+        const list          = StoreTodoLists.todoLists.get(this.#listId)!
+        const isSelected    = StoreGlobal.currentSelectedListId === list.id
+        const contrastColor = getContrastColor(list.color)
 
         this.shadowRoot!.innerHTML = /*html*/`
-            <div class="todo-list-card ${this.#isSelected ? "selected" : ""}">
-                <span class="todo-list-card-name">${this.#list.name}</span>
+            <div class="todo-list-card ${ isSelected ? "selected" : "" }">
+                <span class="todo-list-card-name">${ list.name }</span>
                 <div class="todo-list-card-actions">
                     <img class="todo-list-card-edit" src="/edit.svg">
                     <img class="todo-list-card-delete" src="/trash.svg">
@@ -59,12 +46,12 @@ export class ComponentListCard extends HTMLElement {
                     justify-content: center;
                     align-items: center;
                     width: max-content;
-                    font-size: ${cardFontSize};
-                    color: ${contrastColor};
+                    font-size: ${ cardFontSize };
+                    color: ${ contrastColor };
                     padding: 0.5em;
                     border-radius: ${borderRadius};
                     border: 0.3em solid transparent;
-                    background-color: ${this.#list.color};
+                    background-color: ${ list.color };
 
                     .todo-list-card-name {
                         cursor: pointer;
@@ -95,12 +82,12 @@ export class ComponentListCard extends HTMLElement {
 
         this.shadowRoot!.querySelector(".todo-list-card-name")!.addEventListener( "click", (e) => {
             e.stopPropagation()
-            this.isSelected = true
+            StoreGlobal.updateCurrentSelectedListId(list.id)
         })
 
         this.shadowRoot!.querySelector(".todo-list-card-edit")!.addEventListener( "click", (e) => {
             e.stopPropagation()
-            openModalWithElement(new ComponentListForm(this.#list)) 
+            openModalWithElement(new ComponentListForm(list.id)) 
         })
 
         this.shadowRoot!.querySelector(".todo-list-card-delete")!.addEventListener( "click", async (e) => {
@@ -108,18 +95,11 @@ export class ComponentListCard extends HTMLElement {
 
             if ( !confirm(i18n.todoListCardConfirmDelete) ) return
 
-            getLoadingComponent().wrapAsync( async () => {
-                await storeList.apiDeleteTodoList(this.#list.uuid)
-                this.remove()
-
-                if ( this.#isSelected) {
-                    getTodoPage().currentListUUID = ""
-                }
-            })
+            StoreTodoLists.todoLists.delete(list.id)
         })
     }
 }
 
 customElements.define("component-list-card", ComponentListCard);
 
-export const getCard = (uuid: string) => getListsCards().shadowRoot!.querySelector(`component-list-card[list-uuid="${uuid}"]`) as ComponentListCard
+export const getCard = (id: bigint) => getListsCards().shadowRoot!.querySelector(`component-list-card[list-uuid="${id}"]`) as ComponentListCard

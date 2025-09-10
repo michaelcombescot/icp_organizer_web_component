@@ -1,52 +1,45 @@
-import { storeTodo, TodoWithList } from "../stores/store_todos";
-import { ComponentTodoForm } from "./component_todo_form";
-import { ComponentTodoShow } from "./component_todo_show";
+import { ComponentTodoForm } from "./componentTodoForm";
+import { ComponentTodoShow } from "./componentTodoShow";
 import { openModalWithElement } from "../../../components/modal";
 import { remainingTimeFromEpoch, stringDateFromEpoch } from "../../../utils/date";
 import { baseCardColor, borderRadius, scaleOnHover } from "../../../css/css";
-import { TodoList } from "../../../../../declarations/backend/backend.did";
-import { getComponentTodoLists } from "./component_todo_lists";
+import { Todo, TodoList } from "../../../../../declarations/backend_todos/backend_todos.did";
+import { getComponentTodoLists } from "./componentTodoLists";
 import { getContrastColor } from "../../../css/helpers";
 import { getLoadingComponent } from "../../../components/loading";
+import { StoreTodoLists } from "../stores/storeTodoList";
+import { APITodo } from "../apis/apiTodos";
+import { StoreTodos } from "../stores/storeTodo";
 
 export class ComponentTodo extends HTMLElement {
-    #todo: TodoWithList
-    set todo(todo: TodoWithList) {
-        this.#todo = todo
-        this.#render()
-    }
+    #todoId: bigint = BigInt(0)
 
-    #todoList: TodoList | null = null
-    set todoList(todoList: TodoList | null) {
-        this.#todo.todoList = todoList
-        this.#render()
-    }
-
-    constructor(todo: TodoWithList) {
+    constructor(todoId: bigint) {
         super()
         this.attachShadow({ mode: "open" });
-
-        this.#todo = todo
     }
 
     connectedCallback() {
-        this.#render();
+        this.render();
     }
 
-    #render() {
-        const contrastColor = getContrastColor(this.#todo.todoList?.color || baseCardColor)
+    render() {
+        let todo        = StoreTodos.todos.get(this.#todoId)!;
+        let todoList    = todo.todoListId.length != 0 ? StoreTodoLists.todoLists.get(todo.todoListId[0])! : null;
+
+        const contrastColor = getContrastColor(todoList?.color || baseCardColor)
 
         this.shadowRoot!.innerHTML = /*html*/`
             <div class="todo-item">
-                ${this.#todo.scheduledDate.length != 0 ?
+                ${todo.scheduledDate.length != 0 ?
                     /*html*/`
                         <div class="todo-item-date">
-                            <span>${stringDateFromEpoch(this.#todo.scheduledDate[0])}</span>
-                            <span class="todo-item-date-remaining ${this.#todo.scheduledDate[0] < BigInt(Date.now()) ? "expired" : ""}">${remainingTimeFromEpoch(this.#todo.scheduledDate[0])}</span>
+                            <span>${stringDateFromEpoch(todo.scheduledDate[0])}</span>
+                            <span class="todo-item-date-remaining ${todo.scheduledDate[0] < BigInt(Date.now()) ? "expired" : ""}">${remainingTimeFromEpoch(todo.scheduledDate[0])}</span>
                         </div>
                     ` : ""
                 }
-                <div class="todo-item-resume ${Object.keys(this.#todo.priority)[0]}">${this.#todo.resume}</div>
+                <div class="todo-item-resume ${Object.keys(todo.priority)[0]}">${todo.resume}</div>
                 <div class="todo-item-actions">
                     <img class="todo-item-action-edit" src="/edit.svg">
                     <img class="todo-item-action-done" src="/done.svg">
@@ -59,7 +52,7 @@ export class ComponentTodo extends HTMLElement {
                     display: flex;
                     flex-direction: column;
                     gap: 1em;
-                    background-color: ${this.#todo.todoList?.color || baseCardColor};
+                    background-color: ${todoList?.color || baseCardColor};
                     padding: 1em;
                     width: 15em;
                     border-radius: ${borderRadius};
@@ -106,23 +99,17 @@ export class ComponentTodo extends HTMLElement {
             </style>
         `
 
-        this.shadowRoot!.querySelector(".todo-item-resume")!.addEventListener("click", () => openModalWithElement(new ComponentTodoShow(this.#todo)) );
+        this.shadowRoot!.querySelector(".todo-item-resume")!.addEventListener("click", () => openModalWithElement(new ComponentTodoShow(todo.id)) );
 
-        this.shadowRoot!.querySelector(".todo-item-action-done")!.addEventListener("click", () => this.querySelector(`#${this.#todo.uuid}`)!.classList.toggle("done") );
+        this.shadowRoot!.querySelector(".todo-item-action-done")!.addEventListener("click", () => this.querySelector(`#${todo.id}`)!.classList.toggle("done") );
 
-        this.shadowRoot!.querySelector(".todo-item-action-edit")!.addEventListener("click", () => openModalWithElement(new ComponentTodoForm(this.#todo, this.#todo.todoListUUID[0] as string))  );
+        this.shadowRoot!.querySelector(".todo-item-action-edit")!.addEventListener("click", () => openModalWithElement(new ComponentTodoForm(todo.id)));
 
-        this.shadowRoot!.querySelector(".todo-item-action-delete")!.addEventListener("click", () => {
-            getLoadingComponent().wrapAsync(async () => {
-                await storeTodo.apiDeleteTodo(this.#todo.uuid)
-                this.remove();
-                getLoadingComponent().hide();
-            })
-        });
+        this.shadowRoot!.querySelector(".todo-item-action-delete")!.addEventListener("click", () => { StoreTodos.deleteTodo(todo.id) });
     }
 }
 
 customElements.define("component-todo", ComponentTodo);
 
-export const getComponentTodos = () => getComponentTodoLists().shadowRoot!.querySelectorAll(`component-todo`)
+export const getComponentTodo = (todoId: bigint) => getComponentTodoLists().shadowRoot!.querySelector(`[component_todo_id="${todoId}"]`)! as ComponentTodo
 export const getComponentTodoOfList = (listUUID: string) => getComponentTodoLists().shadowRoot!.querySelectorAll(`component-todo[listUUID="${listUUID}"]`)

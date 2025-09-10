@@ -1,4 +1,4 @@
-import './modules/todo/components/component_todo_page'
+import './modules/todo/components/componentTodoPage'
 import './components/modal'
 import './components/router/router_link'
 import { i18n } from './i18n/i18n'

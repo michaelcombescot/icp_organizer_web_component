@@ -1,9 +1,9 @@
 import Principal "mo:core/Principal";
+import Debug "mo:core/Debug";
 
 module {
-    let indexCanisterPrincipal = "2vxsx-fae";
-
     public func principalIsTodoIndexCanister(principal: Principal) : Bool {
-        principal == Principal.fromText(indexCanisterPrincipal)
+        Debug.print("principalIsTodoIndexCanister" # Principal.toText(principal) # "||" # indexCanisterPrincipal);
+        principal == Principal.fromText(CanistersIDs.todoIndexCanisterId)
     };
 };

@@ -1,27 +1,25 @@
 import { i18n } from "../../../i18n/i18n";
-import { storeTodo } from "../stores/store_todos";
 import { closeModal } from "../../../components/modal";
-import { Todo } from "../../../../../declarations/backend/backend.did";
+import { Todo, TodoList } from "../../../../../declarations/backend_todos/backend_todos.did";
 import { stringToEpoch } from "../../../utils/date";
-import { getTodoPage } from "./component_todo_page";
-import { storeList } from "../stores/store_todo_lists";
 import { epochToStringRFC3339 } from "../../../utils/date";
-import { getComponentTodoLists } from "./component_todo_lists";
+import { getComponentTodoLists } from "./componentTodoLists";
 import { getLoadingComponent } from "../../../components/loading";
+import { defTodoPriorities } from "../stores/storeTodo";
+import { StoreGlobal } from "../stores/storeGlobal";
+import { StoreTodos } from "../stores/storeTodo";
+import { StoreTodoLists } from "../stores/storeTodoList";
 
 class ComponentTodoForm extends HTMLElement {
     #todo: Todo | null = null;
     #isEditMode: boolean = false;
-    #currentListUUID: string
-    #validationErrors: Record<string, string[]> = {};
 
-    constructor(todo : Todo | null, currentListUUID : string) {
+    constructor(todoId: bigint | null) {
         super();
         this.attachShadow({ mode: "open" });
 
-        this.#todo = todo;
-        this.#isEditMode = !!todo;
-        this.#currentListUUID = currentListUUID
+        this.#todo = todoId ? StoreTodos.todos.get(todoId)! : null;
+        this.#isEditMode = !!todoId;
     }
 
     connectedCallback() {
@@ -36,7 +34,7 @@ class ComponentTodoForm extends HTMLElement {
             const formData = new FormData(formElement);
 
             const todo: Todo = {
-                uuid: this.#todo?.uuid || crypto.randomUUID(),
+                id: this.#todo?.id || BigInt(0),
                 resume: formData.get("resume") as string,
                 description: formData.get("description") == "" ? [] : [formData.get("description") as string],
                 scheduledDate: formData.get("scheduledDate") == "" ? [] : [stringToEpoch(formData.get("scheduledDate") as string)],
@@ -44,18 +42,17 @@ class ComponentTodoForm extends HTMLElement {
                             formData.get("priority") === "medium" ? { medium: null } :
                             { high: null },
                 status: { 'pending' : null },
-                todoListUUID: formData.get("listUUID") == "" ? [] : [formData.get("listUUID") as string],
-                createdAt: this.#todo?.createdAt || BigInt(Date.now())
+                todoListId: formData.get("listId") ? [] : [BigInt(formData.get("listId") as string)],
+                createdAt: this.#todo?.createdAt || BigInt(Date.now()),
+                permission: { owned: null },
             }
 
             getLoadingComponent().wrapAsync(async () => {
                 if (this.#isEditMode) {
-                    await storeTodo.apiUpdateTodo(todo)
+                    await StoreTodos.updateTodo(todo)
                 } else {
-                    await storeTodo.apiAddTodo(todo)
+                    await StoreTodos.createTodo(todo)
                 }
-
-                getComponentTodoLists().update()
 
                 closeModal()
             })
@@ -68,8 +65,6 @@ class ComponentTodoForm extends HTMLElement {
     async #render() {
         const priorityValue = this.#todo ? Object.keys(this.#todo!.priority)[0] : "low";
 
-        const lists = await storeList.apiGetTodoLists()
-
         this.shadowRoot!.innerHTML = /*html*/`
             <div id="todo-form">
                 <h3>${this.#isEditMode ? i18n.todoFormTitleEdit : i18n.todoFormTitleNew}</h3>
@@ -81,13 +76,13 @@ class ComponentTodoForm extends HTMLElement {
                     <label for="description">${i18n.todoFormFieldDescription}</label>
                     <textarea type="text" name="description" placeholder="${i18n.todoFormFieldDescriptionPlaceholder}" maxLength="3000">${this.#todo?.description ||  ""}</textarea>
 
-                    <label for="scheduledDate">${i18n.todoFormFieldScheduledDate}</label>
-                    <input type="datetime-local" name="scheduledDate" value="${ this.#todo && this.#todo?.scheduledDate.length != 0 ? epochToStringRFC3339(this.#todo!.scheduledDate[0] as bigint) : null }" min="${new Date().toISOString().slice(0, 16)}"/>
+                    <label for="scheduledDate">${ i18n.todoFormFieldScheduledDate }</label>
+                    <input type="datetime-local" name="scheduledDate" value="${ this.#todo && this.#todo?.scheduledDate.length != 0 ? epochToStringRFC3339(this.#todo!.scheduledDate[0] as bigint) : "" }" min="${new Date().toISOString().slice(0, 16)}"/>
 
                     <label for="priority">${i18n.todoFormFieldPriority}</label>
                     <select name="priority">
                         ${
-                            storeTodo.defTodoPriorities.map( value => /*html*/`
+                            defTodoPriorities.map( value => /*html*/`
                                 <option value="${value}" ${value === priorityValue ? "selected" : ""}>
                                     ${i18n.todoFormPriorities[value]}
                                 </option>
@@ -95,13 +90,13 @@ class ComponentTodoForm extends HTMLElement {
                         }
                     </select>
 
-                    <label for="listUUID">${i18n.todoFormFieldList}</label>
-                    <select name="listUUID">
+                    <label for="listId">${i18n.todoFormFieldList}</label>
+                    <select name="listId">
                         <option value=""></option>
                         ${
-                            lists.map( list => 
+                            [...StoreTodoLists.todoLists].map(([id, list]) =>
                                 /*html*/`
-                                    <option value="${list.uuid}" ${list.uuid === this.#todo?.todoListUUID[0] || list.uuid === this.#currentListUUID ? "selected" : ""}>
+                                    <option value="${id}" ${id === this.#todo?.todoListId[0] || id === StoreGlobal.currentSelectedListId ? "selected" : ""}>
                                         ${list.name}
                                     </option>
                                 `

@@ -1,18 +1,9 @@
 import Order "mo:core/Order";
-import Buffer "mo:base/Buffer";
+import Principal "mo:core/Principal";
+import BucketGroups "../modules/todos/buckets/bucketGroups";
 
-module HelpersArray {
-    public func removeDuplicates<T>(array: [T], compare: (T,T) -> Order.Order) : [T] {
-        let buf = Buffer.fromArray<T>(array);
-        Buffer.removeDuplicates<T>(buf, compare);
-        Buffer.toArray<T>(buf)
+module {
+    public func compareBuckets(b1: BucketGroups.BucketGroups, b2: BucketGroups.BucketGroups) : Order.Order {
+        Principal.compare(Principal.fromActor(b1), Principal.fromActor(b2))
     };
 };
-
-module Request {
-    public type Status = {
-        #ok;
-        #err: Text;
-        #notFound;
-    };
-}

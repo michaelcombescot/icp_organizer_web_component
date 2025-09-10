@@ -15,9 +15,11 @@ module {
     };
 
     public type GroupDataSharable = {
+        id: Nat;
         name: Text;
+        todos: [(Nat, Todo.Todo)];
         todoLists: [(Nat, TodoList.TodoList)];
-        users: [(Principal, GroupPermission)];
+        permission: GroupPermission;
     };
 
     public type GroupPermission = { #admin; #read; #write; };

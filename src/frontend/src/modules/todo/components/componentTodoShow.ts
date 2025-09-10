@@ -1,15 +1,17 @@
-import { Todo } from "../../../../../declarations/backend/backend.did";
+import { Todo } from "../../../../../declarations/backend_todos/backend_todos.did";
 import { i18n } from "../../../i18n/i18n";
 import { stringDateFromEpoch } from "../../../utils/date";
+import { APITodo } from "../apis/apiTodos";
+import { StoreTodos } from "../stores/storeTodo";
 
 export class ComponentTodoShow extends HTMLElement {
-    #todo: Todo
+    #todoId: bigint
 
-    constructor(todo: Todo) {
+    constructor(todoId: bigint) {
         super();
         this.attachShadow({ mode: "open" })
 
-        this.#todo = todo
+        this.#todoId = todoId
     }
 
     connectedCallback() {
@@ -17,28 +19,30 @@ export class ComponentTodoShow extends HTMLElement {
     }
 
     #render() {
+        let todo = StoreTodos.todos.get(this.#todoId)!
+
         this.shadowRoot!.innerHTML = /*html*/`
             <div id="todo-show">
                 <div>${i18n.todoFormFieldResume}</div>
-                <div>${this.#todo.resume}</div>
+                <div>${todo.resume}</div>
 
                 <div>${i18n.todoFormFieldDescription}</div>
-                <div>${this.#todo.description[0]?.replace(/\n/g, "<br>") || ""}</div>
+                <div>${todo.description[0]?.replace(/\n/g, "<br>") || ""}</div>
 
                 ${
-                    this.#todo.scheduledDate.length != 0 ? 
+                    todo.scheduledDate.length != 0 ? 
                         /*html*/`
                             <div>${i18n.todoFormFieldScheduledDate}</div>
-                            <div>${stringDateFromEpoch(this.#todo.scheduledDate[0])}</div>
+                            <div>${stringDateFromEpoch(todo.scheduledDate[0])}</div>
                         ` :
                         ""
                 }                
 
                 <div>${i18n.todoFormFieldPriority}</div>
-                <div>${i18n.todoFormPriorities[Object.keys(this.#todo.priority)[0]]}</div>
+                <div>${i18n.todoFormPriorities[Object.keys(todo.priority)[0]]}</div>
 
                 <div>${i18n.todoFormFieldStatus}</div>
-                <div>${i18n.todoFormStatuses[Object.keys(this.#todo.status)[0]]}</div>
+                <div>${i18n.todoFormStatuses[Object.keys(todo.status)[0]]}</div>
             </div>
 
             <style>

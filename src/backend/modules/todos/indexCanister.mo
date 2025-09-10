@@ -1,16 +1,24 @@
 import Text "mo:base/Text";
 import Map "mo:core/Map";
-import Result "mo:base/Result";
+import Result "mo:core/Result";
 import Principal "mo:base/Principal";
 import Option "mo:base/Option";
+import List "mo:core/List";
 import Nat "mo:core/Nat";
+import Array "mo:core/Array";
 import BucketUsers "./buckets/bucketUsers";
 import BucketGroups "./buckets/bucketGroups";
 import Todo "./models/todo";
 import TodoList "./models/todoList";
+import User "models/user";
+import Group "models/group";
+import Helpers "../../helpers/helpers";
+import Management "../../helpers/management";
+import ExperimentalCycles "mo:base/ExperimentalCycles";
 
 persistent actor {
-    let NEW_BUCKET_NB_CYCLES = 1_000_000_000;
+    let NEW_BUCKET_NB_CYCLES = 1_000_000_000_000;
+    let TOP_UP_AMOUNT = 1_000_000_000_000;
     let BUCKET_USERS_DATA_MAX_ENTRIES = 10_000;
     let BUCKET_GROUPS_DATA_MAX_ENTRIES = 10_000;
 
@@ -25,6 +33,7 @@ persistent actor {
     // MAPPINGS
     //
 
+    var bucketsPrincipals   = List.empty<Principal>();
     var principalsOnBuckets = Map.empty<Principal, BucketUsers.BucketUsers>();
     var groupsOnBuckets     = Map.empty<Nat, BucketGroups.BucketGroups>();
 
@@ -37,17 +46,37 @@ persistent actor {
     var lastGroupId     = 0;
 
     //
+    // SYSTEM
+    //
+
+    system func heartbeat() : async () {
+        for (bucketPrincipal in List.values(bucketsPrincipals)) {
+            let status = await Management.canister_status({ canister_id = bucketPrincipal });
+            if (status.cycles < threshold) {
+                ExperimentalCycles.add<system>(amountToTopUp);
+                await Management.deposit_cycles({ canister_id = bucketPrincipal });
+            };
+        };
+    };
+
+    //
     // USER 
     //
 
     // call this function when a user connect, create the bucket for the user if it doesn't exist.
-    public shared ({ caller }) func login() : async Result.Result<(), Text> {
+    func getOrCreateUserBucket(caller: Principal) : async Result.Result<BucketUsers.BucketUsers, Text> {
         if ( Principal.isAnonymous(caller) ) { return #err("Not logged in"); };
 
-        if (Option.isSome( Map.get(principalsOnBuckets, Principal.compare, caller) )) { return #ok; };
+        switch( Map.get(principalsOnBuckets, Principal.compare, caller) ) {
+            case (?bucket) return #ok(bucket);
+            case null ();
+        };
 
         if ( Option.isNull(bucketUsersData.bucket)  or bucketUsersData.nbUsers >= BUCKET_USERS_DATA_MAX_ENTRIES ) { // create a new bucket
-            let bucket = await BucketUsers.BucketUsers({ _cycles = NEW_BUCKET_NB_CYCLES });
+            let bucket = await (with cycles = NEW_BUCKET_NB_CYCLES) BucketUsers.BucketUsers();
+
+            List.add(bucketsIds, Principal.fromActor(bucket));
+
             bucketUsersData.bucket := ?bucket;
         };
 
@@ -57,21 +86,63 @@ persistent actor {
         switch ( await bucket.createUserData(caller) ) {
             case (#ok) {
                 bucketUsersData.nbUsers := bucketUsersData.nbUsers + 1; 
-                #ok
+                #ok(bucket);
             };
             case (#err err) #err(err);
         }
     };
 
-    public shared ({ caller }) func getuserData() : async Result.Result<{todos: [Todo.Todo]; todoLists: [TodoList.TodoList]}, Text> {
-        if ( Principal.isAnonymous(caller) ) { return #err("Not logged in"); };
+    public shared ({ caller }) func getuserData() : async Result.Result<User.GetUserDataResponse, [Text]> {
+        if ( Principal.isAnonymous(caller) ) { return #err(["Not logged in"]); };
 
-        let ?bucket = Map.get(principalsOnBuckets, Principal.compare, caller) else return #err("No bucket");
+        let bucket = switch ( await getOrCreateUserBucket(caller) ) { case (#ok bucket) bucket; case (#err err) return #err([err]); };
 
-        switch ( await bucket.getUserData(caller) ) {
-            case (#ok data) #ok(data);
-            case (#err err) #err(err);
-        }
+        let userData = switch ( await bucket.getUserData(caller) ) {
+            case (#ok data) data;
+            case (#err err) return #err([err]);
+        };
+
+        // retrieve all groups data in //
+        // 1 => construct of map of bucket => list of ids
+        // 2 => for each bucket, launch the function to retrieve data
+        // 3 => for each future, await and retrieve data
+        let groupsIdsOnBucket = Map.empty<BucketGroups.BucketGroups, List.List<Nat>>();
+        for ((groupId, _) in userData.groups.vals()) {
+            switch (Map.get(groupsOnBuckets, Nat.compare, groupId)) {
+                case (?bucket) {
+                    let currentList = switch (Map.get(groupsIdsOnBucket, Helpers.compareBuckets, bucket)) {
+                        case (?list) list;
+                        case null   List.empty<Nat>();
+                    };
+
+                    List.add(currentList, groupId);
+                    Map.add(groupsIdsOnBucket, Helpers.compareBuckets, bucket, currentList);
+                };
+                case null ();
+            }
+        };
+
+        var futures = List.empty<async Result.Result<[(Nat, Group.GroupDataSharable)], [Text]>>();
+        for ((bucket, idsList) in Map.entries(groupsIdsOnBucket) ) {
+            let future = bucket.getGroupsData(List.toArray(idsList));
+            List.add(futures, future);
+        };
+
+        let groupsData = List.empty<[(Nat, Group.GroupDataSharable)]>();
+        for (future in List.values(futures)) {
+            switch (await future) {
+                case (#ok data) List.add(groupsData, data);
+                case (#err err) return #err(err);
+            }
+        };
+
+        let response = {
+            todos = userData.todos;
+            todoLists = userData.todoLists;
+            groups = Array.flatten( List.toArray(groupsData) );
+        };
+
+        #ok(response);
     };
 
     //
@@ -124,40 +195,40 @@ persistent actor {
     // TODO LIST
     //
 
-    public shared ({ caller }) func createTodoList(userPrincipal: Principal, todoList: TodoList.TodoList) : async Result.Result<(), [Text]> {
+    public shared ({ caller }) func createTodoList(todoList: TodoList.TodoList) : async Result.Result<(), [Text]> {
         if ( Principal.isAnonymous(caller) ) { return #err(["Not logged in"]); };
 
         switch ( TodoList.validateTodoList(todoList) ) { case (#ok) (); case (#err err) return #err(err); };
 
         let todoListWithId = { todoList with id = lastTodoListId + 1; };
 
-        let ?bucket = Map.get(principalsOnBuckets, Principal.compare, userPrincipal) else return #err(["No bucket"]);
+        let ?bucket = Map.get(principalsOnBuckets, Principal.compare, caller) else return #err(["No bucket"]);
 
-        switch ( await bucket.createTodoList(userPrincipal, todoListWithId) ) {
+        switch ( await bucket.createTodoList(caller, todoListWithId) ) {
             case (#ok) #ok;
             case (#err err) #err(err);
         }
     };
 
-    public shared ({ caller }) func updateTodoList(userPrincipal: Principal, todoList: TodoList.TodoList) : async Result.Result<(), [Text]> {
+    public shared ({ caller }) func updateTodoList(todoList: TodoList.TodoList) : async Result.Result<(), [Text]> {
         if ( Principal.isAnonymous(caller) ) { return #err(["Not logged in"]); };
 
         switch ( TodoList.validateTodoList(todoList) ) { case (#ok) (); case (#err err) return #err(err); };
 
-        let ?bucket = Map.get(principalsOnBuckets, Principal.compare, userPrincipal) else return #err(["No bucket"]);
+        let ?bucket = Map.get(principalsOnBuckets, Principal.compare, caller) else return #err(["No bucket"]);
 
-        switch ( await bucket.updateTodoList(userPrincipal, todoList) ) {
+        switch ( await bucket.updateTodoList(caller, todoList) ) {
             case (#ok) #ok;
             case (#err err) #err(err);
         }
     };
 
-    public shared ({ caller }) func removeTodoList(userPrincipal: Principal, todoListId: Nat) : async Result.Result<(), [Text]> {
+    public shared ({ caller }) func removeTodoList(todoListId: Nat) : async Result.Result<(), [Text]> {
         if ( Principal.isAnonymous(caller) ) { return #err(["Not logged in"]); };
 
-        let ?bucket = Map.get(principalsOnBuckets, Principal.compare, userPrincipal) else return #err(["No bucket"]);
+        let ?bucket = Map.get(principalsOnBuckets, Principal.compare, caller) else return #err(["No bucket"]);
 
-        switch ( await bucket.removeTodoList(userPrincipal, todoListId) ) {
+        switch ( await bucket.removeTodoList(caller, todoListId) ) {
             case (#ok) #ok;
             case (#err err) #err(err);
         }
@@ -169,7 +240,10 @@ persistent actor {
 
     func getOrCreateCurrentGroupBucket() : async ?BucketGroups.BucketGroups {
         if ( Option.isNull(bucketGroupData.bucket) or bucketGroupData.nbGroups > BUCKET_GROUPS_DATA_MAX_ENTRIES ) {
-            let newBucket = await BucketGroups.BucketGroups({ _cycles = NEW_BUCKET_NB_CYCLES });
+            let newBucket = await (with cycles = NEW_BUCKET_NB_CYCLES) BucketGroups.BucketGroups();
+
+            List.add(bucketsIds, Principal.fromActor(newBucket));
+
             bucketGroupData.bucket := ?newBucket;
         };
 
@@ -180,7 +254,7 @@ persistent actor {
         if ( Principal.isAnonymous(caller) ) { return #err(["Not logged in"]); };
 
         let ?userBucket = Map.get(principalsOnBuckets, Principal.compare, caller) else return #err(["No bucket for user"]);
-        let ?groupBucket = await getOrCreateCurrentGroupBucket() else return #err(["No bucket"]);
+        let ?groupBucket = await getOrCreateCurrentGroupBucket() else return #err(["group bucket cannot be created"]);
         
         // create the group
         switch ( await groupBucket.createGroupData( { adminPrincipal = caller; groupName = groupName; groupId = lastGroupId + 1; } ) ) {
@@ -197,6 +271,6 @@ persistent actor {
             case (#ok) #ok(lastGroupId);
             case (#err err) #err(err);
         }
-    }
+    };    
 };
 

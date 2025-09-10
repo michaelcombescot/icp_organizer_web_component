@@ -8,8 +8,8 @@ import Accesses "accesses";
 import Todo "../models/todo";
 import TodoList "../models/todoList";
 
-persistent actor class BucketGroups({ _cycles: Nat}) {
-    var groupsData = Map.empty<Nat, Group.GroupData>();
+persistent actor class BucketGroups() {
+    var storeGroupsData = Map.empty<Nat, Group.GroupData>();
 
     //
     // GROUP DATA
@@ -30,24 +30,33 @@ persistent actor class BucketGroups({ _cycles: Nat}) {
             case (#err err) return #err(err);
         };
 
-        Map.add(groupsData, Nat.compare, groupId, groupData);
+        Map.add(storeGroupsData, Nat.compare, groupId, groupData);
         Map.add(groupData.users, Principal.compare, adminPrincipal, #admin);
         
         #ok
     };
 
-    public query ({ caller }) func getGroupData(groupId: Nat) : async Result.Result<{name: Text;todos: [Todo.Todo]; todoLists: [TodoList.TodoList]}, [Text]> {
+    public query ({ caller }) func getGroupsData(groupIds: [Nat]) : async Result.Result<[(Nat, Group.GroupDataSharable)], [Text]> {
         if ( not Accesses.principalIsTodoIndexCanister(caller) ) { return #err(["can only be called by the index canister"]); };
 
-        let ?groupData = Map.get(groupsData, Nat.compare, groupId) else return #err(["No group data"]);
+        let response: [(Nat, Group.GroupDataSharable)] = Array.filterMap(groupIds, func (groupId: Nat) : ?(Nat, Group.GroupDataSharable) {
+            let ?groupData = Map.get(storeGroupsData, Nat.compare, groupId) else return null;
 
-        #ok(
-            {
-                name = groupData.name;
-                todos = Array.fromIter( Map.values(groupData.todos) );
-                todoLists = Array.fromIter( Map.values(groupData.todoLists) );
-            }
-        )
+            let ?permission = Map.get(groupData.users, Principal.compare, caller) else return null;
+
+            ?(
+                groupId,
+                {
+                    id          = groupId;
+                    name        = groupData.name;
+                    todos       = Array.fromIter( Map.entries(groupData.todos) );
+                    todoLists   = Array.fromIter( Map.entries(groupData.todoLists) );
+                    permission  = permission;
+                }
+            )
+        });
+
+        #ok(response)
     };
 
 }

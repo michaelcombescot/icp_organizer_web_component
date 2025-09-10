@@ -1,37 +1,25 @@
 import { i18n } from "../../../i18n/i18n";
-import { TodoList } from "../../../../../declarations/backend/backend.did";
-import { storeList } from "../stores/store_todo_lists";
-import "./component_list_card";
-import { getTodoPage } from "./component_todo_page";
+import { TodoList } from "../../../../../declarations/backend_todos/backend_todos.did";
+import "./componentListCard";
+import { getTodoPage } from "./componentTodoPage";
 import { cardFontSize, scaleOnHover } from "../../../css/css";
-import { ComponentListCard } from "./component_list_card";
+import { ComponentListCard } from "./componentListCard";
+import { StoreGlobal } from "../stores/storeGlobal";
+import { StoreTodoLists } from "../stores/storeTodoList";
 
 export class ComponentListsCards extends HTMLElement {
-    #lists!: TodoList[]
-    get lists() { return this.#lists }
-    set lists(lists: TodoList[]) {
-        this.#lists = lists
-        this.#render()
-    }
-
-    #currentListUUID!: string | null
-    set currentListUUID(listUUID: string) {
-        this.#currentListUUID = listUUID
-        this.#render()
-    }
-
     constructor() {
         super();
         this.attachShadow({ mode: "open" });
     }
 
     async connectedCallback() {
-        this.#currentListUUID = this.getAttribute("currentListUUID")
-        this.#lists = await storeList.apiGetTodoLists()
         this.#render()
     }
 
     #render() {
+        const lists = StoreTodoLists.todoLists.values()
+
         this.shadowRoot!.innerHTML = /*html*/`
             <div id="todo-lists-cards">
                 <span id="todo-list-card-all">${i18n.todoListCardSeeAll}</span>
@@ -64,17 +52,12 @@ export class ComponentListsCards extends HTMLElement {
         `
 
         this.shadowRoot!.querySelector("#todo-lists-cards")!.append(
-            ...this.#lists.map((list) => {
-                const card = new ComponentListCard(list, list.uuid === this.#currentListUUID)
-                card.setAttribute("list-uuid", list.uuid)
-                return card
+            ...lists.map((list) => {
+                return new ComponentListCard(list.id)
             })
         )
 
-        this.shadowRoot!.querySelector("#todo-list-card-all")!.addEventListener("click", element => {
-            getTodoPage().currentListUUID = ""
-            this.#currentListUUID = ""
-        })
+        this.shadowRoot!.querySelector("#todo-list-card-all")!.addEventListener("click", element => { StoreGlobal.currentSelectedListId = null })
     }
 }
 

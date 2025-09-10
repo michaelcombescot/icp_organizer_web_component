@@ -1,3 +1,4 @@
+import Principal "mo:core/Principal";
 module {
     type canister_settings = {
         controllers : ?[Principal];
@@ -17,7 +18,7 @@ module {
     };
 
     let settings = {
-        controllers = ?[Principal.fromText("your-principal-id")];
+        controllers = [Principal.fromText("your-principal-id")];
         compute_allocation = ?10;
         memory_allocation = ?(1024 * 1024 * 10); // 10 MiB
         freezing_threshold = null;

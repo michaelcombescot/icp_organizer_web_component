@@ -42,20 +42,18 @@ class ComponentTodoForm extends HTMLElement {
                             formData.get("priority") === "medium" ? { medium: null } :
                             { high: null },
                 status: { 'pending' : null },
-                todoListId: formData.get("listId") ? [] : [BigInt(formData.get("listId") as string)],
+                todoListId: formData.get("listId") == "" ? [] : [BigInt(formData.get("listId") as string)],
                 createdAt: this.#todo?.createdAt || BigInt(Date.now()),
                 permission: { owned: null },
             }
 
-            getLoadingComponent().wrapAsync(async () => {
-                if (this.#isEditMode) {
-                    await StoreTodos.updateTodo(todo)
-                } else {
-                    await StoreTodos.createTodo(todo)
-                }
+            if (this.#isEditMode) {
+                await StoreTodos.updateTodo(todo)
+            } else {
+                await StoreTodos.createTodo(todo)
+            }
 
-                closeModal()
-            })
+            closeModal()
     }
 
     //

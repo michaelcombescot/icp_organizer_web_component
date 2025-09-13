@@ -16,8 +16,11 @@ export class ComponentLoading extends HTMLElement {
 
     async wrapAsync(func: () => Promise<void>) {
         this.show();
-        await func();
-        this.hide();
+        try {
+            return await func();
+        } finally {
+            this.hide();
+        }
     }
 
     #render() {

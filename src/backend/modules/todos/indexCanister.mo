@@ -6,36 +6,34 @@ import Option "mo:base/Option";
 import List "mo:core/List";
 import Nat "mo:core/Nat";
 import Array "mo:core/Array";
-import BucketUsers "./buckets/bucketUsers";
-import BucketGroups "./buckets/bucketGroups";
+import BucketUsersData "./buckets/bucketUsersData";
 import Todo "./models/todo";
 import TodoList "./models/todoList";
 import User "models/user";
-import Group "models/group";
-import Helpers "../../helpers/helpers";
-import Management "../../helpers/management";
-import ExperimentalCycles "mo:base/ExperimentalCycles";
+import Interfaces "../../helpers/interfaces";
+import Debug "mo:core/Debug";
+import Nat64 "mo:core/Nat64";
+import Time "mo:core/Time";
 
 persistent actor {
-    let NEW_BUCKET_NB_CYCLES = 1_000_000_000_000;
+    let NEW_BUCKET_NB_CYCLES = 2_000_000_000_000;
+    let NB_CYCLES_MIN_BEFORE_TOPPING = 1_000_000_000_000;
     let TOP_UP_AMOUNT = 1_000_000_000_000;
-    let BUCKET_USERS_DATA_MAX_ENTRIES = 10_000;
-    let BUCKET_GROUPS_DATA_MAX_ENTRIES = 10_000;
+    let TOP_UP_TIMER_INTERVAL_NS = 20_000_000_000;
+    let BUCKET_USERS_DATA_MAX_ENTRIES = 1000;
 
     //
     // BUCKETS
     //
 
-    var bucketUsersData: {var bucket: ?BucketUsers.BucketUsers; var nbUsers: Nat} =  { var bucket = null; var nbUsers = 0; };    
-    var bucketGroupData: {var bucket: ?BucketGroups.BucketGroups; var nbGroups: Nat} =  { var bucket = null; var nbGroups = 0; };
+    var bucketUsersData: {var bucket: ?BucketUsersData.BucketUsersData; var nbUsers: Nat} =  { var bucket = null; var nbUsers = 0; };    
 
     //
     // MAPPINGS
     //
 
-    var bucketsPrincipals   = List.empty<Principal>();
-    var principalsOnBuckets = Map.empty<Principal, BucketUsers.BucketUsers>();
-    var groupsOnBuckets     = Map.empty<Nat, BucketGroups.BucketGroups>();
+    var listOfBucketsPrincipals   = List.empty<Principal>();
+    var principalsOnBuckets = Map.empty<Principal, BucketUsersData.BucketUsersData>();
 
     //
     // INC
@@ -46,17 +44,30 @@ persistent actor {
     var lastGroupId     = 0;
 
     //
+    // CANISTERS
+    //
+
+    let managementCanister = actor("aaaaa-aa") : Interfaces.Self;
+
+    //
     // SYSTEM
     //
 
-    system func heartbeat() : async () {
-        for (bucketPrincipal in List.values(bucketsPrincipals)) {
-            let status = await Management.canister_status({ canister_id = bucketPrincipal });
-            if (status.cycles < threshold) {
-                ExperimentalCycles.add<system>(amountToTopUp);
-                await Management.deposit_cycles({ canister_id = bucketPrincipal });
+    // system func heartbeat() : async () { => is a function automatically pocket every second or so by the system
+
+    // timer launch when the actor is started, and then at a time defined with setGlobalTimer.
+    // Here it will top up all buckets if needed, and be called againa after a cooldown of TOP_UP_TIMER_INTERVAL_NS
+    system func timer(setGlobalTimer: (Nat64) -> ()) : async () {
+        for ( bucketPrincipal in List.values(listOfBucketsPrincipals) ) {
+            let status = await managementCanister.canister_status({ canister_id = bucketPrincipal });
+
+            if ( status.cycles < NB_CYCLES_MIN_BEFORE_TOPPING ) {
+                Debug.print("Topping bucket " # Principal.toText(bucketPrincipal));
+                ignore (with cycles = TOP_UP_AMOUNT) managementCanister.deposit_cycles({ canister_id = bucketPrincipal });
             };
         };
+
+        setGlobalTimer( Nat64.fromIntWrap(Time.now()) + Nat64.fromNat(TOP_UP_TIMER_INTERVAL_NS) ); // + 20s
     };
 
     //
@@ -64,7 +75,7 @@ persistent actor {
     //
 
     // call this function when a user connect, create the bucket for the user if it doesn't exist.
-    func getOrCreateUserBucket(caller: Principal) : async Result.Result<BucketUsers.BucketUsers, Text> {
+    func getOrCreateUserBucket(caller: Principal) : async Result.Result<BucketUsersData.BucketUsersData, Text> {
         if ( Principal.isAnonymous(caller) ) { return #err("Not logged in"); };
 
         switch( Map.get(principalsOnBuckets, Principal.compare, caller) ) {
@@ -73,10 +84,8 @@ persistent actor {
         };
 
         if ( Option.isNull(bucketUsersData.bucket)  or bucketUsersData.nbUsers >= BUCKET_USERS_DATA_MAX_ENTRIES ) { // create a new bucket
-            let bucket = await (with cycles = NEW_BUCKET_NB_CYCLES) BucketUsers.BucketUsers();
-
-            List.add(bucketsIds, Principal.fromActor(bucket));
-
+            let bucket = await (with cycles = NEW_BUCKET_NB_CYCLES) BucketUsersData.BucketUsersData();
+            List.add(listOfBucketsPrincipals, Principal.fromActor(bucket));
             bucketUsersData.bucket := ?bucket;
         };
 
@@ -92,57 +101,15 @@ persistent actor {
         }
     };
 
-    public shared ({ caller }) func getuserData() : async Result.Result<User.GetUserDataResponse, [Text]> {
-        if ( Principal.isAnonymous(caller) ) { return #err(["Not logged in"]); };
+    public shared ({ caller }) func getuserData() : async Result.Result<User.UserDataSharable, Text> {
+        if ( Principal.isAnonymous(caller) ) { return #err("Not logged in"); };
 
-        let bucket = switch ( await getOrCreateUserBucket(caller) ) { case (#ok bucket) bucket; case (#err err) return #err([err]); };
+        let bucket = switch ( await getOrCreateUserBucket(caller) ) { case (#ok bucket) bucket; case (#err err) return #err(err); };
 
-        let userData = switch ( await bucket.getUserData(caller) ) {
-            case (#ok data) data;
-            case (#err err) return #err([err]);
-        };
-
-        // retrieve all groups data in //
-        // 1 => construct of map of bucket => list of ids
-        // 2 => for each bucket, launch the function to retrieve data
-        // 3 => for each future, await and retrieve data
-        let groupsIdsOnBucket = Map.empty<BucketGroups.BucketGroups, List.List<Nat>>();
-        for ((groupId, _) in userData.groups.vals()) {
-            switch (Map.get(groupsOnBuckets, Nat.compare, groupId)) {
-                case (?bucket) {
-                    let currentList = switch (Map.get(groupsIdsOnBucket, Helpers.compareBuckets, bucket)) {
-                        case (?list) list;
-                        case null   List.empty<Nat>();
-                    };
-
-                    List.add(currentList, groupId);
-                    Map.add(groupsIdsOnBucket, Helpers.compareBuckets, bucket, currentList);
-                };
-                case null ();
-            }
-        };
-
-        var futures = List.empty<async Result.Result<[(Nat, Group.GroupDataSharable)], [Text]>>();
-        for ((bucket, idsList) in Map.entries(groupsIdsOnBucket) ) {
-            let future = bucket.getGroupsData(List.toArray(idsList));
-            List.add(futures, future);
-        };
-
-        let groupsData = List.empty<[(Nat, Group.GroupDataSharable)]>();
-        for (future in List.values(futures)) {
-            switch (await future) {
-                case (#ok data) List.add(groupsData, data);
-                case (#err err) return #err(err);
-            }
-        };
-
-        let response = {
-            todos = userData.todos;
-            todoLists = userData.todoLists;
-            groups = Array.flatten( List.toArray(groupsData) );
-        };
-
-        #ok(response);
+        switch ( await bucket.getUserData(caller) ) {
+            case (#ok data) #ok(data);
+            case (#err err) #err(err);
+        }
     };
 
     //
@@ -195,7 +162,7 @@ persistent actor {
     // TODO LIST
     //
 
-    public shared ({ caller }) func createTodoList(todoList: TodoList.TodoList) : async Result.Result<(), [Text]> {
+    public shared ({ caller }) func createTodoList(todoList: TodoList.TodoList) : async Result.Result<Nat, [Text]> {
         if ( Principal.isAnonymous(caller) ) { return #err(["Not logged in"]); };
 
         switch ( TodoList.validateTodoList(todoList) ) { case (#ok) (); case (#err err) return #err(err); };
@@ -205,7 +172,10 @@ persistent actor {
         let ?bucket = Map.get(principalsOnBuckets, Principal.compare, caller) else return #err(["No bucket"]);
 
         switch ( await bucket.createTodoList(caller, todoListWithId) ) {
-            case (#ok) #ok;
+            case (#ok) {
+                lastTodoListId := lastTodoListId + 1;
+                #ok(todoListWithId.id);
+            };
             case (#err err) #err(err);
         }
     };
@@ -233,44 +203,5 @@ persistent actor {
             case (#err err) #err(err);
         }
     };
-
-    //
-    // GROUPS
-    //
-
-    func getOrCreateCurrentGroupBucket() : async ?BucketGroups.BucketGroups {
-        if ( Option.isNull(bucketGroupData.bucket) or bucketGroupData.nbGroups > BUCKET_GROUPS_DATA_MAX_ENTRIES ) {
-            let newBucket = await (with cycles = NEW_BUCKET_NB_CYCLES) BucketGroups.BucketGroups();
-
-            List.add(bucketsIds, Principal.fromActor(newBucket));
-
-            bucketGroupData.bucket := ?newBucket;
-        };
-
-        return bucketGroupData.bucket
-    };
-
-    public shared ({ caller }) func createGroup(groupName: Text) : async Result.Result<Nat, [Text]> {
-        if ( Principal.isAnonymous(caller) ) { return #err(["Not logged in"]); };
-
-        let ?userBucket = Map.get(principalsOnBuckets, Principal.compare, caller) else return #err(["No bucket for user"]);
-        let ?groupBucket = await getOrCreateCurrentGroupBucket() else return #err(["group bucket cannot be created"]);
-        
-        // create the group
-        switch ( await groupBucket.createGroupData( { adminPrincipal = caller; groupName = groupName; groupId = lastGroupId + 1; } ) ) {
-            case (#ok) {
-                lastGroupId := lastGroupId + 1;
-                bucketGroupData.nbGroups := bucketGroupData.nbGroups + 1;
-                Map.add(groupsOnBuckets, Nat.compare, lastGroupId, groupBucket);
-            };
-            case (#err err) return #err(err);
-        };
-
-        // add a link between the user and the group in userData
-        switch ( await userBucket.addToGroup({ userPrincipal = caller; groupId = lastGroupId; }) ) {
-            case (#ok) #ok(lastGroupId);
-            case (#err err) #err(err);
-        }
-    };    
 };
 

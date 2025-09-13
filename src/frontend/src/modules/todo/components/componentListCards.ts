@@ -14,10 +14,10 @@ export class ComponentListsCards extends HTMLElement {
     }
 
     async connectedCallback() {
-        this.#render()
+        this.render()
     }
 
-    #render() {
+    render() {
         const lists = StoreTodoLists.todoLists.values()
 
         this.shadowRoot!.innerHTML = /*html*/`
@@ -57,7 +57,7 @@ export class ComponentListsCards extends HTMLElement {
             })
         )
 
-        this.shadowRoot!.querySelector("#todo-list-card-all")!.addEventListener("click", element => { StoreGlobal.currentSelectedListId = null })
+        this.shadowRoot!.querySelector("#todo-list-card-all")!.addEventListener("click", element => { StoreGlobal.updateCurrentSelectedListId(null) })
     }
 }
 

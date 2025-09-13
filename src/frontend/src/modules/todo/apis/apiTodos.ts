@@ -2,19 +2,15 @@ import { Todo, TodoList, TodoPriority } from "../../../../../declarations/backen
 import { actor } from "../../../components/auth/auth";
 
 export let APITodo = {
-    async apiGetTodos() {
-        return actor.getuserData()
-    },
-
-    async apiCreateTodo(todo: Todo): Promise<{ ok: bigint } | { err: string[] }> {
+    async createTodo(todo: Todo): Promise<{ ok: bigint } | { err: string[] }> {
         return actor.createTodo(todo)
     },
 
-    async apiUpdateTodo(todo: Todo) {
+    async updateTodo(todo: Todo) {
         return actor.updateTodo(todo)
     },
 
-    async apiDeleteTodo(id: bigint) {
+    async removeTodo(id: bigint) {
         return actor.removeTodo(id)
     },
 }

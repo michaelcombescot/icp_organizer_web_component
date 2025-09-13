@@ -17,6 +17,8 @@ export class ComponentTodo extends HTMLElement {
     constructor(todoId: bigint) {
         super()
         this.attachShadow({ mode: "open" });
+
+        this.#todoId = todoId
     }
 
     connectedCallback() {

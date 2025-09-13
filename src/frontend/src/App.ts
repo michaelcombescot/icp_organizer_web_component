@@ -4,6 +4,7 @@ import './components/router/router_link'
 import { i18n } from './i18n/i18n'
 import { navigateTo, routes } from './components/router/router'
 import { login, logout, isAuthenticated } from './components/auth/auth'
+import { StoreGlobal } from './modules/todo/stores/storeGlobal'
 // import { logo } from '../assets/icp-logo.svg'
 
 class App extends HTMLElement {
@@ -17,7 +18,7 @@ class App extends HTMLElement {
         setTimeout(() => { navigateTo(window.location.pathname) }, 0) // element is not fully rendered without the timeout, and we cannot find the #page for the router
     }
 
-    #render() {
+    async #render() {
         this.shadowRoot!.innerHTML = /*html*/`       
             <div id="main-app">
                 <header>

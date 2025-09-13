@@ -35,15 +35,13 @@ export class ComponentListForm extends HTMLElement {
             color: formData.get("color") as string
         }
 
-        getLoadingComponent().wrapAsync(async () => { 
-            if (this.#isEditMode) {
-                await StoreTodoLists.updateTodoList(list);
-            } else {
-                await StoreTodoLists.createTodoList(list);
-            }            
+        if (this.#isEditMode) {
+            await StoreTodoLists.updateTodoList(list);
+        } else {
+            await StoreTodoLists.createTodoList(list);
+        }            
 
-            closeModal()
-        })            
+        closeModal()         
     }
 
     #render() {

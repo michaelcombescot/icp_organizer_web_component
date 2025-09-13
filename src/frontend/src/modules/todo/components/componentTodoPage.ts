@@ -16,10 +16,14 @@ class ComponentTodoPage extends HTMLElement {
     }
 
     async connectedCallback() {
-        this.#render()
+        this.render()
     }
 
-    #render() {
+    async render() {
+        if ( isAuthenticated ) {
+            await StoreGlobal.getUserData();
+        }
+
         let currentListId = StoreGlobal.currentSelectedListId
 
         this.shadowRoot!.innerHTML = /*html*/`

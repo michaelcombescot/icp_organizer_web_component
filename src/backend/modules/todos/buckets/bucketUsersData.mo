@@ -3,13 +3,13 @@ import Result "mo:core/Result";
 import Principal "mo:core/Principal";
 import Nat "mo:core/Nat";
 import Array "mo:core/Array";
+import Debug "mo:core/Debug";
 import Accesses "accesses";
 import Todo "../models/todo";
 import TodoList "../models/todoList";
 import User "../models/user";
-import Group "../models/group";
 
-persistent actor class BucketUsers() {
+persistent actor class BucketUsersData() {
     var usersData = Map.empty<Principal, User.UserData>();
 
     //
@@ -22,7 +22,6 @@ persistent actor class BucketUsers() {
         let userData = {
             todos     = Map.empty<Nat, Todo.Todo>();
             todoLists = Map.empty<Nat, TodoList.TodoList>();
-            groups    = Map.empty<Nat, ()>();
         };
 
         Map.add(usersData, Principal.compare, userPrincipal, userData);
@@ -39,7 +38,6 @@ persistent actor class BucketUsers() {
             {
                 todos       = Array.fromIter( Map.entries(userData.todos) );
                 todoLists   = Array.fromIter( Map.entries(userData.todoLists) );
-                groups      = Array.fromIter( Map.entries(userData.groups) );
             }
         )
     };
@@ -109,20 +107,6 @@ persistent actor class BucketUsers() {
         let ?userData = Map.get(usersData, Principal.compare, userPrincipal) else return #err(["No user data"]);
 
         Map.remove(userData.todoLists, Nat.compare, todoListId);
-
-        #ok
-    };
-
-    //
-    // GROUPS
-    //
-
-    public query ({ caller }) func addToGroup({ userPrincipal: Principal; groupId: Nat; }) : async Result.Result<(), [Text]> {
-        if ( not Accesses.principalIsTodoIndexCanister(caller) ) { return #err(["can only be called by the index canister"]); };
-
-        let ?userData = Map.get(usersData, Principal.compare, userPrincipal) else return #err(["No user data"]);
-
-        Map.add(userData.groups, Nat.compare, groupId, ());
 
         #ok
     };

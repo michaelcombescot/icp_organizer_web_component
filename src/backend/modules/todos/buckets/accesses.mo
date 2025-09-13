@@ -1,6 +1,5 @@
 import Principal "mo:core/Principal";
-import Debug "mo:core/Debug";
-import CanistersIDs "../../helpers/canistersIDs";
+import CanistersIDs "../../../helpers/canistersIds";
 
 module {
     public func principalIsTodoIndexCanister(principal: Principal) : Bool {

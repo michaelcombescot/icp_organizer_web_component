@@ -1,18 +1,40 @@
 import { TodoList } from "../../../../../declarations/backend_todos/backend_todos.did";
+import { getLoadingComponent } from "../../../components/loading";
+import { APITodoList } from "../apis/apiTodoLists";
+import { getListsCards } from "../components/componentListCards";
+import { getTodoPage } from "../components/componentTodoPage";
 
 export class StoreTodoLists {
     static todoLists: Map<bigint, TodoList> = new Map<bigint, TodoList>();
 
     static createTodoList(todoList: TodoList) {
-        this.todoLists.set(todoList.id, todoList);
+        getLoadingComponent().wrapAsync(async () => {
+            const result = await APITodoList.createList(todoList);
+            if ("ok" in result) {
+                todoList.id = result.ok;
+                this.todoLists.set(result.ok, todoList);
+
+                getListsCards().render();
+            }
+        })
     }
 
     static updateTodoList(todoList: TodoList) {
-        this.todoLists.set(todoList.id, todoList);
+        getLoadingComponent().wrapAsync(async () => {
+            await APITodoList.updateList(todoList);
+            this.todoLists.set(todoList.id, todoList);
+
+            getTodoPage().render();
+        })
     }
 
     static deleteTodoList(id: bigint) {
-        this.todoLists.delete(id);
+        getLoadingComponent().wrapAsync(async () => {
+            await APITodoList.removeList(id);
+            this.todoLists.delete(id);
+
+            getTodoPage().render();
+        })
     }
 }
 

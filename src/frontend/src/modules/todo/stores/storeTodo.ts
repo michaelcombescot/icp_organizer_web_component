@@ -52,7 +52,7 @@ export class StoreTodos {
         let currentSelectedListId = StoreGlobal.currentSelectedListId
 
         return [...this.todos]
-            .filter(([id, todo]) => todo.scheduledDate.length === 0 && (!currentSelectedListId || todo.id === currentSelectedListId))
+            .filter(([id, todo]) => todo.scheduledDate.length === 0 && (!currentSelectedListId || todo.todoListId[0] === currentSelectedListId))
             .map(([_, todo]) => todo)
             .sort((a, b) => {
                 const aLevel = defTodoPriorities.indexOf(Object.keys(a.priority)[0] as string);

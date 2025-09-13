@@ -5,7 +5,6 @@ import Principal "mo:base/Principal";
 import Option "mo:base/Option";
 import List "mo:core/List";
 import Nat "mo:core/Nat";
-import Array "mo:core/Array";
 import BucketUsersData "./buckets/bucketUsersData";
 import Todo "./models/todo";
 import TodoList "./models/todoList";
@@ -14,6 +13,7 @@ import Interfaces "../../helpers/interfaces";
 import Debug "mo:core/Debug";
 import Nat64 "mo:core/Nat64";
 import Time "mo:core/Time";
+import Error "mo:core/Error";
 
 persistent actor {
     let NEW_BUCKET_NB_CYCLES = 2_000_000_000_000;
@@ -32,8 +32,8 @@ persistent actor {
     // MAPPINGS
     //
 
-    var listOfBucketsPrincipals   = List.empty<Principal>();
-    var principalsOnBuckets = Map.empty<Principal, BucketUsersData.BucketUsersData>();
+    var listOfBucketsUserDataPrincipals     = List.empty<Principal>();
+    var principalsOnBuckets                 = Map.empty<Principal, BucketUsersData.BucketUsersData>();
 
     //
     // INC
@@ -58,7 +58,7 @@ persistent actor {
     // timer launch when the actor is started, and then at a time defined with setGlobalTimer.
     // Here it will top up all buckets if needed, and be called againa after a cooldown of TOP_UP_TIMER_INTERVAL_NS
     system func timer(setGlobalTimer: (Nat64) -> ()) : async () {
-        for ( bucketPrincipal in List.values(listOfBucketsPrincipals) ) {
+        for ( bucketPrincipal in List.values(listOfBucketsUserDataPrincipals) ) {
             let status = await managementCanister.canister_status({ canister_id = bucketPrincipal });
 
             if ( status.cycles < NB_CYCLES_MIN_BEFORE_TOPPING ) {
@@ -68,6 +68,33 @@ persistent actor {
         };
 
         setGlobalTimer( Nat64.fromIntWrap(Time.now()) + Nat64.fromNat(TOP_UP_TIMER_INTERVAL_NS) ); // + 20s
+    };
+
+    public shared func upgradeAllBuckets() : async () {
+        // update users buckets
+        label l for (p in List.values(listOfBucketsUserDataPrincipals)) {
+            try {
+                await managementCanister.stop_canister({ canister_id = p });
+            } catch (e) {
+                Debug.print("Cannot stop UserData bucket " # Principal.toText(p) # ": " # Error.message(e));
+                continue l;
+            };
+
+            let userDataBucket = actor (Principal.toText(p)) : BucketUsersData.BucketUsersData;
+
+            try {
+                ignore await (system BucketUsersData.BucketUsersData)(#upgrade userDataBucket)();
+            } catch (e) {
+                Debug.print("Cannot upgrade UserData bucket " # Principal.toText(p) # ": " # Error.message(e));
+                continue l;
+            };
+
+            try {
+                await managementCanister.start_canister({ canister_id = p });
+            } catch (e) {
+                Debug.print("Cannot restart UserData bucket" # Principal.toText(p) # ": " # Error.message(e));
+            };
+        };
     };
 
     //
@@ -85,7 +112,7 @@ persistent actor {
 
         if ( Option.isNull(bucketUsersData.bucket)  or bucketUsersData.nbUsers >= BUCKET_USERS_DATA_MAX_ENTRIES ) { // create a new bucket
             let bucket = await (with cycles = NEW_BUCKET_NB_CYCLES) BucketUsersData.BucketUsersData();
-            List.add(listOfBucketsPrincipals, Principal.fromActor(bucket));
+            List.add(listOfBucketsUserDataPrincipals, Principal.fromActor(bucket));
             bucketUsersData.bucket := ?bucket;
         };
 

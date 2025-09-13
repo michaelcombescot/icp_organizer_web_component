@@ -3,6 +3,7 @@ import { getLoadingComponent } from "../../../components/loading";
 import { APITodoList } from "../apis/apiTodoLists";
 import { getListsCards } from "../components/componentListCards";
 import { getTodoPage } from "../components/componentTodoPage";
+import { StoreTodos } from "./storeTodo";
 
 export class StoreTodoLists {
     static todoLists: Map<bigint, TodoList> = new Map<bigint, TodoList>();
@@ -32,6 +33,12 @@ export class StoreTodoLists {
         getLoadingComponent().wrapAsync(async () => {
             await APITodoList.removeList(id);
             this.todoLists.delete(id);
+
+            StoreTodos.todos.forEach((todo) => {
+                if (todo.todoListId[0] === id) {
+                    StoreTodos.todos.delete(todo.id)
+                }
+            })
 
             getTodoPage().render();
         })

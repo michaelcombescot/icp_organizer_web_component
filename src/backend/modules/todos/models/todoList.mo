@@ -1,4 +1,3 @@
-import Map "mo:core/Map";
 import Result "mo:core/Result";
 import List "mo:core/List";
 

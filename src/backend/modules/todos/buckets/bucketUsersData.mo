@@ -4,6 +4,8 @@ import Principal "mo:core/Principal";
 import Nat "mo:core/Nat";
 import Array "mo:core/Array";
 import Debug "mo:core/Debug";
+import Iter "mo:core/Iter";
+import Option "mo:core/Option";
 import Accesses "accesses";
 import Todo "../models/todo";
 import TodoList "../models/todoList";
@@ -101,12 +103,15 @@ persistent actor class BucketUsersData() {
         #ok
     };
 
+    // remove the list and all associated todos
     public shared ({ caller }) func removeTodoList(userPrincipal: Principal, todoListId: Nat) : async Result.Result<(), [Text]> {
         if ( not Accesses.principalIsTodoIndexCanister(caller) ) { return #err(["can only be called by the index canister"]); };
 
         let ?userData = Map.get(usersData, Principal.compare, userPrincipal) else return #err(["No user data"]);
 
         Map.remove(userData.todoLists, Nat.compare, todoListId);
+
+        Iter.forEach( Map.entries(userData.todos), func ((_, todo)) { if ( todo.todoListId == ?todoListId ) { Map.remove(userData.todos, Nat.compare, todo.id) } } );
 
         #ok
     };

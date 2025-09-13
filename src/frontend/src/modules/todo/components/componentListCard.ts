@@ -95,7 +95,7 @@ export class ComponentListCard extends HTMLElement {
 
             if ( !confirm(i18n.todoListCardConfirmDelete) ) return
 
-            StoreTodoLists.todoLists.delete(list.id)
+            StoreTodoLists.deleteTodoList(list.id)
         })
     }
 }

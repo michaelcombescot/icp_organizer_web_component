@@ -1,7 +1,7 @@
 {
   "canisters": {
     "backend_todos": {
-      "main": "src/backend/modules/todos/indexCanister.mo",
+      "main": "src/backend/modules/maintenance/maintenanceIndex.mo",
       "type": "motoko"
     },
     "frontend": {

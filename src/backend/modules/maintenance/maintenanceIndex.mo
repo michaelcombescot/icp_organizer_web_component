@@ -21,13 +21,7 @@ type BucketData = {
 shared ({ caller = owner }) persistent actor class MaintenanceIndex() = this {
     var buckets = Map.empty<Principal, BucketData>();
 
-    transient let allowedCallers = Map.fromIter<Principal, (Helpers.Nature, Helpers.BucketType)>(
-        Iter.fromArray([
-            ( Principal.fromText(Configs.CanisterIds.INDEX_USERS_DATA), (#usersData, #usersData(UsersDataBucket.UsersDataBucket)) ),
-            ( Principal.fromText(Configs.CanisterIds.INDEX_TODOS), (#todos, #todos(TodosBucket.TodosBucket)) )
-        ]),
-        Principal.compare
-    );
+    transient let allowedCallers = Helpers.makeAllowedCallers();
 
     //
     // SYSTEM
@@ -102,7 +96,7 @@ shared ({ caller = owner }) persistent actor class MaintenanceIndex() = this {
                     await (with cycles = Configs.Consts.NEW_BUCKET_NB_CYCLES) ctor();
                 };                
             };
-            
+
             newBucketPrincipal := Principal.fromActor(newBucket);
         } catch (e) {
             return #err("Cannot create new bucket: " # Error.message(e));

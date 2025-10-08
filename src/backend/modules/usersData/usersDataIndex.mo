@@ -35,36 +35,45 @@ shared ({ caller = owner }) persistent actor class UsersDataIndex() = this {
     public shared ({ caller }) func getOrCreateBucket() : async Result.Result<Principal, Text> {
         if ( Principal.isAnonymous(caller) ) { return #err(Errors.ERR_NOT_CONNECTED); };
 
-        // if no user entry, create one in the current bucket (last entry of the ordered map).
-        // if there is no last entry, or the last entry if full, create a new entry
+        var mustCreateBucket = false;
+        var respBucketPrincipal = Principal.anonymous();
+        
         switch ( Map.get(principalsOnBuckets, Principal.compare, caller) ) {
             case (?bucketPrincipal) return #ok(bucketPrincipal);
             case null {
                 switch (bucketMapOperations.maxEntry(bucketsStore)) {
                     case (?(bucketPrincipal, bucket)) {
-                        if (bucket.nbEntries < Configs.Consts.BUCKET_USERS_DATA_MAX_ENTRIES) {
-                            addUserToBucket(bucketPrincipal, caller);
-                            return #ok(bucketPrincipal);
+                        if (bucket.nbEntries <= Configs.Consts.BUCKET_USERS_DATA_MAX_ENTRIES) {
+                            respBucketPrincipal := bucketPrincipal;
                         } else {
-                            let bucket = await createBucket();
-                            addUserToBucket(bucketPrincipal, bucketPrincipal);
-                            return #ok(bucketPrincipal);
+                            mustCreateBucket := true;
                         };
                     };
                     case null {
-                        let newBucketPrincipal = await createBucket();
-                        addUserToBucket(newBucketPrincipal, caller);
-                        return #ok(newBucketPrincipal);
+                        mustCreateBucket := true
                     };
                 };
             };
         };
-    };
 
-    
+        if (mustCreateBucket) {
+            try {
+                switch ( await Interfaces.MaintenanceIndex.canister.addBucket() ) {
+                    case (#ok(bucketPrincipal)) respBucketPrincipal := bucketPrincipal;
+                    case (#err(e)) {
+                        Debug.print("Cannot create new bucket: " # e);
+                        return #err("Cannot create new bucket");
+                    }
+                };
+            } catch (e) {
+                Debug.print("Cannot create new bucket: " # Error.message(e));
+                return #err("Cannot create new bucket");
+            }
+        };
 
-    func addUserToBucket(bucketPrincipal: Principal, caller: Principal) : () {
-        Map.add(principalsOnBuckets, Principal.compare, caller, bucketPrincipal);
+        Map.add(principalsOnBuckets, Principal.compare, caller, respBucketPrincipal);
+
+        #ok(respBucketPrincipal)
     };
 };
 

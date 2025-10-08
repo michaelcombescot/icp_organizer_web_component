@@ -7,7 +7,7 @@ module {
         public let canister = actor(Configs.CanisterIds.INDEX_MAINTENANCE) : Self;
 
         public type Self = actor {
-            addBucket : shared (Principal) -> async Result.Result<(), Text>;
+            addBucket : shared () -> async Result.Result<Principal, Text>;
         };
     };
 

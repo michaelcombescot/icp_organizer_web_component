@@ -4,7 +4,6 @@ import Result "mo:core/Result";
 import Principal "mo:core/Principal";
 import Nat "mo:core/Nat";
 import OrderedMap "mo:base/OrderedMap";
-import UsersDataBucket "./usersDataBucket";
 import Interfaces "../../shared/interfaces";
 import Debug "mo:core/Debug";
 import Error "mo:core/Error";
@@ -13,7 +12,6 @@ import Errors "../../shared/errors";
 
 type BucketData = {
     principal: Principal;
-    bucket: UsersDataBucket.UsersDataBucket;
     nbEntries: Nat;
 };
 
@@ -59,7 +57,11 @@ shared ({ caller = owner }) persistent actor class UsersDataIndex() = this {
         if (mustCreateBucket) {
             try {
                 switch ( await Interfaces.MaintenanceIndex.canister.addBucket() ) {
-                    case (#ok(bucketPrincipal)) respBucketPrincipal := bucketPrincipal;
+                    case (#ok(bucketPrincipal)) {
+                        respBucketPrincipal := bucketPrincipal;
+
+                        bucketsStore := bucketMapOperations.put(bucketsStore, respBucketPrincipal, { principal = respBucketPrincipal; nbEntries = 1; });
+                    };
                     case (#err(e)) {
                         Debug.print("Cannot create new bucket: " # e);
                         return #err("Cannot create new bucket");

@@ -2,16 +2,15 @@ import Principal "mo:core/Principal";
 import Debug "mo:core/Debug";
 import Map "mo:core/Map";
 import Result "mo:core/Result";
-import List "mo:core/List";
-import Array "mo:core/Array";
+import Error "mo:core/Error";
 import OrderedMap "mo:base/OrderedMap";
 import Interfaces "../../shared/interfaces";
-import TodosBucket "todosBucket";
 import Configs "../../shared/configs";
+import Errors "../../shared/errors";
+import Todo "todoModel";
 
 type BucketData = {
     principal: Principal;
-    bucket: TodosBucket.TodosBucket;
     nbEntries: Nat;
 };
 
@@ -21,44 +20,57 @@ shared ({ caller = owner }) persistent actor class TodosIndex() = this {
 
     var todosOnBuckets = Map.empty<Principal, Principal>();
 
-    public shared ({ caller }) func getorCreateBucket(todoPrincipal: Principal, bucketPrincipal: Principal) : async Result.Result<Principal, Text> {
-        func createBucket() : async Principal {
-            let bucket = await (with cycles = Configs.Consts.NEW_BUCKET_NB_CYCLES) TodosBucket.TodosBucket();
-            let bucketprincipal = Principal.fromActor(bucket);
-            bucketsStore := bucketMapOperations.put(bucketsStore, bucketprincipal, { principal = bucketprincipal; bucket = bucket; nbEntries = 0; });
-            
-            bucketprincipal
-        };
+    //
+    // API 
+    //
 
-        var principalResponse = Principal.anonymous();
-        switch (bucketMapOperations.maxEntry(bucketsStore)) {
-            case (?(principal,bucket)) {
-                principalResponse :=    if ( bucket.nbEntries >= Configs.Consts.BUCKET_TODOS_MAX_ENTRIES ) {
-                                            await createBucket()
-                                        } else {
-                                            principal
-                                        };
-            };
-            case null {
-                principalResponse := await createBucket()
-            };
-        };
+    public shared ({ caller }) func createTodo(todo: Todo.Todo) : async Result.Result<Principal, Text> {
+        if ( caller == Principal.anonymous() ) { return #err(Errors.ERR_NOT_CONNECTED); };
 
-        #ok(principalResponse)
+        #err("ousse")
     };
 
-    public query ({ caller }) func getBuckets(todos: [Principal]) : async Result.Result<[Principal], Text> {
-        var bucketsPrincipals = List.empty<Principal>();
+    //
+    // PRIVATE
+    //
 
-        for (todo in Array.values(todos)) {
-            switch (Map.get(todosOnBuckets, Principal.compare, todo)) {
-                case (?bucketPrincipal) {
-                    List.add(bucketsPrincipals, bucketPrincipal);
+    // create a new bucket if the last one is full
+    func getOrCreateBucket() : async Result.Result<Principal, Text> {
+        var mustCreateBucket = false;
+        var respBucketPrincipal = Principal.anonymous();
+        
+        switch (bucketMapOperations.maxEntry(bucketsStore)) {
+            case (?(bucketPrincipal, bucket)) {
+                if (bucket.nbEntries <= Configs.Consts.BUCKET_TODOS_MAX_ENTRIES) {
+                    respBucketPrincipal := bucketPrincipal;
+                } else {
+                    mustCreateBucket := true;
                 };
-                case null return #err("No bucket for todo " # Principal.toText(todo));
+            };
+            case null {
+                mustCreateBucket := true
+            };
+        };
+
+        if (mustCreateBucket) {
+            try {
+                switch ( await Interfaces.MaintenanceIndex.canister.addBucket() ) {
+                    case (#ok(bucketPrincipal)) {
+                        respBucketPrincipal := bucketPrincipal;
+
+                        bucketsStore := bucketMapOperations.put(bucketsStore, respBucketPrincipal, { principal = respBucketPrincipal; nbEntries = 1; });
+                    };
+                    case (#err(e)) {
+                        Debug.print("Cannot create new bucket: " # e);
+                        return #err("Cannot create new bucket");
+                    }
+                };
+            } catch (e) {
+                Debug.print("Cannot create new bucket: " # Error.message(e));
+                return #err("Cannot create new bucket");
             }
         };
 
-        #ok(List.toArray(bucketsPrincipals));
+        #ok(respBucketPrincipal)
     };
 }

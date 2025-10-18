@@ -6,28 +6,27 @@ import Nat64 "mo:core/Nat64";
 import Time "mo:core/Time";
 import Nat "mo:core/Nat";
 import Error "mo:core/Error";
-import Iter "mo:core/Iter";
 import Interfaces "../../shared/interfaces";
 import Errors "../../shared/errors";
 import Configs "../../shared/configs";
 import UsersDataBucket "../usersData/usersDataBucket";
 import TodosBucket "../todos/todosBucket";
-import Helpers "./maintenanceModel"
+import MaintenanceModel "./maintenanceModel"
 
 type BucketData = {
-    nature: Helpers.Nature;
+    nature: MaintenanceModel.Nature;
 };
 
 shared ({ caller = owner }) persistent actor class MaintenanceIndex() = this {
     var buckets = Map.empty<Principal, BucketData>();
 
-    transient let allowedCallers = Helpers.makeAllowedCallers();
+    transient let allowedCallers = MaintenanceModel.makeAllowedCallers();
 
     //
     // SYSTEM
     //
 
-    // if ever one day the need arise, it's possible to massively optimise this func by using parralellized calls.
+    // if ever one day the need arise, it's possible to massively optimise this func by using parralellized calls
     system func timer(setGlobalTimer : (Nat64) -> ()) : async () {
         for ((bucketPrincipal, _) in Map.entries(buckets)) {
             let status = await Interfaces.ManagementCanister.canister.canister_status({ canister_id = bucketPrincipal });
@@ -46,7 +45,7 @@ shared ({ caller = owner }) persistent actor class MaintenanceIndex() = this {
         setGlobalTimer(Nat64.fromIntWrap(Time.now()) + Nat64.fromNat(Configs.Consts.TOPPING_TIMER_INTERVAL_NS));
     };
 
-    public shared ({ caller }) func upgradeAllBuckets(nature : Helpers.Nature) : async Result.Result<(), Text> {
+    public shared ({ caller }) func upgradeAllBuckets(nature : MaintenanceModel.Nature) : async Result.Result<(), Text> {
         if (caller != owner) { return #err(Errors.ERR_CAN_ONLY_BE_CALLED_BY_OWNER); };
 
         let bucketsOfNature = Map.filter(buckets, Principal.compare, func(_, bucketData) = bucketData.nature == nature );
@@ -89,11 +88,11 @@ shared ({ caller = owner }) persistent actor class MaintenanceIndex() = this {
         var newBucketPrincipal = Principal.anonymous();
         try {
             let newBucket = switch actorKind {
-                case (#usersData(ctor)) {
-                    await (with cycles = Configs.Consts.NEW_BUCKET_NB_CYCLES) ctor();
+                case (#usersData(aktor)) {
+                    await (with cycles = Configs.Consts.NEW_BUCKET_NB_CYCLES) aktor();
                 };
-                case (#todos(ctor)) {
-                    await (with cycles = Configs.Consts.NEW_BUCKET_NB_CYCLES) ctor();
+                case (#todos(aktor)) {
+                    await (with cycles = Configs.Consts.NEW_BUCKET_NB_CYCLES) aktor();
                 };                
             };
 

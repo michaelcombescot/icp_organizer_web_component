@@ -5,7 +5,7 @@ import List "mo:core/List";
 
 module {
     public type Todo = {
-        id: Nat;
+        id: Text;
         resume: Text;
         description: ?Text;
         scheduledDate: ?Time.Time;
@@ -14,6 +14,7 @@ module {
         createdAt: Time.Time;
         todoListId: ?Nat;
         permission: TodoPermission;
+        owner: Principal;
     };
 
     public type TodoPriority    = { #high; #medium; #low; };

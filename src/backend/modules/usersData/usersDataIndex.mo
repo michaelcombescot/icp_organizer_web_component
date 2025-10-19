@@ -10,13 +10,13 @@ import Error "mo:core/Error";
 import Configs "../../shared/configs";
 import Errors "../../shared/errors";
 
-type BucketData = {
-    principal: Principal;
-    nbEntries: Nat;
-};
-
 // This actor is in charge to map a principal with a bucket containing the user data
 shared ({ caller = owner }) persistent actor class UsersDataIndex() = this {
+    type BucketData = {
+        principal: Principal;
+        nbEntries: Nat;
+    };
+
     //
     // MEMORY
     //

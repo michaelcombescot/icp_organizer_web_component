@@ -1,10 +1,10 @@
-import { type _SERVICE } from '../../../../declarations/backend_todos/backend_todos.did'
+import { _SERVICE } from '../../../../declarations/organizerTodos/organizerTodos.did';
 import { AuthClient } from '@dfinity/auth-client';
-import { createActor } from '../../../../declarations/backend_todos';
-import { canisterId as backendCanisterID } from '../../../../declarations/backend_todos';
+import { createActor as createActorTodos, canisterId as todosCanisterID } from '../../../../declarations/organizerTodos';
+import { createActor as createActorUserData, canisterId as usersDataCanisterID } from '../../../../declarations/organizerUsersData';
 import { canisterId as identityCanisterID } from '../../../../declarations/internet_identity/index';
 
-console.log(backendCanisterID, identityCanisterID)
+console.log(todosCanisterID, usersDataCanisterID)
 
 const identityProvider = process.env.DFX_NETWORK === 'ic' ?
                             'https://identity.ic0.app' // Mainnet
@@ -12,11 +12,7 @@ const identityProvider = process.env.DFX_NETWORK === 'ic' ?
 let authClient = await AuthClient.create();
 let identity = authClient.getIdentity();
 
-export let actor =  createActor(backendCanisterID, {
-                        agentOptions: {
-                            identity
-                        }
-                    });
+export let actorTodos : ActorSubclass<_SERVICE>
 
 export let isAuthenticated: boolean = await authClient.isAuthenticated();
 
@@ -32,7 +28,7 @@ export const login = async () => {
 
 export const updateActor = async () => {
     identity = authClient.getIdentity();
-    actor = createActor(backendCanisterID, {
+    actorTodos = createActorTodos(todosCanisterID, {
       agentOptions: {
         identity
       }

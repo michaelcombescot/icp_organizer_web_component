@@ -1,18 +1,28 @@
 {
   "canisters": {
-    "backend_todos": {
+    "organizerMaintenance": {
       "main": "src/backend/modules/maintenance/maintenanceIndex.mo",
       "type": "motoko"
     },
-    "frontend": {
+    "organizerUsersData": {
+      "main": "src/backend/modules/usersData/usersDataIndex.mo",
+      "type": "motoko"
+    },
+    "organizerTodos": {
+      "main": "src/backend/modules/todos/todosIndex.mo",
+      "type": "motoko"
+    },
+    "organizerFrontend": {
       "dependencies": [
-        "backend_todos"
+        "organizerUsersData",
+        "organizerTodos"
       ],
       "source": [
         "src/frontend/dist"
       ],
       "type": "assets",
-      "workspace": "frontend"
+      "workspace": "frontend",
+      "build": "echo 'skip build'"
     },
     "internet_identity": {
       "candid": "https://github.com/dfinity/internet-identity/releases/latest/download/internet_identity.did",
@@ -22,6 +32,9 @@
           "ic": "rdmx6-jaaaa-aaaaa-aaadq-cai",
           "playground": "rdmx6-jaaaa-aaaaa-aaadq-cai"
         }
+      },
+      "local": {
+        "id": "rdmx6-jaaaa-aaaaa-aaadq-cai"
       },
       "wasm": "https://github.com/dfinity/internet-identity/releases/latest/download/internet_identity_dev.wasm.gz",
       "frontend": {}

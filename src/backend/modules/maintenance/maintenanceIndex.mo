@@ -13,11 +13,11 @@ import UsersDataBucket "../usersData/usersDataBucket";
 import TodosBucket "../todos/todosBucket";
 import MaintenanceModel "./maintenanceModel"
 
-type BucketData = {
-    nature: MaintenanceModel.Nature;
-};
-
 shared ({ caller = owner }) persistent actor class MaintenanceIndex() = this {
+    type BucketData = {
+        nature: MaintenanceModel.Nature;
+    };
+
     var buckets = Map.empty<Principal, BucketData>();
 
     transient let allowedCallers = MaintenanceModel.makeAllowedCallers();

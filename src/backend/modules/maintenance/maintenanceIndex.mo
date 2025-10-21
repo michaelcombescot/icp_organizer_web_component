@@ -6,37 +6,54 @@ import Nat64 "mo:core/Nat64";
 import Time "mo:core/Time";
 import Nat "mo:core/Nat";
 import Error "mo:core/Error";
+import Runtime "mo:core/Runtime";
+import Array "mo:core/Array";
+import Iter "mo:core/Iter";
+import List "mo:core/List";
 import Interfaces "../../shared/interfaces";
 import Errors "../../shared/errors";
 import Configs "../../shared/configs";
 import UsersDataBucket "../usersData/usersDataBucket";
 import TodosBucket "../todos/todosBucket";
-import MaintenanceModel "./maintenanceModel"
+import TodosIndex "../todos/todosIndex";
+import UsersDataIndex "../usersData/usersDataIndex";
 
 shared ({ caller = owner }) persistent actor class MaintenanceIndex() = this {
-    type BucketData = {
-        nature: MaintenanceModel.Nature;
+    let ERR_UNKNOWN_CANISTER_NATURE = "ERR_UNKNOWN_CANISTER_NATURE";
+
+    type CanisterIndex = {
+        #usersDataIndex;
+        #todosIndex;
     };
 
-    var buckets = Map.empty<Principal, BucketData>();
+    type CanisterBucket = {
+        #usersDataBucket;
+        #todosBucket;
+    };
 
-    transient let allowedCallers = MaintenanceModel.makeAllowedCallers();
+    type CanisterNature = {
+        #index: CanisterIndex;
+        #bucket: CanisterBucket;
+    };
+
+    var canisters = Map.empty<Principal, CanisterNature>();
 
     //
     // SYSTEM
     //
 
-    // if ever one day the need arise, it's possible to massively optimise this func by using parralellized calls
+    // if ever one day the need arise, it's possible to massively optimise this func by using parralellized calls.
+    // TODO:it might be necessary to distinguish the topping by canister
     system func timer(setGlobalTimer : (Nat64) -> ()) : async () {
-        for ((bucketPrincipal, _) in Map.entries(buckets)) {
-            let status = await Interfaces.ManagementCanister.canister.canister_status({ canister_id = bucketPrincipal });
+        for ( canisterPrincipal in Map.keys(canisters) ) {
+            let status = await Interfaces.ManagementCanister.canister.canister_status({ canister_id = canisterPrincipal });
             if (status.cycles > Configs.Consts.TOPPING_THRESHOLD) {
-                Debug.print("Bucket low on cycles, requesting top-up for " # Principal.toText(bucketPrincipal) # "with " # Nat.toText(Configs.Consts.TOPPING_AMOUNT) # " cycles");
+                Debug.print("Bucket low on cycles, requesting top-up for " # Principal.toText(canisterPrincipal) # "with " # Nat.toText(Configs.Consts.TOPPING_AMOUNT) # " cycles");
 
                 try {
-                    ignore (with cycles = Configs.Consts.TOPPING_AMOUNT) Interfaces.ManagementCanister.canister.deposit_cycles({ canister_id = bucketPrincipal });
+                    ignore (with cycles = Configs.Consts.TOPPING_AMOUNT) Interfaces.ManagementCanister.canister.deposit_cycles({ canister_id = canisterPrincipal });
                 } catch (e) {
-                    Debug.print("Error while topping up bucket " # Principal.toText(bucketPrincipal) # ": " # Error.message(e));
+                    Debug.print("Error while topping up bucket " # Principal.toText(canisterPrincipal) # ": " # Error.message(e));
                 };
             };
         };
@@ -45,50 +62,58 @@ shared ({ caller = owner }) persistent actor class MaintenanceIndex() = this {
         setGlobalTimer(Nat64.fromIntWrap(Time.now()) + Nat64.fromNat(Configs.Consts.TOPPING_TIMER_INTERVAL_NS));
     };
 
-    public shared ({ caller }) func upgradeAllBuckets(nature : MaintenanceModel.Nature) : async Result.Result<(), Text> {
-        if (caller != owner) { return #err(Errors.ERR_CAN_ONLY_BE_CALLED_BY_OWNER); };
+    //
+    // API
+    //
 
-        let bucketsOfNature = Map.filter(buckets, Principal.compare, func(_, bucketData) = bucketData.nature == nature );
+    public shared ({ caller }) func setIndexPrincipal(nature : CanisterIndex, indexPrincipal : Principal) : async () {
+        if (caller != owner) { Runtime.trap(Errors.ERR_CAN_ONLY_BE_CALLED_BY_OWNER) };
 
         switch (nature) {
-            case (#usersData) {
-                for ((bucketPrincipal, _) in Map.entries(bucketsOfNature)) {
-                    let userDataBucket = actor (Principal.toText(bucketPrincipal)) : UsersDataBucket.UsersDataBucket;
+            case (#usersDataIndex) Map.add(canisters, Principal.compare, indexPrincipal, #index(#usersDataIndex));
+            case (#todosIndex) Map.add(canisters, Principal.compare, indexPrincipal, #index(#todosIndex));
+        };
+    };
 
-                    try {
-                        ignore await (system UsersDataBucket.UsersDataBucket)(#upgrade userDataBucket)();
-                    } catch (e) {
-                        Debug.print("Cannot upgrade UserData bucket " # Principal.toText(bucketPrincipal) # ": " # Error.message(e));
-                    };
-                };
-            };
-            case (#todos) {
-                for ((bucketPrincipal, _) in Map.entries(bucketsOfNature)) {
-                    let todoBucket = actor (Principal.toText(bucketPrincipal)) : TodosBucket.TodosBucket;
+    public shared ({ caller }) func upgradeAllBuckets(nature : CanisterBucket) : async Result.Result<(), Text> {
+        if (caller != owner) { return #err(Errors.ERR_CAN_ONLY_BE_CALLED_BY_OWNER); };
 
-                    try {
-                        ignore await (system UsersDataBucket.UsersDataBucket)(#upgrade todoBucket)();
-                    } catch (e) {
-                        Debug.print("Cannot upgrade UserData bucket " # Principal.toText(bucketPrincipal) # ": " # Error.message(e));
-                    };
-                };
+        let bucketsPrincipals = Iter.toArray(
+                                    Iter.filterMap(
+                                        Map.entries(canisters),
+                                        func ((principal: Principal, canisterNature: CanisterNature)) : ?Principal {
+                                            switch (canisterNature) {
+                                                case (#bucket(bucketNature)) {
+                                                    if (bucketNature == nature) {
+                                                        ?principal
+                                                    } else {
+                                                        null
+                                                    }
+                                                };
+                                            };
+                                        }
+                                    )
+                                );
+
+        for (principal in Array.values(bucketsPrincipals)) {
+            let aktorType : actor {} = actor (Principal.toText(principal)) : actor {};
+
+            try {
+                ignore await (system aktorType)(#upgrade aktorType)();
+            } catch (e) {
+                Debug.print("Cannot upgrade UserData bucket " # Principal.toText(principal) # ": " # Error.message(e));
             };
         };
 
         #ok()
     };
 
-    //
-    // API
-    //
-
     public shared ({ caller }) func createBucket() : async Result.Result<Principal, Text> {
-        let ?(nature, actorKind) = Map.get(allowedCallers, Principal.compare, caller) else return #err(Errors.ERR_CAN_ONLY_BE_CALLED_BY_INDEX);
-
         var newBucketPrincipal = Principal.anonymous();
+
         try {
-            let newBucket = switch actorKind {
-                case (#usersData(aktor)) {
+            let newBucket = switch ( caller ) {
+                case () {
                     await (with cycles = Configs.Consts.NEW_BUCKET_NB_CYCLES) aktor();
                 };
                 case (#todos(aktor)) {

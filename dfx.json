@@ -4,14 +4,26 @@
       "main": "src/backend/modules/maintenance/maintenanceIndex.mo",
       "type": "motoko"
     },
-    "organizerUsersData": {
+
+    "organizerUsersDataIndex": {
       "main": "src/backend/modules/usersData/usersDataIndex.mo",
       "type": "motoko"
     },
-    "organizerTodos": {
+    "organizerUsersDataBucket": {
+      "main": "src/backend/modules/usersData/usersDataBucket.mo",
+      "type": "motoko"
+    },
+    
+
+    "organizerTodosIndex": {
       "main": "src/backend/modules/todos/todosIndex.mo",
       "type": "motoko"
     },
+    "organizerTodosBucket": {
+      "main": "src/backend/modules/todos/todosBucket.mo",
+      "type": "motoko"
+    },
+
     "organizerFrontend": {
       "dependencies": [
         "organizerUsersData",

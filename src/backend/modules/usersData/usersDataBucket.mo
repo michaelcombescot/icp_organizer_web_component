@@ -16,7 +16,7 @@ shared ({ caller = owner }) persistent actor class UsersDataBucket(indexPrincipa
     //
 
     // create user data
-    public shared ({ caller }) func createUserData(userPrincipal: Principal) : async Result.Result<(), Text> {
+    public shared ({ caller }) func createUserData(userPrincipal: Principal) : async Result.Result<Nat, Text> {
         if ( caller != index ) { return #err(Errors.ERR_CAN_ONLY_BE_CALLED_BY_INDEX); };
 
         let ?_ = Map.get(usersData, Principal.compare, userPrincipal) else return #err(Errors.ERR_USER_DATA_ALREADY_EXISTS);
@@ -26,7 +26,7 @@ shared ({ caller = owner }) persistent actor class UsersDataBucket(indexPrincipa
                 todoLists = List.empty<Text>();
         });
 
-        #ok
+        #ok(usersData.size)
     };
 
     // get user data 

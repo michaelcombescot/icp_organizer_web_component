@@ -8,37 +8,28 @@ import Nat "mo:core/Nat";
 import Error "mo:core/Error";
 import Runtime "mo:core/Runtime";
 import Array "mo:core/Array";
-import Iter "mo:core/Iter";
-import List "mo:core/List";
 import Blob "mo:core/Blob";
-import Interfaces "../../shared/interfaces";
 import Errors "../../shared/errors";
 import Configs "../../shared/configs";
 import UsersDataBucket "../usersData/usersDataBucket";
 import TodosBucket "../todos/todosBucket";
-import TodosIndex "../todos/todosIndex";
-import UsersDataIndex "../usersData/usersDataIndex";
 import IC "mo:ic";
 
 shared ({ caller = owner }) persistent actor class MaintenanceIndex() = this {
-    let ERR_UNKNOWN_CANISTER_NATURE = "ERR_UNKNOWN_CANISTER_NATURE";
-
-    type CanisterIndex = {
+    type Index = {
         #usersDataIndex;
         #todosIndex;
     };
 
-    type CanisterBucket = {
+    type Bucket = {
         #usersDataBucket;
         #todosBucket;
     };
 
-    type CanisterNature = {
-        #index: CanisterIndex;
-        #bucket: CanisterBucket;
-    };
-
-    var canisters = Map.empty<Principal, CanisterNature>();
+    var indexTodosPrincipal = Principal.anonymous();
+    var indexUserDataPrincipal = Principal.anonymous();
+    var bucketsTodosPrincipals = Map.empty<Principal, ()>();
+    var bucketsUserDataPrincipals = Map.empty<Principal, ()>();
 
     //
     // SYSTEM
@@ -47,7 +38,13 @@ shared ({ caller = owner }) persistent actor class MaintenanceIndex() = this {
     // if ever one day the need arise, it's possible to massively optimise this func by using parralellized calls.
     // TODO:it might be necessary to distinguish the topping by canister
     system func timer(setGlobalTimer : (Nat64) -> ()) : async () {
-        for ( canisterPrincipal in Map.keys(canisters) ) {
+        var principals = Array.flatten([
+            [indexTodosPrincipal, indexUserDataPrincipal],
+            Array.fromIter(Map.keys(bucketsTodosPrincipals)),
+            Array.fromIter(Map.keys(bucketsUserDataPrincipals))
+        ]);
+
+        for ( canisterPrincipal in Array.values(principals) ) {
             let status = await IC.ic.canister_status({ canister_id = canisterPrincipal });
             if (status.cycles > Configs.Consts.TOPPING_THRESHOLD) {
                 Debug.print("Bucket low on cycles, requesting top-up for " # Principal.toText(canisterPrincipal) # "with " # Nat.toText(Configs.Consts.TOPPING_AMOUNT) # " cycles");
@@ -68,61 +65,69 @@ shared ({ caller = owner }) persistent actor class MaintenanceIndex() = this {
     // API
     //
 
-    public shared ({ caller }) func setIndexPrincipal(nature : CanisterIndex, indexPrincipal : Principal) : async () {
+    public shared ({ caller }) func setIndexPrincipal(nature : Index, indexPrincipal : Principal) : async () {
         if (caller != owner) { Runtime.trap(Errors.ERR_CAN_ONLY_BE_CALLED_BY_OWNER) };
 
         switch (nature) {
-            case (#usersDataIndex) Map.add(canisters, Principal.compare, indexPrincipal, #index(#usersDataIndex));
-            case (#todosIndex) Map.add(canisters, Principal.compare, indexPrincipal, #index(#todosIndex));
+            case (#usersDataIndex) indexUserDataPrincipal := indexPrincipal;
+            case (#todosIndex) indexTodosPrincipal := indexPrincipal;
         };
     };
 
-    public shared ({ caller }) func upgradeAllBuckets(nature : CanisterBucket, code: Blob.Blob) : async Result.Result<(), Text> {
+    public shared ({ caller }) func upgradeAllBuckets(nature : Bucket, code: Blob.Blob) : async Result.Result<(), Text> {
         if (caller != owner) { return #err(Errors.ERR_CAN_ONLY_BE_CALLED_BY_OWNER); };
 
-        let bucketsPrincipals = Iter.toArray(
-                                    Iter.filterMap(
-                                        Map.entries(canisters),
-                                        func ((principal: Principal, canisterNature: CanisterNature)) : ?Principal {
-                                            switch (canisterNature) {
-                                                case (#bucket(bucketNature)) if (bucketNature == nature) { ?principal } else { null };
-                                                case _ null;
-                                            }
-                                        }
-                                    )
-                                );
-
-        for (principal in Array.values(bucketsPrincipals)) {
-            try {
-                await IC.ic.install_code({ mode = #upgrade(null); canister_id = principal; wasm_module = Blob.fromArray([8]); arg = Blob.fromArray([Principal.anonymous()]); sender_canister_version = null; });
-            } catch (e) {
-                Debug.print("Cannot upgrade UserData bucket " # Principal.toText(principal) # ": " # Error.message(e));
+        switch (nature) {
+            case (#usersDataBucket) {
+                for (principal in Map.keys(bucketsUserDataPrincipals)) {
+                    try {
+                        await IC.ic.install_code({ mode = #upgrade(null); canister_id = principal; wasm_module = code; arg = to_candid((Principal.anonymous())); sender_canister_version = null; });
+                    } catch (e) {
+                        Debug.print("Cannot upgrade UserData bucket " # Principal.toText(principal) # ": " # Error.message(e));
+                    };
+                }
             };
+            case (#todosBucket) {
+                for (principal in Map.keys(bucketsTodosPrincipals)) {
+                    try {
+                        await IC.ic.install_code({ mode = #upgrade(null); canister_id = principal; wasm_module = code; arg = to_candid((Principal.anonymous())); sender_canister_version = null; });
+                    } catch (e) {
+                        Debug.print("Cannot upgrade UserData bucket " # Principal.toText(principal) # ": " # Error.message(e));
+                    };
+                }
+            }
         };
 
         #ok()
     };
 
     public shared ({ caller }) func createBucket() : async Result.Result<Principal, Text> {
-        var newBucketPrincipal = Principal.anonymous();
+        let bucketprincipal =   if ( caller == indexUserDataPrincipal ) {
+                                    try {
+                                        let aktor = await (with cycles = Configs.Consts.NEW_BUCKET_NB_CYCLES) UsersDataBucket.UsersDataBucket(indexUserDataPrincipal);
+                                        let principal = Principal.fromActor(aktor);
 
-        try {
-            let newBucket = switch ( caller ) {
-                case () {
-                    await (with cycles = Configs.Consts.NEW_BUCKET_NB_CYCLES) aktor();
-                };
-                case (#todos(aktor)) {
-                    await (with cycles = Configs.Consts.NEW_BUCKET_NB_CYCLES) aktor();
-                };                
-            };
+                                        Map.add(bucketsUserDataPrincipals, Principal.compare, Principal.fromActor(aktor), ());
 
-            newBucketPrincipal := Principal.fromActor(newBucket);
-        } catch (e) {
-            return #err("Cannot create new bucket: " # Error.message(e));
-        };
-        
-        Map.add(buckets, Principal.compare, newBucketPrincipal, { nature = nature });
+                                        principal
+                                    } catch (e) {
+                                        return #err("Cannot create new bucket: " # Error.message(e));
+                                    };
+                                } else if ( caller == indexTodosPrincipal ) {
+                                    try {
+                                        let aktor       = await (with cycles = Configs.Consts.NEW_BUCKET_NB_CYCLES) TodosBucket.TodosBucket(indexTodosPrincipal);
+                                        let principal   = Principal.fromActor(aktor);
 
-        #ok(newBucketPrincipal)        
+                                        Map.add(bucketsTodosPrincipals, Principal.compare, Principal.fromActor(aktor), ());
+
+                                        principal
+                                    } catch (e) {
+                                        return #err("Cannot create new bucket: " # Error.message(e));
+                                    };
+                                } else {
+                                    return #err("Can only be called by an index canister");
+                                }; 
+
+        #ok(bucketprincipal)
     };
 };

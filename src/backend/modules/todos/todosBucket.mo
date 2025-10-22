@@ -1,7 +1,6 @@
 import Todo "todoModel";
 import Result "mo:core/Result";
 import Map "mo:core/Map";
-import Configs "../../shared/configs";
 import Principal "mo:core/Principal";
 import Text "mo:core/Text";
 import Time "mo:core/Time";
@@ -9,11 +8,12 @@ import Array "mo:core/Array";
 import List "mo:core/List";
 import Int "mo:base/Int";
 
-shared ({ caller = owner }) persistent actor class TodosBucket() = this {
+shared ({ caller = owner }) persistent actor class TodosBucket(indexPrincipal: Principal) = this {
+    let index = indexPrincipal;
     let todosStore = Map.empty<Text, Todo.Todo>();
 
     public shared ({ caller }) func createTodo(userPrincipal: Principal, todo: Todo.Todo) : async Result.Result<(Int, Text, Nat), [Text]> {
-        if ( Configs.CanisterIds.INDEX_TODOS != Principal.toText(caller) ) { return #err(["can only be called by the index todo canister"]); };
+        if ( caller != index ) { return #err(["can only be called by the index todo canister"]); };
 
         switch ( Todo.validateTodo(todo) ) {
             case (#ok(_)) ();

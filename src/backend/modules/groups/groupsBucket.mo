@@ -9,7 +9,7 @@ import Group "groupModel";
 shared ({ caller = owner }) persistent actor class GroupsBucket(indexPrincipal: Principal) = this {
     let index = indexPrincipal;
     
-    let groupsStore = Map.empty<Text, Group.Group>();
+    let storeGroups = Map.empty<Text, Group.Group>();
 
     //
     // API
@@ -18,10 +18,10 @@ shared ({ caller = owner }) persistent actor class GroupsBucket(indexPrincipal: 
     public shared ({ caller }) func createGroup(group: Group.CreateGroupParam) : async Result.Result<(Text, Nat), [Text]> {
         if ( caller != index ) { return #err(["can only be called by the index canister"]); };
     
-        let id  = Principal.toText(Principal.fromActor(this)) # "_" # Nat.toText(Map.size(groupsStore));
+        let id  = Principal.toText(Principal.fromActor(this)) # "_" # Nat.toText(Map.size(storeGroups));
         let now = Time.now();
 
-        Map.add(groupsStore, Text.compare, id, {
+        Map.add(storeGroups, Text.compare, id, {
             id = id;
             name = group.name;
             todos = Map.empty<Text, ()>();
@@ -31,11 +31,11 @@ shared ({ caller = owner }) persistent actor class GroupsBucket(indexPrincipal: 
             updatedAt = now;
         });
     
-        #ok(id, Map.size(groupsStore));
+        #ok(id, Map.size(storeGroups));
     };
 
     public query func isUserInGroup(groupId: Text, userPrincipal: Principal ) : async Bool {
-        let ?group = Map.get(groupsStore, Text.compare, groupId) else return false;
+        let ?group = Map.get(storeGroups, Text.compare, groupId) else return false;
 
         let ?_ = Map.get(group.users, Principal.compare, userPrincipal) else return false;
         return true;

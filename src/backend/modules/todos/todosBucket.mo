@@ -6,13 +6,14 @@ import Text "mo:core/Text";
 import Time "mo:core/Time";
 import Array "mo:core/Array";
 import List "mo:core/List";
-import Int "mo:base/Int";
+import Nat "mo:core/Nat";
+import GroupsBucket "../groups/groupsBucket";
 
 shared ({ caller = owner }) persistent actor class TodosBucket(indexPrincipal: Principal) = this {
     let index = indexPrincipal;
-    let todosStore = Map.empty<Text, Todo.Todo>();
+    let storeTodos = Map.empty<Text, Todo.Todo>();
 
-    public shared ({ caller }) func createTodo(userPrincipal: Principal, todo: Todo.Todo) : async Result.Result<(Int, Text, Nat), [Text]> {
+    public shared ({ caller }) func createTodo(owner: Todo.TodoOwner, todo: Todo.Todo) : async Result.Result<(Text, Nat), [Text]> {
         if ( caller != index ) { return #err(["can only be called by the index todo canister"]); };
 
         switch ( Todo.validateTodo(todo) ) {
@@ -21,31 +22,45 @@ shared ({ caller = owner }) persistent actor class TodosBucket(indexPrincipal: P
         };
 
         let now = Time.now();
-        let id = Principal.toText(Principal.fromActor(this)) # "-" # Int.toText(now);
+        let id = Principal.toText(Principal.fromActor(this)) # "_" # Nat.toText(Map.size(storeTodos));
 
-        Map.add(todosStore, Text.compare, id, { todo with id = id; owner = userPrincipal; createdAt = now; });
+        Map.add(storeTodos, Text.compare, id, { todo with id = id; owner = owner; createdAt = now; });
 
-        #ok( now, id, Map.size(todosStore))
+        #ok(id, Map.size(storeTodos))
     };
 
-    public shared ({ caller }) func getTodos(ids: [Text]) : async Result.Result<[Todo.Todo], [Text]> {
-        var errors = List.empty<Text>();
-        var todos = List.empty<Todo.Todo>();
-        
+    public shared ({ caller }) func getTodos(ids: [Text]) : async Result.Result<[Todo.Todo], Text> {
+        var todos           = List.empty<Todo.Todo>();
+        var groupsToCheck   = Map.empty<Text, Text>(); // store bucket id/group id
+
         for (id in Array.values(ids)) {
-            switch (Map.get(todosStore, Text.compare, id)) {
+            switch (Map.get(storeTodos, Text.compare, id)) {
                 case (?todo) {
-                    if ( todo.owner != caller ) {
-                        List.add(errors, "can only be retrieved by the todo owner") 
-                    } else {
-                        List.add(todos, todo);
+                    switch(todo.owner) {
+                        case(#user(principal)) if ( principal != caller ) { return #err("can only be retrieved by the todo owner") };
+                        case(#group(id)) {
+                            // check if user belongs to the group
+                            let ?firstPart = ( Text.split(id, #char '_') ).next() else return #err("malformed group id");
+                            Map.add(groupsToCheck, Text.compare, firstPart, id);
+                        };
                     };
+
+                    List.add(todos, todo);
                 };
-                case (null) List.add(errors, "todo wit id " # id # " not found");
+                case (null) return #err("todo wit id " # id # " not found");
             }
         };
 
-        if ( List.size(errors) != 0 ) { return #err( List.toArray(errors) ) };
+        if ( Map.size(groupsToCheck) != 0 ) {
+            let futures = List.empty<async Bool>();
+            for ( (bucketPrincipal, groupId) in Map.entries(groupsToCheck)) {
+                List.add(futures, (actor (bucketPrincipal) : GroupsBucket.GroupsBucket).isUserInGroup(groupId, caller));
+            };
+
+            for (future in List.values(futures)) {
+                if ( not (await future) ) { return #err("user does not belong to the group"); };
+            };
+        };
 
         #ok(List.toArray(todos))
     };

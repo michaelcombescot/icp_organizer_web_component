@@ -1,8 +1,9 @@
-import List "mo:core/List";
+import Map "mo:core/Map";
 
 module {
     public type UserData = {
-        todoLists:  List.List<Text>;
-        todos:      List.List<Text>;
+        id: Text;
+        todoLists:  Map.Map<Text, ()>;
+        todos:      Map.Map<Text, ()>;
     };
 }

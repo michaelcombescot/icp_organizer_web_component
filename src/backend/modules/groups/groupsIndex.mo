@@ -3,22 +3,22 @@ import Debug "mo:core/Debug";
 import Result "mo:core/Result";
 import Error "mo:core/Error";
 import Text "mo:core/Text";
-import Int "mo:core/Int";
-import Time "mo:core/Time";
+import OrderedMap "mo:base/OrderedMap";
 import Interfaces "../../shared/interfaces";
 import Configs "../../shared/configs";
 import Errors "../../shared/errors";
-import Todo "todoModel";
-import TodosBucket "todosBucket";
-import List "mo:core/List";
+import Group "groupModel";
+import GroupsBucket "groupsBucket";
+import Time "mo:core/Time";
 
 shared ({ caller = owner }) persistent actor class TodosIndex() = this {
     type BucketData = {
-        createdAt: Int.Int;
-        aktor: TodosBucket.TodosBucket;
+        createdAt: Time.Time;
+        aktor: GroupsBucket.GroupsBucket;
     };
 
-    var bucketsStore = List.empty<BucketData>();
+    transient let bucketMapOperations = OrderedMap.Make<Principal>(Principal.compare);
+    var bucketsStore = bucketMapOperations.empty<BucketData>();
 
     //
     // API 
@@ -27,20 +27,20 @@ shared ({ caller = owner }) persistent actor class TodosIndex() = this {
     // create a new todo in the last created bucket.
     // trigger the creation of a new bucket if the last one is full
     // return the id of the created todo
-    public shared ({ caller }) func createTodo(todo: Todo.Todo, owner: Todo.TodoOwner) : async Result.Result<Text, [Text]> {
+    public shared ({ caller }) func createTodo(param: Group.CreateGroupParam) : async Result.Result<Text, [Text]> {
         if ( caller == Principal.anonymous() ) { return #err([Errors.ERR_NOT_CONNECTED]); };
 
-        if (List.size(bucketsStore) == 0) { await createNewBucket(); };
+        if (bucketsStore.size == 0) { await createNewBucket(); };
 
-        switch ( List.last(bucketsStore) ) {
-            case (?bucketData) {
-                switch ( await bucketData.aktor.createTodo(owner, todo) ) {
-                    case (#ok( (todoId, nbEntries) )) {
+        switch ( bucketMapOperations.maxEntry(bucketsStore) ) {
+            case (?(_, bucketData)) {
+                switch ( await bucketData.aktor.createGroup(param) ) {
+                    case (#ok(id, nbEntries)) {
                         if ( nbEntries > Configs.Consts.BUCKET_TODOS_MAX_ENTRIES ) {
                             await createNewBucket();
                         };
 
-                        return #ok(todoId);
+                        return #ok(id);
                     };
                     case (#err(e)) return #err(e);
                 };
@@ -59,7 +59,11 @@ shared ({ caller = owner }) persistent actor class TodosIndex() = this {
     func createNewBucket() : async () {
         try {
             switch ( await Interfaces.MaintenanceIndex.canister.addBucket() ) {
-                case (#ok(bucketPrincipal)) List.add(bucketsStore, { createdAt = Time.now(); aktor = actor (Principal.toText(bucketPrincipal)) : TodosBucket.TodosBucket });
+                case (#ok(bucketPrincipal)) bucketsStore := bucketMapOperations.put(
+                                                                                    bucketsStore,
+                                                                                    bucketPrincipal,
+                                                                                    { createdAt = Time.now(); aktor = actor (Principal.toText(bucketPrincipal)) : GroupsBucket.GroupsBucket; }
+                                                                                );
                 case (#err(e)) Debug.print("Cannot create new bucket: " # e);
             };
         } catch (e) {

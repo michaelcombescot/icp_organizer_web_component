@@ -14,7 +14,12 @@ module {
         createdAt: Time.Time;
         todoListId: ?Nat;
         permission: TodoPermission;
-        owner: Principal;
+        owner: TodoOwner;
+    };
+
+    public type TodoOwner = {
+        #user: Principal;
+        #group: Text;
     };
 
     public type TodoPriority    = { #high; #medium; #low; };

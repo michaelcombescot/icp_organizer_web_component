@@ -10,3 +10,8 @@ dfx canister call organizerMaintenance upgradeAllBuckets \
   '(#buckettype, blob "'$(hexdump -ve '1/1 "\\\\%02x"' .dfx/local/canisters/organizerUsersDataBucket/organizerUsersDataBucket.wasm)'")'
 
 Note for the dfx file => dependencies field will check if the canisters are already deployed, or it will try to deploy it, so don't put the buckets here.
+
+
+Architecture:
+- modules MUST stay totally independant, no shared model or data, it's organized like microservices.
+- only shared code must be shared between modules, NOTHING else or you will enter a world of pain.

@@ -15,6 +15,7 @@ module {
         todoListId: ?Nat;
         permission: TodoPermission;
         owner: TodoOwner;
+        createdBy: Text;
     };
 
     public type TodoOwner = {

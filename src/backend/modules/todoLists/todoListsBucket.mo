@@ -1,32 +1,72 @@
- // public shared ({ caller }) func createTodoList(userPrincipal: Principal, todoList: TodoList.TodoList) : async Result.Result<(), [Text]> {
-    //     if ( Configs.CanisterIds.INDEX_TODO_CANISTER != Principal.toText(caller) ) { return #err(["can only be called by the index todo canister"]); };
+import Map "mo:core/Map";
+import Result "mo:core/Result";
+import Time "mo:core/Time";
+import Principal "mo:core/Principal";
+import Nat "mo:core/Nat";
+import Text "mo:core/Text";
+import TodoList "todoListModel";
 
-    //     let ?userData = Map.get(usersData, Principal.compare, userPrincipal) else return #err(["No user data"]);
+shared ({ caller = owner }) persistent actor class TodoListsBucket(indexPrincipal: Principal) = this {
+   let index = indexPrincipal;
+   let storeTodoLists = Map.empty<Text, TodoList.TodoList>();
 
-    //     Map.add(userData.todoLists, Nat.compare, todoList.id, todoList);
+   //
+   // API
+   //
 
-    //     #ok
-    // };
+   // public query func getTodoLists(ids: [Text]) : Result.Result<[TodoList.TodoList], Text> {
+   //    let todoLists = List.empty<TodoList.TodoList>();
+   //    for (id in ids) {
+   //       let ?todoList = Map.get(storeTodoLists, Text.compare, id) else return #err(["No todo list found"]);
+   //    } { List.add(todoLists, Map.get(storeTodoLists, Text.compare, i)) };
+   //    return #ok(List.toArray(todoLists));
+   // }
 
-    // public shared ({ caller }) func updateTodoList(userPrincipal: Principal, todoList: TodoList.TodoList) : async Result.Result<(), [Text]> {
-    //     if ( Configs.CanisterIds.INDEX_TODO_CANISTER != Principal.toText(caller) ) { return #err(["can only be called by the index todo canister"]); };
+   public shared ({ caller }) func createTodoList(userPrincipal: Principal, todoListData: TodoList.CreateTodoListData) : async Result.Result<(), [Text]> {
+      if ( caller != index ) { return #err(["can only be called by the index todo canister"]); };
 
-    //     let ?userData = Map.get(usersData, Principal.compare, userPrincipal) else return #err(["No user data"]);
+      switch ( TodoList.validateTodoList(todoListData) ) {
+         case (#ok(_)) ();
+         case (#err(e)) return #err(e);
+      };
 
-    //     let _ = Map.swap(userData.todoLists, Nat.compare, todoList.id, todoList) else return #err(["No todo list found"]);
+      let id = Principal.toText(Principal.fromActor(this)) # "_" # Nat.toText(Map.size(storeTodoLists));
+      Map.add(storeTodoLists, Text.compare, id, {
+                                                   id = id;
+                                                   name=todoListData.name;
+                                                   color=todoListData.color;
+                                                   todos = Map.empty<Text, ()>();
+                                                   owner=#user(userPrincipal);
+                                                   createdAt=Time.now()
+                                                }
+      );
 
-    //     #ok
-    // };
+      #ok
+    };
 
-    // // remove the list and all associated todos
-    // public shared ({ caller }) func removeTodoList(userPrincipal: Principal, todoListId: Nat) : async Result.Result<(), [Text]> {
-    //     if ( Configs.CanisterIds.INDEX_TODO_CANISTER != Principal.toText(caller) ) { return #err(["can only be called by the index todo canister"]); };
+    public shared ({ caller }) func updateTodoList(todoListData: TodoList.UpdateTodoListData) : async Result.Result<(), [Text]> {
+      let ?todoList = Map.get(storeTodoLists, Text.compare, todoListData.id) else return #err(["No todo list found"]);
 
-    //     let ?userData = Map.get(usersData, Principal.compare, userPrincipal) else return #err(["No user data"]);
+      if ( todoList.owner != #user(caller) ) { return #err(["can only be called by the owner of the todo list"]); };
 
-    //     Map.remove(userData.todoLists, Nat.compare, todoListId);
+      switch ( TodoList.validateTodoList(todoListData) ) {
+         case (#ok(_)) ();
+         case (#err(e)) return #err(e);
+      };
 
-    //     Iter.forEach( Map.entries(userData.todos), func ((_, todo)) { if ( todo.todoListId == ?todoListId ) { Map.remove(userData.todos, Nat.compare, todo.id) } } );
+      ignore Map.replace(storeTodoLists, Text.compare, todoListData.id, { todoList with name = todoListData.name; color = todoListData.color; } );
 
-    //     #ok
-    // };
+      #ok
+    };
+
+   // remove the list and all associated todos
+   public shared ({ caller }) func removeTodoList(id: Text) : async Result.Result<(), [Text]> {
+      let ?todoList = Map.get(storeTodoLists, Text.compare, id) else return #err(["No todo list found"]);
+
+      if ( todoList.owner != #user(caller) ) { return #err(["can only be called by the owner of the todo list"]); };
+
+      Map.remove(storeTodoLists, Text.compare, id);
+
+      #ok
+    };
+}

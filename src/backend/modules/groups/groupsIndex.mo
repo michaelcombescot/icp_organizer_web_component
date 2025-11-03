@@ -34,7 +34,7 @@ shared ({ caller = owner }) persistent actor class TodosIndex() = this {
 
         switch ( bucketMapOperations.maxEntry(bucketsStore) ) {
             case (?(_, bucketData)) {
-                switch ( await bucketData.aktor.createGroup(param) ) {
+                switch ( await bucketData.aktor.createGroup({ userPrincipal = caller; group = param }) ) {
                     case (#ok(id, nbEntries)) {
                         if ( nbEntries > Configs.Consts.BUCKET_TODOS_MAX_ENTRIES ) {
                             await createNewBucket();

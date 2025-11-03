@@ -16,15 +16,32 @@ shared ({ caller = owner }) persistent actor class TodosBucket(indexPrincipal: P
     public shared ({ caller }) func createTodo(owner: Todo.TodoOwner, todo: Todo.Todo) : async Result.Result<(Text, Nat), [Text]> {
         if ( caller != index ) { return #err(["can only be called by the index todo canister"]); };
 
+        // validate todo data
         switch ( Todo.validateTodo(todo) ) {
             case (#ok(_)) ();
             case (#err(e)) return #err(e);
         };
 
-        let now = Time.now();
+        // create the todo depending on the owner
         let id = Principal.toText(Principal.fromActor(this)) # "_" # Nat.toText(Map.size(storeTodos));
 
-        Map.add(storeTodos, Text.compare, id, { todo with id = id; owner = owner; createdAt = now; });
+        // add the todo to the owner store
+        try {
+            switch (owner) {
+                case(#user(id)) {
+                    let ?bucketPrincipal = ( Text.split(id, #char '_') ).next() else return #err(["malformed user id"]);
+                    await (actor (bucketPrincipal) : UsersDataBucket.UsersDataBucket).addTodoToUser(id, caller);
+                };
+                case(#group(id)) {
+                    let ?bucketPrincipal = ( Text.split(id, #char '_') ).next() else return #err(["malformed group id"]);
+                    await (actor (bucketPrincipal) : GroupsBucket.GroupsBucket).addTodoToGroup(id, id);
+                };
+            };
+
+            Map.add(storeTodos, Text.compare, id, { todo with id = id; owner = owner; createdAt = Time.now(); });
+        } catch (e) {
+            return #err([e]);
+        };
 
         #ok(id, Map.size(storeTodos))
     };
@@ -63,6 +80,15 @@ shared ({ caller = owner }) persistent actor class TodosBucket(indexPrincipal: P
         };
 
         #ok(List.toArray(todos))
+    };
+
+    //
+    // HELPERS
+    //
+
+    func canCreateGroupTodo({ userPrincipal: Principal; groupId: Text }) : async Bool {
+        let ?bucketPrincipal = ( Text.split(groupId, #char '_') ).next() else return false;   
+        await (actor (bucketPrincipal) : GroupsBucket.GroupsBucket).isUserInGroup({ groupId = groupId; userPrincipal = userPrincipal });
     };
 }
 

@@ -8,12 +8,13 @@ import Array "mo:core/Array";
 import List "mo:core/List";
 import Nat "mo:core/Nat";
 import GroupsBucket "../groups/groupsBucket";
+import UsersDataBucket "../usersData/usersDataBucket";
 
 shared ({ caller = owner }) persistent actor class TodosBucket(indexPrincipal: Principal) = this {
     let index = indexPrincipal;
     let storeTodos = Map.empty<Text, Todo.Todo>();
 
-    public shared ({ caller }) func createTodo(owner: Todo.TodoOwner, todo: Todo.Todo) : async Result.Result<(Text, Nat), [Text]> {
+    public shared ({ caller }) func createTodo({ owner: Todo.TodoOwner; todo: Todo.Todo; userBucket: Text}) : async Result.Result<(Text, Nat), [Text]> {
         if ( caller != index ) { return #err(["can only be called by the index todo canister"]); };
 
         // validate todo data

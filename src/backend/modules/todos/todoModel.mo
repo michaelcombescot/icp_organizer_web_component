@@ -5,7 +5,8 @@ import List "mo:core/List";
 
 module {
     public type Todo = {
-        id: Text;
+        id: Nat;
+        bucket: Text;
         resume: Text;
         description: ?Text;
         scheduledDate: ?Time.Time;
@@ -19,7 +20,7 @@ module {
     };
 
     public type TodoOwner = {
-        #user: Principal;
+        #user: { bucket: Text; principal: Principal };
         #group: Text;
     };
 

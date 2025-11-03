@@ -19,17 +19,22 @@ shared ({ caller = owner }) persistent actor class MaintenanceIndex() = this {
     type Index = {
         #usersDataIndex;
         #todosIndex;
+        #groupsIndex;
     };
 
     type Bucket = {
         #usersDataBucket;
         #todosBucket;
+        #groupsBucket;
     };
 
     var indexTodosPrincipal = Principal.anonymous();
     var indexUserDataPrincipal = Principal.anonymous();
+    var indexGroupsPrincipal = Principal.anonymous();
+
     var bucketsTodosPrincipals = Map.empty<Principal, ()>();
     var bucketsUserDataPrincipals = Map.empty<Principal, ()>();
+    var bucketsGroupsPrincipals = Map.empty<Principal, ()>();
 
     //
     // SYSTEM
@@ -41,7 +46,8 @@ shared ({ caller = owner }) persistent actor class MaintenanceIndex() = this {
         var principals = Array.flatten([
             [indexTodosPrincipal, indexUserDataPrincipal],
             Array.fromIter(Map.keys(bucketsTodosPrincipals)),
-            Array.fromIter(Map.keys(bucketsUserDataPrincipals))
+            Array.fromIter(Map.keys(bucketsUserDataPrincipals)),
+            Array.fromIter(Map.keys(bucketsGroupsPrincipals))
         ]);
 
         for ( canisterPrincipal in Array.values(principals) ) {
@@ -71,6 +77,7 @@ shared ({ caller = owner }) persistent actor class MaintenanceIndex() = this {
         switch (nature) {
             case (#usersDataIndex) indexUserDataPrincipal := indexPrincipal;
             case (#todosIndex) indexTodosPrincipal := indexPrincipal;
+            case (#groupsIndex) indexGroupsPrincipal := indexPrincipal;
         };
     };
 
@@ -95,7 +102,16 @@ shared ({ caller = owner }) persistent actor class MaintenanceIndex() = this {
                         Debug.print("Cannot upgrade UserData bucket " # Principal.toText(principal) # ": " # Error.message(e));
                     };
                 }
-            }
+            };
+            case (#groupsBucket) {
+                for (principal in Map.keys(bucketsGroupsPrincipals)) {
+                    try {
+                        await IC.ic.install_code({ mode = #upgrade(null); canister_id = principal; wasm_module = code; arg = to_candid((Principal.anonymous())); sender_canister_version = null; });
+                    } catch (e) {
+                        Debug.print("Cannot upgrade UserData bucket " # Principal.toText(principal) # ": " # Error.message(e));
+                    };
+                }
+            };
         };
 
         #ok()
@@ -124,8 +140,17 @@ shared ({ caller = owner }) persistent actor class MaintenanceIndex() = this {
                                     } catch (e) {
                                         return #err("Cannot create new bucket: " # Error.message(e));
                                     };
-                                } else {
-                                    return #err("Can only be called by an index canister");
+                                } else if ( caller == indexGroupsPrincipal ) {
+                                    try {
+                                        let aktor       = await (with cycles = Configs.Consts.NEW_BUCKET_NB_CYCLES) GroupsBucket.GroupsBucket(indexGroupsPrincipal);
+                                        let principal   = Principal.fromActor(aktor);
+
+                                        Map.add(bucketsGroupsPrincipals, Principal.compare, Principal.fromActor(aktor), ());
+
+                                        principal
+                                    } catch (e) {
+                                        return #err("Cannot create new bucket: " # Error.message(e));
+                                    }
                                 }; 
 
         #ok(bucketprincipal)

@@ -1,18 +1,21 @@
 import Time "mo:core/Time";
 import Map "mo:core/Map";
-import Types "../../shared/types";
+import Identifiers "../../shared/identifiers";
 
 module {
     public type Group = {
-        identifiers: Types.Identifiers;
+        identifiers: Identifiers.WithID;
         name: Text;
-        todos: Map.Map<Types.Identifiers, ()>;
-        todoLists: Map.Map<Types.Identifiers, ()>;
+        todos: Map.Map<Nat, TodoData>;
+        todoLists: Map.Map<Nat, TodoListData>;
         users: Map.Map<Principal, UserGroupPermission>;
         createdAt: Time.Time;
         updatedAt: Time.Time;
         createdBy: Principal;
     };
+
+    public type TodoData = { bucket: Text; };
+    public type TodoListData = { bucket: Text; };
 
     public type UserGroupPermission = {
         // can do everything related to the group

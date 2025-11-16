@@ -6,8 +6,7 @@
 // import Text "mo:core/Text";
 // import TodoList "todoListModel";
 
-// shared ({ caller = owner }) persistent actor class TodoListsBucket(indexPrincipal: Principal) = this {
-//    let index = indexPrincipal;
+shared ({ caller = owner }) persistent actor class TodosListsBucket() = this {
 //    let storeTodoLists = Map.empty<Text, TodoList.TodoList>();
 
 //    //
@@ -69,4 +68,4 @@
 
 //       #ok
 //     };
-// }
+}

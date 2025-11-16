@@ -2,10 +2,11 @@ import Time "mo:core/Time";
 import Result "mo:core/Result";
 import Option "mo:core/Option";
 import List "mo:core/List";
+import Identifiers "../../shared/identifiers";
 
 module {
     public type Todo = {
-        id: Nat;
+        identifier: Identifiers.WithID;
         bucket: Text;
         resume: Text;
         description: ?Text;
@@ -13,20 +14,11 @@ module {
         priority: TodoPriority;
         status: TodoStatus;
         createdAt: Time.Time;
-        todoListId: ?Nat;
-        permission: TodoPermission;
-        owner: TodoOwner;
         createdBy: Text;
-    };
-
-    public type TodoOwner = {
-        #user: { bucket: Text; principal: Principal };
-        #group: Text;
     };
 
     public type TodoPriority    = { #high; #medium; #low; };
     public type TodoStatus      = { #pending; #done; };
-    public type TodoPermission  = { #owned; #read; #write; };
 
     public func validateTodo(todo: Todo) : Result.Result<(), [Text]> {
         let errors = List.empty<Text>();

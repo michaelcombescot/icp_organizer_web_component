@@ -1,13 +1,46 @@
-// import Map "mo:core/Map";
-// import Result "mo:core/Result";
-// import Time "mo:core/Time";
-// import Principal "mo:core/Principal";
-// import Nat "mo:core/Nat";
-// import Text "mo:core/Text";
-// import TodoList "todoListModel";
+import Map "mo:core/Map";
+import Result "mo:core/Result";
+import Time "mo:core/Time";
+import Principal "mo:core/Principal";
+import Nat "mo:core/Nat";
+import Text "mo:core/Text";
+import Nat64 "mo:core/Nat64";
+import Array "mo:core/Array";
+import TodoListModel "../models/todoListModel";
+import Interfaces "../../shared/interfaces";
 
 shared ({ caller = owner }) persistent actor class TodosListsBucket() = this {
-//    let storeTodoLists = Map.empty<Text, TodoList.TodoList>();
+    let thisPrincipalText = Principal.toText(Principal.fromActor(this));
+    let coordinator = actor (Principal.toText(owner)) : Interfaces.Coordinator;
+
+    ////////////
+    // CONFIG //
+    ////////////
+
+    let CONFIG_INTERVAL_FETCH_INDEXES: Nat64    = 60_000_000_000;
+    let CONFIG_MAX_NUMBER_ENTRIES: Nat          = 100_000;
+
+    ////////////
+    // ERRORS //
+    ////////////
+
+    let ERR_CAN_ONLY_BE_CALLED_BY_INDEX = "ERR_CAN_ONLY_BE_CALLED_BY_INDEX";
+
+    ////////////
+    // STORES //
+    ////////////
+
+    var storeIndexes        = Map.empty<Principal, ()>();
+    let storeTodosLists     = Map.empty<Nat, TodoListModel.TodoList>();
+
+    ////////////
+    // SYSTEM //
+    ////////////
+
+    system func timer(setGlobalTimer : (Nat64) -> ()) : async () {
+        storeIndexes := Map.fromIter(Array.map(await coordinator.getIndexes(), func(x) = (x, ())).values(), Principal.compare);
+        setGlobalTimer(Nat64.fromIntWrap(Time.now()) + CONFIG_INTERVAL_FETCH_INDEXES);
+    };
 
 //    //
 //    // API

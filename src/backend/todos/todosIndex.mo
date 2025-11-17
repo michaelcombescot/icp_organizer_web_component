@@ -12,6 +12,7 @@ import TodosTodosBucket "buckets/todosTodosBucket";
 import TodosUsersDataBucket "buckets/todosUsersDataBucket";
 import TodosGroupsBucket "buckets/todosGroupsBucket";
 import TodosListsBucket "buckets/todosListsBucket";
+import CanistersKinds "../ops/canistersKinds";
 
 shared ({ caller = owner }) persistent actor class TodosIndex() = this {
     transient let ERR_CAN_ONLY_BE_CALLED_BY_OWNER = "ERR_CAN_ONLY_BE_CALLED_BY_OWNER";
@@ -45,6 +46,10 @@ shared ({ caller = owner }) persistent actor class TodosIndex() = this {
     ////////////
     // SYSTEM //
     ////////////
+
+    public func requestNewBucket(bucketType : CanistersKinds.BucketKind) : () {
+        
+    }
 
     // public shared ({ caller }) func receiveBuckets(buckets: [(Buckets.BucketTodosType, [Principal])]) : () {
     //     if (caller != owner) { return };

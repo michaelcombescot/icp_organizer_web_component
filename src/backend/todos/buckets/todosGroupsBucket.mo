@@ -4,17 +4,46 @@ import Principal "mo:core/Principal";
 import Nat "mo:core/Nat";
 import Text "mo:core/Text";
 import Iter "mo:core/Iter";
+import Nat64 "mo:core/Nat64";
+import Array "mo:core/Array";
 import Time "mo:base/Time";
 import Group "../models/groupModel";
 import Identifiers "../../shared/identifiers";
+import GroupModel "../models/groupModel";
+import Interfaces "../../shared/interfaces";
 
 shared ({ caller = owner }) persistent actor class TodosGroupsBucket() = this {
-    // let thisPrincipalText   = Principal.toText(Principal.fromActor(this));
-    // let index               = indexPrincipal;
-    // var userDataIndex       = "";
-    // var knownTodoBuckets    = Map.empty<Text, ()>();
-    
-    // let storeGroups = Map.empty<Nat, Group.Group>();
+    let thisPrincipalText = Principal.toText(Principal.fromActor(this));
+    let coordinator = actor (Principal.toText(owner)) : Interfaces.Coordinator;
+
+    ////////////
+    // CONFIG //
+    ////////////
+
+    let CONFIG_INTERVAL_FETCH_INDEXES: Nat64    = 60_000_000_000;
+    let CONFIG_MAX_NUMBER_ENTRIES: Nat          = 100_000;
+
+    ////////////
+    // ERRORS //
+    ////////////
+
+    let ERR_CAN_ONLY_BE_CALLED_BY_INDEX = "ERR_CAN_ONLY_BE_CALLED_BY_INDEX";
+
+    ////////////
+    // STORES //
+    ////////////
+
+    var storeIndexes        = Map.empty<Principal, ()>();
+    let storeGroups         = Map.empty<Nat, GroupModel.Group>();
+
+    ////////////
+    // SYSTEM //
+    ////////////
+
+    system func timer(setGlobalTimer : (Nat64) -> ()) : async () {
+        storeIndexes := Map.fromIter(Array.map(await coordinator.getIndexes(), func(x) = (x, ())).values(), Principal.compare);
+        setGlobalTimer(Nat64.fromIntWrap(Time.now()) + CONFIG_INTERVAL_FETCH_INDEXES);
+    };
 
     // //
     // // ERRORS

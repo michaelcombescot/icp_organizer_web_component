@@ -18,8 +18,8 @@ shared ({ caller = owner }) persistent actor class TodosTodosBucket() = this {
     // CONFIG //
     ////////////
 
-    let CONFIG_INTERVAL_FETCH_INDEXES: Nat64    = 20_000_000_000;
-    let CONFIG_MAX_NUMBER_ENTRIES: Nat          = 100;
+    let CONFIG_INTERVAL_FETCH_INDEXES: Nat64    = 60_000_000_000;
+    let CONFIG_MAX_NUMBER_ENTRIES: Nat          = 100_000;
 
     ////////////
     // ERRORS //
@@ -40,7 +40,6 @@ shared ({ caller = owner }) persistent actor class TodosTodosBucket() = this {
 
     system func timer(setGlobalTimer : (Nat64) -> ()) : async () {
         storeIndexes := Map.fromIter(Array.map(await coordinator.getIndexes(), func(x) = (x, ())).values(), Principal.compare);
-
         setGlobalTimer(Nat64.fromIntWrap(Time.now()) + CONFIG_INTERVAL_FETCH_INDEXES);
     };
 

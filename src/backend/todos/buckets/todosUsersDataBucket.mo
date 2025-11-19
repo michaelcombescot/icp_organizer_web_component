@@ -42,7 +42,7 @@ shared ({ caller = owner }) persistent actor class TodosUsersDataBucket() = this
     system func timer(setGlobalTimer : (Nat64) -> ()) : async () {
         storeIndexes := Map.fromIter(Array.map(await coordinator.getIndexes(), func(x) = (x, ())).values(), Principal.compare);
         setGlobalTimer(Nat64.fromIntWrap(Time.now()) + CONFIG_INTERVAL_FETCH_INDEXES);
-    };1
+    };
 
     // //
     // // ERRORS

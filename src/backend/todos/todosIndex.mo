@@ -13,8 +13,11 @@ import TodosUsersDataBucket "buckets/todosUsersDataBucket";
 import TodosGroupsBucket "buckets/todosGroupsBucket";
 import TodosListsBucket "buckets/todosListsBucket";
 import CanistersKinds "../ops/canistersKinds";
+import Interfaces "../shared/interfaces";
 
 shared ({ caller = owner }) persistent actor class TodosIndex() = this {
+    let coordinator = actor(Principal.toText(owner)) : Interfaces.Coordinator;
+
     transient let ERR_CAN_ONLY_BE_CALLED_BY_OWNER = "ERR_CAN_ONLY_BE_CALLED_BY_OWNER";
 
     ////////////
@@ -47,17 +50,18 @@ shared ({ caller = owner }) persistent actor class TodosIndex() = this {
     // SYSTEM //
     ////////////
 
-    public func requestNewBucket(bucketType : CanistersKinds.BucketKind) : () {
+    system func timer(setGlobalTimer : (Nat64) -> ()) : async () {
+        for (key, value) in memoryTodosTodosBuckets {
+            
+        }
         
-    }
+        let listCalls = List.empty<Principal>();
+         ray.map(await coordinator.getIndexes(), func(x) = (x, ())).values(), Principal.compare);
 
-    // public shared ({ caller }) func receiveBuckets(buckets: [(Buckets.BucketTodosType, [Principal])]) : () {
-    //     if (caller != owner) { return };
-        
-    //     for (bucket in buckets) {
-    //         List.add(storeBuckets[bucket[0]], bucket[1]);
-    //     }
-    // };
+
+
+        setGlobalTimer(Nat64.fromIntWrap(Time.now()) + CONFIG_INTERVAL_FETCH_BUCKETS);
+    };
 
     ///////////
     // TODOS //

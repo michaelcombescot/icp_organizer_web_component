@@ -60,11 +60,23 @@ shared ({ caller = owner }) persistent actor class Coordinator() = this {
         // TODO performances: parrallelize the calls
         for ( (nature, typeMap) in Map.entries(storeCanisters) ) {
             let toppingAmount = switch (nature) {
-                                    case (#todosIndex) TOPPING_AMOUNT_INDEXES;
-                                    case (#todosTodosBucket) TOPPING_AMOUNT_BUCKETS;
-                                    case (#todosUsersDataBucket) TOPPING_AMOUNT_BUCKETS;
-                                    case (#todosListsBucket) TOPPING_AMOUNT_BUCKETS;
-                                    case (#todosGroupsBucket) TOPPING_AMOUNT_BUCKETS;
+                                    case (#indexes(indexesKind)) {
+                                        switch indexesKind {
+                                            case (#todosIndex) TOPPING_AMOUNT_INDEXES;
+                                        }
+                                    };
+                                    case (#buckets(bucketsKind)) {
+                                        switch bucketsKind {
+                                            case(#todos(todoBuckets)) {
+                                                switch (todoBuckets) {
+                                                    case (#todosTodosBucket) TOPPING_AMOUNT_BUCKETS;
+                                                    case (#todosUsersDataBucket) TOPPING_AMOUNT_BUCKETS;
+                                                    case (#todosListsBucket) TOPPING_AMOUNT_BUCKETS;
+                                                    case (#todosGroupsBucket) TOPPING_AMOUNT_BUCKETS;
+                                                }
+                                            }
+                                        };
+                                    };                                   
                                 };
 
 
@@ -76,7 +88,7 @@ shared ({ caller = owner }) persistent actor class Coordinator() = this {
         // create new bucket if necessary in the buckets pool
         // TODO performances: parrallelize the calls
         for ( nature in CanistersKinds.bucketKindArray.values() ) {
-            switch ( Map.get(storeEmptyBuckets, CanistersKinds.compareCanisterKinds, nature) ) {
+            switch ( Map.get(storeEmptyBuckets, CanistersKinds.compareBucketsKinds, nature) ) {
                 case null ignore helperCreateBucket(nature);
                 case (?typeMap) {
                     if (List.size(typeMap) < NB_EMPTY_BUCKETS_PER_TYPE) {
@@ -89,7 +101,6 @@ shared ({ caller = owner }) persistent actor class Coordinator() = this {
         // set timer
         setGlobalTimer(Nat64.fromIntWrap(Time.now()) + Nat64.fromNat(TOPPING_TIMER_INTERVAL_NS));
     };
-
     
     func helperTopCanisterCycles(canisterPrincipal : Principal, amount: Nat) : async () {
         let status = await IC.ic.canister_status({ canister_id = canisterPrincipal });
@@ -107,16 +118,20 @@ shared ({ caller = owner }) persistent actor class Coordinator() = this {
     func helperCreateBucket(bucketType : CanistersKinds.BucketKind) : async () {
         try {
             let aktor = await switch (bucketType) {
-                            case (#todosTodosBucket)        (with cycles = NEW_BUCKET_NB_CYCLES) TodosTodosBucket.TodosTodosBucket();
-                            case (#todosUsersDataBucket)    (with cycles = NEW_BUCKET_NB_CYCLES) TodosUsersDataBucket.TodosUsersDataBucket();
-                            case (#todosListsBucket )       (with cycles = NEW_BUCKET_NB_CYCLES) TodosListsBucket.TodosListsBucket();
-                            case (#todosGroupsBucket)       (with cycles = NEW_BUCKET_NB_CYCLES) TodosGroupsBucket.TodosGroupsBucket();
+                                case (#todos(todoType)) {
+                                    switch (todoType) {
+                                        case (#todosTodosBucket)        (with cycles = NEW_BUCKET_NB_CYCLES) TodosTodosBucket.TodosTodosBucket();
+                                        case (#todosUsersDataBucket)    (with cycles = NEW_BUCKET_NB_CYCLES) TodosUsersDataBucket.TodosUsersDataBucket();
+                                        case (#todosListsBucket )       (with cycles = NEW_BUCKET_NB_CYCLES) TodosListsBucket.TodosListsBucket();
+                                        case (#todosGroupsBucket)       (with cycles = NEW_BUCKET_NB_CYCLES) TodosGroupsBucket.TodosGroupsBucket();
+                                    };
+                                };
                         };
 
             let newPrincipal = Principal.fromActor(aktor);
 
-            switch ( Map.get(storeEmptyBuckets, CanistersKinds.compareCanisterKinds, bucketType) ) {
-                case null Map.add(storeEmptyBuckets, CanistersKinds.compareCanisterKinds, bucketType, List.singleton<Principal>(newPrincipal));
+            switch ( Map.get(storeEmptyBuckets, CanistersKinds.compareBucketsKinds, bucketType) ) {
+                case null Map.add(storeEmptyBuckets, CanistersKinds.compareBucketsKinds, bucketType, List.singleton<Principal>(newPrincipal));
                 case (?list) List.add(list, newPrincipal);
             };
         } catch (e) {
@@ -124,7 +139,7 @@ shared ({ caller = owner }) persistent actor class Coordinator() = this {
         };     
     };
 
-    func helperCreateIndex(indexType : CanistersKinds.IndexKind) : async () {
+    func helperCreateIndex(indexType : CanistersKinds.IndexKind) : async Principal {
         try {
             let aktor = await switch (indexType) {
                             case (#todosIndex) (with cycles = NEW_BUCKET_NB_CYCLES) TodosIndex.TodosIndex();
@@ -132,8 +147,8 @@ shared ({ caller = owner }) persistent actor class Coordinator() = this {
 
             let newPrincipal = Principal.fromActor(aktor);
 
-            switch ( Map.get(storeCanisters, CanistersKinds.compareCanisterKinds, indexType) ) {
-                case null Map.add(storeCanisters, CanistersKinds.compareCanisterKinds, indexType, Map.singleton<Principal, ()>(newPrincipal, ()));
+            switch ( Map.get(storeCanisters, CanistersKinds.compareCanisterKinds, #indexes(indexType)) ) {
+                case null Map.add(storeCanisters, CanistersKinds.compareCanisterKinds, #indexes(indexType), Map.singleton<Principal, ()>(newPrincipal, ()));
                 case (?map) Map.add(map, Principal.compare, newPrincipal, ());
             };
         } catch (e) {
@@ -146,16 +161,20 @@ shared ({ caller = owner }) persistent actor class Coordinator() = this {
 
         for ( nature in CanistersKinds.bucketKindArray.values() ) {
             switch (nature) {
-                case (#todosTodosBucket or #todosUsersDataBucket or #todosListsBucket or #todosGroupsBucket) {
-                    switch ( Map.get(storeCanisters, CanistersKinds.compareCanisterKinds, nature) ) {
-                        case (?typeMap) {
-                            for ( canisterPrincipal in Map.keys(typeMap) ) {
-                                List.add(buckets, canisterPrincipal);
+                case (#todos(todoType)) {
+                    switch (todoType) {
+                        case (#todosTodosBucket or #todosUsersDataBucket or #todosListsBucket or #todosGroupsBucket) {
+                            switch ( Map.get(storeCanisters, CanistersKinds.compareCanisterKinds, #buckets(nature)) ) {
+                                case (?typeMap) {
+                                    for ( canisterPrincipal in Map.keys(typeMap) ) {
+                                        List.add(buckets, canisterPrincipal);
+                                    };
+                                };
+                                case null ();
                             };
                         };
-                        case null ();
-                    };
-                };
+                    }
+                }
             }    
         };
 
@@ -168,7 +187,7 @@ shared ({ caller = owner }) persistent actor class Coordinator() = this {
         for ( nature in CanistersKinds.indexKindArray.values() ) {
             switch (nature) {
                 case (#todosIndex) {
-                    switch ( Map.get(storeCanisters, CanistersKinds.compareCanisterKinds, nature) ) {
+                    switch ( Map.get(storeCanisters, CanistersKinds.compareCanisterKinds, #indexes(nature)) ) {
                         case (?typeMap) {
                             for ( canisterPrincipal in Map.keys(typeMap) ) {
                                 List.add(indexes, canisterPrincipal);
@@ -187,36 +206,41 @@ shared ({ caller = owner }) persistent actor class Coordinator() = this {
     // API
     //
 
+    // create a new index, the main function to scale, must be called by hand
     public shared ({ caller }) func handlerCreateIndex({nature: CanistersKinds.IndexKind}) : async Result.Result<(), Text> {
         if (caller != owner) { return #err(ERR_CAN_ONLY_BE_CALLED_BY_OWNER); };
 
-        ignore helperCreateIndex(nature);
-        #ok
+        #ok( await helperCreateIndex(nature) )
     };
 
+    // retrieve Principal of all indexes of a specific type
     public shared ({ caller }) func handlerGetIndexes({nature: CanistersKinds.IndexKind}) : async Result.Result<[Principal], Text> {
-        if ( List.contains(helperGetIndexesPrincipals(), Principal.equal, caller) ) { return #err(ERR_CAN_ONLY_BE_CALLED_BY_BUCKETS); };
+        if ( List.contains(helperGetBucketsPrincipals(), Principal.equal, caller) ) { return #err(ERR_CAN_ONLY_BE_CALLED_BY_BUCKETS); };
 
-        let ?indexes = Map.get(storeCanisters, CanistersKinds.compareCanisterKinds, nature) else return #err("No indexes of type " # debug_show(nature) # " found");
+        let ?indexes = Map.get(storeCanisters, CanistersKinds.compareCanisterKinds, #indexes(nature)) else return #err("No indexes of type " # debug_show(nature) # " found");
         #ok( Array.fromIter( Map.keys(indexes) ) );
     };
 
-    public shared ({ caller }) func handlerGetBuckets({nature: CanistersKinds.BucketKind}) : async Result.Result<[Principal], Text> {
-        if ( List.contains(helperGetBucketsPrincipals(), Principal.equal, caller) ) { return #err(ERR_CAN_ONLY_BE_CALLED_BY_INDEX); };
+    // retrieve Principal of all buckets of a specific type
+    public shared ({ caller }) func handlerGetBuckets({nature: CanistersKinds.BucketKind}) : async Result.Result<[(Principal, CanistersKinds.BucketKind)], Text> {
+        if ( List.contains(helperGetIndexesPrincipals(), Principal.equal, caller) ) { return #err(ERR_CAN_ONLY_BE_CALLED_BY_INDEX); };
 
-        let ?buckets = Map.get(storeCanisters, CanistersKinds.compareCanisterKinds, nature) else return #err("No buckets of type " # debug_show(nature) # " found");
+        let ?buckets = Map.get(storeCanisters, CanistersKinds.compareCanisterKinds, #buckets(nature)) else return #err("No buckets of type " # debug_show(nature) # " found");
         #ok( Array.fromIter( Map.keys(buckets) ) );
     };
 
+    // retrieve Principal of an empty bucket of a specific type. Must be queried by an index when needed
     public shared ({ caller }) func handlerGetEmptyBucket({ nature : CanistersKinds.BucketKind }) : async Result.Result<Principal, Text> {
         if ( List.contains(helperGetIndexesPrincipals(), Principal.equal, caller) ) { return #err(ERR_CAN_ONLY_BE_CALLED_BY_BUCKETS); };
 
-        let ?buckets = Map.get(storeEmptyBuckets, CanistersKinds.compareCanisterKinds, nature) else return #err("No empty buckets of type " # debug_show(nature) # " found");
+        let ?buckets = Map.get(storeEmptyBuckets, CanistersKinds.compareBucketsKinds, nature) else return #err("No empty buckets of type " # debug_show(nature) # " found");
         let ?bucket = List.get(buckets, 0) else return #err("No empty buckets of type " # debug_show(nature) # " found");
 
         #ok( bucket );
     };
 
+    // upgrade a canister of a specific type, is to be used in cli with the command (replace for the right canister path):
+    // - dfx canister call organizerMaintenance upgradeAllBuckets '(#buckettype, blob "'$(hexdump -ve '1/1 "\\\\%02x"' .dfx/local/canisters/organizerUsersDataBucket/organizerUsersDataBucket.wasm)'")'
     public shared ({ caller }) func handlerUpgradeCanister({ nature : CanistersKinds.CanisterKind; code: Blob.Blob }) : async Result.Result<(), Text> {
         if (caller != owner) { return #err(ERR_CAN_ONLY_BE_CALLED_BY_OWNER); };
 

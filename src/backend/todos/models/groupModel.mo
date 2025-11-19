@@ -6,16 +6,13 @@ module {
     public type Group = {
         identifiers: Identifiers.WithID;
         name: Text;
-        todos: Map.Map<Nat, TodoData>;
-        todoLists: Map.Map<Nat, TodoListData>;
+        todos: Map.Map<Identifiers.WithID, ()>;
+        todoLists: Map.Map<Identifiers.WithID, ()>;
         users: Map.Map<Principal, UserGroupPermission>;
         createdAt: Time.Time;
         updatedAt: Time.Time;
         createdBy: Principal;
     };
-
-    public type TodoData = { bucket: Text; };
-    public type TodoListData = { bucket: Text; };
 
     public type UserGroupPermission = {
         // can do everything related to the group

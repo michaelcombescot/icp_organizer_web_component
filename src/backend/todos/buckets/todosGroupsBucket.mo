@@ -17,6 +17,13 @@ shared ({ caller = owner }) persistent actor class TodosGroupsBucket() = this {
     let coordinator = actor (Principal.toText(owner)) : Interfaces.Coordinator;
 
     ////////////
+    // ERRORS //
+    ////////////
+
+    let ERR_GROUP_NOT_FOUND               = "ERR_GROUP_NOT_FOUND";
+    let ERR_USER_NOT_IN_GROUP             = "ERR_USER_NOT_IN_GROUP";
+
+    ////////////
     // CONFIG //
     ////////////
 
@@ -45,39 +52,30 @@ shared ({ caller = owner }) persistent actor class TodosGroupsBucket() = this {
         setGlobalTimer(Nat64.fromIntWrap(Time.now()) + CONFIG_INTERVAL_FETCH_INDEXES);
     };
 
-    // //
-    // // ERRORS
-    // //
+    /////////
+    // API //
+    /////////
 
-    // transient let ERR_GROUP_NOT_FOUND               = "ERR_GROUP_NOT_FOUND";
-    // transient let ERR_USER_NOT_IN_GROUP             = "ERR_USER_NOT_IN_GROUP";
-    // transient let ERR_USER_MUST_BE_ADMIN            = "ERR_USER_MUST_BE_ADMIN";
-    // transient let ERR_USER_MUST_BE_ADMIN_OR_USER    = "ERR_USER_MUST_BE_ADMIN_OR_USER";
+    // get group data
+    type GetGroupResponse = {
+        id: Identifiers.WithID;
+        name: Text;
+        todos: [Identifiers.WithID];
+        todoLists: [Identifiers.WithID];
+    };
 
-    // //
-    // // API
-    // //
+    public shared ({ caller }) func getGroupData(id: Nat) : async Result.Result<GetGroupResponse, [Text]> {
+        let ?_ = Map.get(storeIndexes, Principal.compare, caller) else return #err([ERR_CAN_ONLY_BE_CALLED_BY_INDEX]);
 
-    // // get group data
-    // type GetGroupResponse = {
-    //     id: Identifiers.WithID;
-    //     name: Text;
-    //     todos: [Identifiers.WithID];
-    //     todoLists: [Identifiers.WithID];
-    // };
+        let ?group = Map.get(storeGroups, Nat.compare, id) else return #err([ERR_GROUP_NOT_FOUND]);
 
-    // public shared ({ caller }) func getGroupData(id: Nat) : async Result.Result<GetGroupResponse, [Text]> {
-    //     let ?group = Map.get(storeGroups, Nat.compare, id) else return #err([ERR_GROUP_NOT_FOUND]);
-
-    //     let ?_ = Map.get(group.users, Principal.compare, caller) else return #err([ERR_USER_NOT_IN_GROUP]);
-
-    //     #ok({
-    //         id = group.identifiers;
-    //         name = group.name;
-    //         todos = Iter.toArray(Map.keys(group.todos));
-    //         todoLists = Iter.toArray(Map.keys(group.todoLists));
-    //     });
-    // };
+        #ok({
+            id = group.identifiers;
+            name = group.name;
+            todos = Iter.toArray(Map.keys(group.todos));
+            todoLists = Iter.toArray(Map.keys(group.todoLists));
+        });
+    };
 
     // // create
     // public shared ({ caller }) func createGroup({userPrincipal: Principal; group: Group.CreateGroupParam}) : async Result.Result<(Types.Identifiers, Nat), [Text]> {

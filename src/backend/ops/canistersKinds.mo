@@ -2,32 +2,42 @@ import Text "mo:core/Text";
 import Order "mo:core/Order";
 
 module {
+    // all canisters
     public type CanisterKind = {
-        // todos
-        #todosIndex;
-        #todosTodosBucket;
-        #todosUsersDataBucket;
-        #todosListsBucket;
-        #todosGroupsBucket;
+        #indexes: IndexKind;
+        #buckets: BucketKind;
     };
-
-    public let bucketKindArray: [BucketKind] = [#todosTodosBucket, #todosUsersDataBucket, #todosListsBucket, #todosGroupsBucket];
-
-    public let indexKindArray: [IndexKind] = [#todosIndex];
 
     public func compareCanisterKinds(a: CanisterKind, b: CanisterKind) : Order.Order {
         Text.compare(debug_show(a), debug_show(b))
     };
 
+    // indexes
     public type IndexKind = {
         #todosIndex;
     };
 
+    public let indexKindArray: [IndexKind] = [#todosIndex];
+
+    public func compareIndexesKinds(a: IndexKind, b: IndexKind) : Order.Order {
+        Text.compare(debug_show(a), debug_show(b))
+    };
+
+    // buckets
     public type BucketKind = {
-        // todos
+        #todos: BucketTodoKind;
+    };
+
+    public let bucketKindArray: [BucketKind] = [#todos(#todosTodosBucket), #todos(#todosUsersDataBucket), #todos(#todosListsBucket), #todos(#todosGroupsBucket)];
+
+    public type BucketTodoKind = {
         #todosTodosBucket;
         #todosUsersDataBucket;
         #todosListsBucket;
         #todosGroupsBucket;
+    };
+
+    public func compareBucketsKinds(a: BucketKind, b: BucketKind) : Order.Order {
+        Text.compare(debug_show(a), debug_show(b))
     };
 }

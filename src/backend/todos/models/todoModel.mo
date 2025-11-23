@@ -7,14 +7,13 @@ import Identifiers "../../shared/identifiers";
 module {
     public type Todo = {
         identifier: Identifiers.WithID;
-        bucket: Text;
         resume: Text;
         description: ?Text;
         scheduledDate: ?Time.Time;
         priority: TodoPriority;
         status: TodoStatus;
         createdAt: Time.Time;
-        createdBy: Text;
+        createdBy: Principal;
         owner: Principal;
 
     };

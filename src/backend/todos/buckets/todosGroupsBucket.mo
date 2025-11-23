@@ -48,7 +48,7 @@ shared ({ caller = owner }) persistent actor class TodosGroupsBucket() = this {
     ////////////
 
     system func timer(setGlobalTimer : (Nat64) -> ()) : async () {
-        storeIndexes := Map.fromIter(Array.map(await coordinator.getIndexes(), func(x) = (x, ())).values(), Principal.compare);
+        storeIndexes := Map.fromIter(Array.map(await coordinator.handlerGetIndexes(), func(x) = (x, ())).values(), Principal.compare);
         setGlobalTimer(Nat64.fromIntWrap(Time.now()) + CONFIG_INTERVAL_FETCH_INDEXES);
     };
 

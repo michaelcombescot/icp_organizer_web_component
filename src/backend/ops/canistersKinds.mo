@@ -30,6 +30,10 @@ module {
 
     public let bucketKindArray: [BucketKind] = [#todos(#todosTodosBucket), #todos(#todosUsersDataBucket), #todos(#todosListsBucket), #todos(#todosGroupsBucket)];
 
+    public func compareBucketsKinds(a: BucketKind, b: BucketKind) : Order.Order {
+        Text.compare(debug_show(a), debug_show(b))
+    };
+
     public type BucketTodoKind = {
         #todosTodosBucket;
         #todosUsersDataBucket;
@@ -37,7 +41,9 @@ module {
         #todosGroupsBucket;
     };
 
-    public func compareBucketsKinds(a: BucketKind, b: BucketKind) : Order.Order {
+    public let bucketTodoKindArray: [BucketTodoKind] = [#todosTodosBucket, #todosUsersDataBucket, #todosListsBucket, #todosGroupsBucket];
+
+    public func compareBucketsTodoKinds(a: BucketTodoKind, b: BucketTodoKind) : Order.Order {
         Text.compare(debug_show(a), debug_show(b))
     };
 }

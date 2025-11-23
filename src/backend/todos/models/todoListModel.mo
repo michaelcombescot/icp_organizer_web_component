@@ -8,10 +8,9 @@ module {
         id: Text;
         name: Text;
         color: Text;
-        todos: Map.Map<Text, ()>;
         owner: Owner;
         createdAt: Time.Time;
-        createdBy: Text;
+        createdBy: Principal;
     };
 
     public type Owner = {

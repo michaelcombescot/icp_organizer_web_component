@@ -31,7 +31,8 @@ shared ({ caller = owner }) persistent actor class TodosTodosBucket() = this {
     // STORES //
     ////////////
 
-    var storeIndexes        = Map.empty<Principal, ()>();
+    transient var storeIndexes        = Map.empty<Principal, ()>();
+
     let storeTodos          = Map.empty<Nat, Todo.Todo>();
 
     ////////////
@@ -39,7 +40,7 @@ shared ({ caller = owner }) persistent actor class TodosTodosBucket() = this {
     ////////////
 
     system func timer(setGlobalTimer : (Nat64) -> ()) : async () {
-        storeIndexes := Map.fromIter(Array.map(await coordinator.getIndexes(), func(x) = (x, ())).values(), Principal.compare);
+        storeIndexes := Map.fromIter(Array.map(await coordinator.handlerGetIndexes(), func(x) = (x, ())).values(), Principal.compare);
         setGlobalTimer(Nat64.fromIntWrap(Time.now()) + CONFIG_INTERVAL_FETCH_INDEXES);
     };
 
@@ -48,7 +49,7 @@ shared ({ caller = owner }) persistent actor class TodosTodosBucket() = this {
     /////////
 
     // create a new todo
-    public shared ({ caller }) func createTodo(todo: Todo.Todo) : async Result.Result<{ identifier: Identifiers.WithID; isFull: Bool }, [Text]> {
+    public shared ({ caller }) func handlerCreateTodo({ initialCaller: Principal; todo: Todo.Todo }) : async Result.Result<{ identifier: Identifiers.WithID; isFull: Bool }, [Text]> {
         let ?_ = Map.get(storeIndexes, Principal.compare, caller) else return #err([ERR_CAN_ONLY_BE_CALLED_BY_INDEX]);
 
         // validate todo data
@@ -59,12 +60,11 @@ shared ({ caller = owner }) persistent actor class TodosTodosBucket() = this {
 
         let identifier = { id = Map.size(storeTodos); bucket = thisPrincipalText };
 
-        Map.add(storeTodos, Nat.compare, identifier.id, { todo with identifier = identifier });
+        Map.add(storeTodos, Nat.compare, identifier.id, { todo with identifier = identifier; createdBy = initialCaller; createdAt = Time.now(); });
 
         #ok({ identifier = identifier; isFull = identifier.id > CONFIG_MAX_NUMBER_ENTRIES })
     };
 
-    
     public shared ({ caller }) func getTodos(ids: [Nat]) : async Result.Result<[Todo.Todo], Text> {
        let ?_ = Map.get(storeIndexes, Principal.compare, caller) else return #err(ERR_CAN_ONLY_BE_CALLED_BY_INDEX);
 

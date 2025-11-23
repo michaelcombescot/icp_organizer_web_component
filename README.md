@@ -1,11 +1,10 @@
 ARCHITECTURE:
-- a single entry point as coordinator, this coordinator is responsible to create every other canisters dynamically topping buckets, and must not be accessible by anyone but the creator.
-- indexes are dynamically created, but on demand by the admin, not automatically. One index of each type will must be created at first launch
-- each index has no state at all, and will retrieve data (the accessible buckets) from the coordinator directly. Their only goal is to coordinate multi canister call (update or query)
-- each bucket must be able to check if it is called by an index if needed, so each bucket will be responsible to retrieve the list of indexes from the coordinator once in a while.
+- a coordinator responsible to create buckets dynamically topping every canister (indexes included), and must not be accessible by anyone but the creator and the canisters directly
+- one or several indexes by module, all defined in the dfx.json and used by the frontend.
+- data are stored in buckets, and buckets are created dynamically when needed -> the coordinator keep a pool of new buckets available, and indexes grab them when needed. The pool of new buckets is automatically refilled by the coordinator. 
 
 DEPLOYEMENT:
-- When deploying, use the script deploy_local.sh
+- When deploying, use the script deploy_local.sh, or see it to understand what is done.
 
 UPDATING CODE FOR BUCKET:
 When updating code for a bucket, we need to call the maintenance index upgradeAllBuckets methods, while providing as parameter the bucket type and the wasm code as base64, here is an exemple;
@@ -14,4 +13,4 @@ dfx canister call organizerMaintenance upgradeAllBuckets \
 
 
 GOOD TO KNOW:
-- Note for the dfx file => dependencies field will check if the canisters are already deployed, or it will try to deploy it, so don't put the buckets here.
+- Note for the dfx file => dependencies field will check if the canisters are already deployed, or it will try to deploy it, so don't put the buckets here. For the bucket we just need to generate the candid/js files if one day we need to be able to call a bucket directly.

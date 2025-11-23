@@ -13,7 +13,6 @@ import GroupModel "../models/groupModel";
 import Interfaces "../../shared/interfaces";
 
 shared ({ caller = owner }) persistent actor class TodosGroupsBucket() = this {
-    let thisPrincipalText = Principal.toText(Principal.fromActor(this));
     let coordinator = actor (Principal.toText(owner)) : Interfaces.Coordinator;
 
     ////////////

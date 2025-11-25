@@ -6,6 +6,8 @@ import Map "mo:core/Map";
 import Array "mo:core/Array";
 import Nat64 "mo:core/Nat64";
 import Runtime "mo:core/Runtime";
+import List "mo:core/List";
+import Blob "mo:core/Blob";
 import Identifiers "../shared/identifiers";
 import TodosTodosBucket "buckets/todosTodosBucket";
 import TodosUsersDataBucket "buckets/todosUsersDataBucket";
@@ -37,6 +39,9 @@ shared ({ caller = owner }) persistent actor class TodosIndex() = this {
     // MEMORY //
     ////////////
 
+    transient let memoryListBuckets = Array.empty<TodosTodosBucket.TodosTodosBucket>();
+    transient let 
+
     transient var memoryBucketsTodos = Map.empty<Principal, TodosTodosBucket.TodosTodosBucket>();
     transient var memoryBucketsUsersData = Map.empty<Principal, TodosUsersDataBucket.TodosUsersDataBucket>();
     transient var memoryBucketsGroups = Map.empty<Principal, TodosGroupsBucket.TodosGroupsBucket>();
@@ -50,6 +55,23 @@ shared ({ caller = owner }) persistent actor class TodosIndex() = this {
     ////////////
     // SYSTEM //
     ////////////
+
+    type Msg = {
+        #createTodo : () -> (todo : TodoModel.Todo);
+        #removeTodo : () -> (id : Nat);
+        #setCoordinator : () -> (principal : Principal);
+        #updateTodo : () -> (todo : TodoModel.Todo)
+    };
+
+     system func inspect({ arg : Blob; caller : Principal; msg : Msg }) : Bool {
+        // check if the user is connected
+        if (Principal.isAnonymous(caller)) { return false; };
+
+        // check payload size
+        if (Blob.size(arg) > 1000) { return false; };
+
+        true
+    };
 
     system func timer(setGlobalTimer : (Nat64) -> ()) : async () {
         for ( nature in CanistersKinds.bucketTodoKindArray.values() ) {

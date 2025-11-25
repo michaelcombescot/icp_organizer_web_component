@@ -14,3 +14,4 @@ dfx canister call organizerMaintenance upgradeAllBuckets \
 
 GOOD TO KNOW:
 - Note for the dfx file => dependencies field will check if the canisters are already deployed, or it will try to deploy it, so don't put the buckets here. For the bucket we just need to generate the candid/js files if one day we need to be able to call a bucket directly.
+- When a canister is deploy on the main network, a canister_ids file is generated, this is this file which make it possible for other canisters (especially the frontend) to know from the js file what the principals are.

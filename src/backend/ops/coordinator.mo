@@ -23,7 +23,11 @@ import TodosGroupsBucket "../todos/buckets/todosGroupsBucket";
 // - create buckets and indexes
 // - top indexes and canisters with cycles
 // - check if there are free buckets in the bucket pool.The bucket pool is here for the different indexes to pick new active buckets when a buckets return a signal it's full.
-shared ({ caller = owner }) persistent actor class Coordinator() = this {
+shared ({ caller = owner }) persistent actor class Coordinator({ registryPrincipalInit: Principal}) = this {
+    ////////////
+    // ERRORS //
+    ////////////
+
     let ERR_CAN_ONLY_BE_CALLED_BY_OWNER     = "ERR_CAN_ONLY_BE_CALLED_BY_OWNER";
     let ERR_CAN_ONLY_BE_CALLED_BY_BUCKETS   = "ERR_CAN_ONLY_BE_CALLED_BY_BUCKETS";
     let ERR_CAN_ONLY_BE_CALLED_BY_INDEX     = "ERR_CAN_ONLY_BE_CALLED_BY_INDEX";
@@ -47,8 +51,13 @@ shared ({ caller = owner }) persistent actor class Coordinator() = this {
     // STATES //
     ////////////
 
+    let registryPrincipal = registryPrincipalInit;
+
     let memoryCanisters     = Map.empty<CanistersKinds.CanisterKind , Map.Map<Principal, ()>>();
     let memoryFreeBuckets   = Map.empty<CanistersKinds.BucketKind , List.List<Principal>>();
+
+    var listBucketsPrincipals = List.empty<Principal>();
+    var listIndexesPrincipals = List.empty<Principal>();
 
     ////////////
     // SYSTEM //
@@ -158,7 +167,7 @@ shared ({ caller = owner }) persistent actor class Coordinator() = this {
 
     // retrieve Principal of all indexes of a specific type
     public query ({ caller }) func handlerGetIndexes({nature: CanistersKinds.IndexKind}) : async [Principal] {
-        if ( List.contains(helperGetBucketsPrincipals(), Principal.equal, caller) ) { Runtime.trap( ERR_CAN_ONLY_BE_CALLED_BY_BUCKETS # " but called by " # debug_show(caller) ); };
+        if ( List.contains(listBucketsPrincipals, Principal.equal, caller) ) { Runtime.trap( ERR_CAN_ONLY_BE_CALLED_BY_BUCKETS # " but called by " # debug_show(caller) ); };
 
         let ?indexesMap = Map.get(memoryCanisters, CanistersKinds.compareCanisterKinds, #indexes(nature)) else Runtime.trap( "No indexes of type " # debug_show(nature) # " found");
         Array.fromIter( Map.keys(indexesMap) )
@@ -225,51 +234,5 @@ shared ({ caller = owner }) persistent actor class Coordinator() = this {
             case null Map.add(memoryCanisters, CanistersKinds.compareCanisterKinds, #buckets(bucketType), Map.singleton<Principal, ()>(newPrincipal, ()));
             case (?map) Map.add(map, Principal.compare, newPrincipal, ());
         };
-    };
-
-    func helperGetBucketsPrincipals() : List.List<Principal> {
-        let buckets = List.empty<Principal>();
-
-        for ( nature in CanistersKinds.bucketKindArray.values() ) {
-            switch (nature) {
-                case (#todos(todoType)) {
-                    switch (todoType) {
-                        case (#todosTodosBucket or #todosUsersDataBucket or #todosListsBucket or #todosGroupsBucket) {
-                            switch ( Map.get(memoryCanisters, CanistersKinds.compareCanisterKinds, #buckets(nature)) ) {
-                                case (?typeMap) {
-                                    for ( canisterPrincipal in Map.keys(typeMap) ) {
-                                        List.add(buckets, canisterPrincipal);
-                                    };
-                                };
-                                case null ();
-                            };
-                        };
-                    }
-                }
-            }    
-        };
-
-        return buckets;
-    };
-
-    func helperGetIndexesPrincipals() : List.List<Principal> {
-        let indexes = List.empty<Principal>();
-
-        for ( nature in CanistersKinds.indexKindArray.values() ) {
-            switch (nature) {
-                case (#todosIndex) {
-                    switch ( Map.get(memoryCanisters, CanistersKinds.compareCanisterKinds, #indexes(nature)) ) {
-                        case (?typeMap) {
-                            for ( canisterPrincipal in Map.keys(typeMap) ) {
-                                List.add(indexes, canisterPrincipal);
-                            };
-                        };
-                        case null ();
-                    };
-                };
-            }    
-        };
-
-        return indexes;
     };
 };

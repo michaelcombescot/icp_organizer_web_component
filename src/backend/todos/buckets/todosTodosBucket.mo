@@ -19,7 +19,7 @@ shared ({ caller = owner }) persistent actor class TodosTodosBucket() = this {
     ////////////
 
     let CONFIG_INTERVAL_FETCH_INDEXES: Nat64    = 60_000_000_000;
-    let CONFIG_MAX_NUMBER_ENTRIES: Nat          = 100_000;
+    let CONFIG_MAX_NUMBER_ENTRIES: Nat          = 1_000_000;
 
     ////////////
     // ERRORS //

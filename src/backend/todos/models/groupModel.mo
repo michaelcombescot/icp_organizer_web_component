@@ -1,13 +1,13 @@
 import Time "mo:core/Time";
 import Map "mo:core/Map";
-import Identifiers "../../shared/identifiers";
 
-module {
+module Group {
     public type Group = {
-        identifiers: Identifiers.WithID;
+        id: Nat;
+        bucket: Principal;
         name: Text;
-        todos: Map.Map<Identifiers.WithID, ()>;
-        todoLists: Map.Map<Identifiers.WithID, ()>;
+        todos: Map.Map<Nat, ()>;
+        todoLists: Map.Map<Nat, ()>;
         users: Map.Map<Principal, UserGroupPermission>;
         createdAt: Time.Time;
         updatedAt: Time.Time;
@@ -30,4 +30,4 @@ module {
     public type CreateGroupParam = {
         name: Text;
     };
-}
+};

@@ -6,9 +6,21 @@ module {
     public type CanisterKind = {
         #indexes: IndexKind;
         #buckets: BucketKind;
+        #registry: RegistryKind;
     };
 
     public func compareCanisterKinds(a: CanisterKind, b: CanisterKind) : Order.Order {
+        Text.compare(debug_show(a), debug_show(b))
+    };
+
+    // registry
+    public type RegistryKind = {
+        #registry;
+    };
+
+    public let registryKindArray: [RegistryKind] = [#registry];
+
+    public func compareRegistryKinds(a: RegistryKind, b: RegistryKind) : Order.Order {
         Text.compare(debug_show(a), debug_show(b))
     };
 
@@ -28,20 +40,18 @@ module {
         #todos: BucketTodoKind;
     };
 
-    public let bucketKindArray: [BucketKind] = [#todos(#todosTodosBucket), #todos(#todosUsersDataBucket), #todos(#todosListsBucket), #todos(#todosGroupsBucket)];
+    public let bucketKindArray: [BucketKind] = [#todos(#todosUsersDataBucket), #todos(#todosGroupsBucket)];
 
     public func compareBucketsKinds(a: BucketKind, b: BucketKind) : Order.Order {
         Text.compare(debug_show(a), debug_show(b))
     };
 
     public type BucketTodoKind = {
-        #todosTodosBucket;
         #todosUsersDataBucket;
-        #todosListsBucket;
         #todosGroupsBucket;
     };
 
-    public let bucketTodoKindArray: [BucketTodoKind] = [#todosTodosBucket, #todosUsersDataBucket, #todosListsBucket, #todosGroupsBucket];
+    public let bucketTodoKindArray: [BucketTodoKind] = [#todosUsersDataBucket, #todosGroupsBucket];
 
     public func compareBucketsTodoKinds(a: BucketTodoKind, b: BucketTodoKind) : Order.Order {
         Text.compare(debug_show(a), debug_show(b))

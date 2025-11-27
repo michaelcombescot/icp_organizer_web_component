@@ -2,11 +2,11 @@ import Time "mo:core/Time";
 import Result "mo:core/Result";
 import Option "mo:core/Option";
 import List "mo:core/List";
-import Identifiers "../../shared/identifiers";
+import Nat "mo:base/Nat";
 
 module {
     public type Todo = {
-        identifier: Identifiers.WithID;
+        id: Nat;
         resume: Text;
         description: ?Text;
         scheduledDate: ?Time.Time;

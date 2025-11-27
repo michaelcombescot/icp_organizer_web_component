@@ -1,10 +1,9 @@
 ARCHITECTURE:
-- a coordinator responsible to create buckets dynamically topping every canister (indexes included), and must not be accessible by anyone but the creator and the canisters directly
-- one or several indexes by module, all defined in the dfx.json and used by the frontend.
-- data are stored in buckets, and buckets are created dynamically when needed -> the coordinator keep a pool of new buckets available, and indexes grab them when needed. The pool of new buckets is automatically refilled by the coordinator. 
+- a coordinator is responsible to create buckets and indexes. It as a loop topping every canisters if needed
+- indexes create new items, and handle the complex things (like multi step update on several buckets), otherwise the frontend can directly query relevant buckets
 
 DEPLOYEMENT:
-- When deploying, use the script deploy_local.sh, or see it to understand what is done.
+- When deploying locally, use the script deploy_local.sh, or see it to understand what is done.
 
 UPDATING CODE FOR BUCKET:
 When updating code for a bucket, we need to call the maintenance index upgradeAllBuckets methods, while providing as parameter the bucket type and the wasm code as base64, here is an exemple;

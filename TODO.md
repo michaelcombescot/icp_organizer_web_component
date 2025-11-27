@@ -1,7 +1,7 @@
 a changer après réflexion:
 - dans le coordinateur, penser à cache les principaux pour les indexes et les buckets plutôt que de tout recalculer à chaque fois.
 - AJOUTER UN system inspect PARTOUT
-- ajouter un registry canister, c'est lui qui aura les infos sur les indexes, et c'est lui qui sera appelé par le front.
+- ajouter un registry canister, c'est lui qui aura les infos sur les indexes, et c'est lui qui sera appelé par le front pour reucp les indexes
 - changer le système pour prévenir les buckets/canisters qu'il y a un petit nouveau en event et plus en polling depuis les indexes/buckets
 - remettre les indexes en dynamique, il n'y a que 2 canisters persistants => le coordinateur et le registry
 - modifier les map de buckets dans l'index pour fonctionner avec des arrays a la place, et sauvegarder un id local et un index de bucket plutot que le principal por économiser de la place en mémoire

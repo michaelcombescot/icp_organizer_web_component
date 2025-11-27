@@ -2,6 +2,7 @@ import Array "mo:core/Array";
 import Principal "mo:core/Principal";
 import Map "mo:core/Map";
 import Iter "mo:core/Iter";
+import List "mo:core/List";
 import CanistersKinds "canistersKinds";
 
 shared ({ caller = owner }) persistent actor class Registry() = this {
@@ -12,7 +13,7 @@ shared ({ caller = owner }) persistent actor class Registry() = this {
 
     var coordinatorPrincipal: ?Principal = null;
 
-    var memoryIndexes = Map.empty<CanistersKinds.IndexKind, [Principal]>();
+    var memoryIndexes = Map.empty<CanistersKinds.IndexKind, List.List<Principal>>();
 
     ////////////
     // SYSTEM //
@@ -21,7 +22,7 @@ shared ({ caller = owner }) persistent actor class Registry() = this {
     type Msg = {
         #getIndexes : () -> ();
         #setCoordinator : () -> {coordinatorPrincipalArg : Principal};
-        #updateIndexes : () -> {indexes : [(CanistersKinds.IndexKind, [Principal])]}
+        #addIndex : () -> { kind: CanistersKinds.IndexKind; principal: Principal }
     };
 
     system func inspect({ caller : Principal; msg : Msg }) : Bool {
@@ -29,7 +30,7 @@ shared ({ caller = owner }) persistent actor class Registry() = this {
             case (#setCoordinator(_)) {
                 if ( caller != owner ) { return false; };
             };
-            case (#updateIndexes(_)) {
+            case (#addIndex (_)) {
                 if ( ?caller != coordinatorPrincipal ) { return false; };
             };
             case (#getIndexes(_)) ();
@@ -46,15 +47,18 @@ shared ({ caller = owner }) persistent actor class Registry() = this {
         coordinatorPrincipal := ?coordinatorPrincipalArg;
     };
 
-    public shared func updateIndexes({ indexes: [(CanistersKinds.IndexKind, [Principal])] }) : async () {
-        memoryIndexes := Map.fromIter(indexes.values(), CanistersKinds.compareIndexesKinds);
+    public shared func addIndex({ kind: CanistersKinds.IndexKind; principal: Principal }) : async () {
+        switch ( Map.get(memoryIndexes, CanistersKinds.compareIndexesKinds, kind) ) {
+            case null Map.add(memoryIndexes, CanistersKinds.compareIndexesKinds, kind, List.singleton<Principal>(principal));
+            case (?list) List.add(list, principal);  
+        };
     };
 
     public shared func getIndexes() : async [{ indexKind: CanistersKinds.IndexKind; principals: [Principal] }] {
         Array.fromIter(
             Iter.map(
                 Map.entries(memoryIndexes),
-                func(indexKind, principals) = { indexKind = indexKind; principals = principals }
+                func(indexKind, principals) = { indexKind = indexKind; principals = List.toArray(principals) }
             )
         )
     };

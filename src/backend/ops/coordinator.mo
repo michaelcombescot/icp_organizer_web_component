@@ -33,65 +33,70 @@ shared ({ caller = owner }) persistent actor class Coordinator({ registryInitPri
     let ERR_CAN_ONLY_BE_CALLED_BY_INDEX     = "ERR_CAN_ONLY_BE_CALLED_BY_INDEX";
 
     type APIErrors = {
-        #errorSendIndexesToRegistry;
-        #errorSendIndexToBucket: { bucketPrincipal: Principal; bucketKind: CanistersKinds.BucketKind; };
-        #errorSendBucketsToIndex: { indexPrincipal: Principal; indexKind: CanistersKinds.IndexKind; };
+        #errorSendIndexToRegistry: { kind: CanistersKinds.IndexKind; principal: Principal };
+        #errorSendBucketToIndex: { indexPrincipal: Principal; indexKind: CanistersKinds.IndexKind; bucketPrincipal: Principal; bucketKind: CanistersKinds.BucketKind; };
+        #errorSendIndexToBucket: { bucketPrincipal: Principal; bucketKind: CanistersKinds.BucketKind; indexPrincipal: Principal; indexKind: CanistersKinds.IndexKind; };
     };
 
-    let listAPIErrors = List.empty<APIErrors>();
+    var listAPIErrors = List.empty<APIErrors>();
 
     /////////////
     // CONFIGS //
     /////////////
 
-    let TIMER_INTERVAL_NS   = 20_000_000_000;
+    let TIMER_INTERVAL_NS           = 20_000_000_000;
+
     let TOPPING_THRESHOLD           = 1_000_000_000_000;
     let TOPPING_AMOUNT_BUCKETS      = 1_000_000_000_000;
     let TOPPING_AMOUNT_INDEXES      = 1_000_000_000_000;
+    let TOPPING_AMOUNT_REGISTRY     = 1_000_000_000_000;
 
     let NEW_BUCKET_NB_CYCLES        = 2_000_000_000_000;
+    let NEW_INDEX_NB_CYCLES         = 2_000_000_000_000;
 
     ////////////
     // STATES //
     ////////////
 
-    let registryActor = actor (Principal.toText(owner)) : Registry.Registry;
+    let registryActor = actor (Principal.toText(registryInitPrincipal)) : Registry.Registry;
 
-    let memoryCanisters     = Map.singleton<CanistersKinds.CanisterKind , Map.Map<Principal, ()>>((#registry, registryInitPrincipal));
-
-    var listBucketsPrincipals = List.empty<Principal>();
-    var listIndexesPrincipals = List.empty<Principal>();
+    let memoryCanisters = Map.singleton<CanistersKinds.CanisterKind , Map.Map<Principal, ()>>( (#registry, Map.singleton<Principal, ()>( (registryInitPrincipal, () ) )) );
 
     ////////////
     // SYSTEM //
     ////////////
 
     type Msg = {
-        #handlerUpgradeCanister;
-        #handlerAddIndex : () -> (todo : TodoModel.Todo);
-        #handlerGetIndexes : () -> (id : Nat);
-        #handlerGetBuckets : () -> (principal : Principal);
+        #handlerAddIndex : () -> {nature : CanistersKinds.IndexKind; principal : Principal};
+        #handlerUpgradeCanister : () -> {code : Blob; nature : CanistersKinds.CanisterKind};
+
+        #handlerGiveFreeBucket : () -> Principal;
     };
 
     system func inspect({ arg : Blob; caller : Principal; msg : Msg }) : Bool {
-        // only accept request from the owner or from one of the canister created by the coordinator
-        if ( caller != owner and not Array.concat(listBucketsPrincipals, listIndexesPrincipals).contains(caller) ) { return false; };
-
-        true
+        switch msg {
+            case (#handlerAddIndex(_)) caller != owner;
+            case (#handlerUpgradeCanister(_)) caller != owner;
+            case (#handlerGiveFreeBucket(_)) true;
+        }
     };
 
-    // the timer has 1 main function => topping buckets/indexes with cycles, the amount of cycles will depend on the canister type (index or bucket)
+    // the timer has 2 main function 
+    // => topping buckets/indexes with cycles, the amount of cycles will depend on the canister type (index or bucket)
+    // => handle errors and retry async calls id needed
     system func timer(setGlobalTimer : (Nat64) -> ()) : async () {
+        // topping logic
         for ( (nature, typeMap) in Map.entries(memoryCanisters) ) {
             let toppingAmount = switch (nature) {
                                     case (#indexes(_)) TOPPING_AMOUNT_INDEXES;                        
                                     case (#buckets(_)) TOPPING_AMOUNT_BUCKETS;                
+                                    case (#registry(_)) TOPPING_AMOUNT_REGISTRY;
                                 };
 
 
             for ( canisterPrincipal in Map.keys(typeMap) ) { 
                 let status = await IC.ic.canister_status({ canister_id = canisterPrincipal });
-                if (status.cycles > TOPPING_THRESHOLD) {
+                if (status.cycles < TOPPING_THRESHOLD) {
                     Debug.print("Bucket low on cycles, requesting top-up for " # Principal.toText(canisterPrincipal) # "with " # Nat.toText(toppingAmount) # " cycles");
 
                     try {
@@ -103,6 +108,39 @@ shared ({ caller = owner }) persistent actor class Coordinator({ registryInitPri
             };
         };
 
+        // error handling
+        let tempList = List.empty<APIErrors>();
+        for ( error in List.values(listAPIErrors) ) {
+            switch (error) {
+                case (#errorSendIndexToRegistry(params)) {
+                    try {
+                        ignore registryActor.addIndex(params);
+                    } catch (e) {
+                        Debug.print("Error while sending index to registry: " # Error.message(e));
+                        List.add(tempList, error);
+                    }
+                };
+                case (#errorSendBucketToIndex(params)) {
+                    switch ( params.indexKind ) {
+                        case (#todosIndex) {
+                            try {
+                                ignore (actor(Principal.toText(params.indexPrincipal)) : TodosIndex.TodosIndex).addBucket({ bucketPrincipal = params.bucketPrincipal; bucketKind = params.bucketKind; }));
+                            } catch (e) {
+                                Debug.print("Error while sending bucket to index: " # Error.message(e));
+                                List.add(tempList, error);
+                            }
+                        };
+                    };
+                };
+                case (#errorSendIndexToBucket(params)) {
+                    // TODO
+                };
+            };
+        };
+
+        listAPIErrors := tempList;
+
+        // reset timer
         setGlobalTimer(Nat64.fromIntWrap(Time.now()) + Nat64.fromNat(TIMER_INTERVAL_NS));
     };
 
@@ -117,8 +155,6 @@ shared ({ caller = owner }) persistent actor class Coordinator({ registryInitPri
     // upgrade a canister of a specific type, is to be used in cli with the command (replace for the right canister path):
     // - dfx canister call organizerMaintenance upgradeAllBuckets '(#buckettype, blob "'$(hexdump -ve '1/1 "\\\\%02x"' .dfx/local/canisters/organizerUsersDataBucket/organizerUsersDataBucket.wasm)'")'
     public shared ({ caller }) func handlerUpgradeCanister({ nature : CanistersKinds.CanisterKind; code: Blob.Blob }) : async () {
-        if (caller != owner) { Runtime.trap(ERR_CAN_ONLY_BE_CALLED_BY_OWNER); };
-
         let ?canistersMap = Map.get(memoryCanisters, CanistersKinds.compareCanisterKinds, nature) else Runtime.trap("No canisters of type " # debug_show(nature) # " found");
 
         for ( canisterPrincipal in Map.keys(canistersMap) ) {
@@ -132,61 +168,70 @@ shared ({ caller = owner }) persistent actor class Coordinator({ registryInitPri
 
     // add a new index to the index list
     public shared ({ caller }) func handlerAddIndex({nature: CanistersKinds.IndexKind; principal: Principal}) : async () {
-        if (caller != owner) { Runtime.trap( ERR_CAN_ONLY_BE_CALLED_BY_OWNER ); };
-
-        helperCreateCanister({ canisterType = nature });
+        try {
+            ignore helperCreateCanister({ canisterType = #indexes(nature) });
+        } catch (e) {
+            Debug.print("Cannot create index, error: " # Error.message(e));
+        }
     };
 
     //
-    // INTERCANISTERS CALLS
+    // INDEXES
     //
 
-    // retrieve Principal of all indexes of a specific type
-    public query ({ caller }) func handlerGetIndexes({nature: CanistersKinds.IndexKind}) : async [Principal] {
-        if ( List.contains(listBucketsPrincipals, Principal.equal, caller) ) { Runtime.trap( ERR_CAN_ONLY_BE_CALLED_BY_BUCKETS # " but called by " # debug_show(caller) ); };
-
-        let ?indexesMap = Map.get(memoryCanisters, CanistersKinds.compareCanisterKinds, #indexes(nature)) else Runtime.trap( "No indexes of type " # debug_show(nature) # " found");
-        Array.fromIter( Map.keys(indexesMap) )
-    };
-
-    // retrieve Principal of all buckets of a specific type
-    public shared ({ caller }) func handlerGetBuckets({nature: CanistersKinds.BucketKind}) : async [Principal] {
-        if ( List.contains(helperGetIndexesPrincipals(), Principal.equal, caller) ) { Runtime.trap( ERR_CAN_ONLY_BE_CALLED_BY_INDEX # " but called by " # debug_show(caller) ); };
-
-        let ?bucketsMap = Map.get(memoryCanisters, CanistersKinds.compareCanisterKinds, #buckets(nature)) else Runtime.trap( "No buckets of type " # debug_show(nature) # " found");
-
-        Array.fromIter( Map.keys(bucketsMap) )
+    public shared func handlerGiveFreeBucket({ bucketKind: CanistersKinds.BucketKind }) : async Principal {
+        switch( Map.get(memoryFreeBuckets) )
     };
 
     /////////////
     // HELPERS //
     /////////////
 
+    // send a subtype of canisters to other canisters
+    // main usage:
+    // - send indexes to the registry
+    // - send a set of buckets to indexes
+    // - send a set of indexes to buckets
+    func sendCanistersPrincipals(canistersType: CanistersKinds.CanisterKind) : async () {
+        switch ( canistersType ) {
+            case (#indexes(indexType)) {
+                
+            };
+            case (#buckets(bucketType)) {
+
+            };
+            case (#registry(registryType)) {
+                
+            };
+        };
+    };
+
     func helperCreateCanister({ canisterType : CanistersKinds.CanisterKind }) : async () {
         switch (canisterType) {
-            // for indexes:
-            // - create a new index
-            // - add it to the list of indexes
-            // - add it to the main store
+            case (#registry) (); // registry is never created by the helper
             case(#indexes(indexType)) {
+                // for indexes:
+                // - create a new index
+                // - add it to the list of indexes
+                // - add it to the main store
+
                 let aktor = switch (indexType) {
-                                case (#todosIndex) (with cycles = NEW_BUCKET_NB_CYCLES) TodosIndex.TodosIndex();
+                                case (#todosIndex) await (with cycles = NEW_INDEX_NB_CYCLES) TodosIndex.TodosIndex();
                             };
 
                 let newPrincipal = Principal.fromActor(aktor);  
 
                 // update main store
-                switch ( Map.get(memoryCanisters, CanistersKinds.compareCanisterKinds, #buckets(bucketType)) ) {
-                    case null Map.add(memoryCanisters, CanistersKinds.compareCanisterKinds, #buckets(bucketType), Map.singleton<Principal, ()>(newPrincipal, ()));
+                switch ( Map.get(memoryCanisters, CanistersKinds.compareCanisterKinds, #indexes(indexType)) ) {
+                    case null Map.add(memoryCanisters, CanistersKinds.compareCanisterKinds, #indexes(indexType), Map.singleton<Principal, ()>(newPrincipal, ()));
                     case (?map) Map.add(map, Principal.compare, newPrincipal, ());
                 };
 
-                // update indexes list
-                List.add(listIndexesPrincipals, newPrincipal);
-
                 // update registry
+                let principals = 
+
                 try {
-                    ignore registry.updateIndexes({ indexes = [{ indexKind = indexType; principal = newPrincipal }] });
+                    ignore registryActor.addIndex({ kind = indexType; principal = newPrincipal });
                 } catch (e) {
                     Debug.print("Error while sending indexes to registry: " # Error.message(e));
                     List.add(listAPIErrors, #errorSendIndexesToRegistry);

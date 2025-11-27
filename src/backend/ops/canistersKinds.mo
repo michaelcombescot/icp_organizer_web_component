@@ -6,24 +6,13 @@ module {
     public type CanisterKind = {
         #indexes: IndexKind;
         #buckets: BucketKind;
-        #registry: RegistryKind;
+        #registry;
     };
 
     public func compareCanisterKinds(a: CanisterKind, b: CanisterKind) : Order.Order {
         Text.compare(debug_show(a), debug_show(b))
     };
-
-    // registry
-    public type RegistryKind = {
-        #registry;
-    };
-
-    public let registryKindArray: [RegistryKind] = [#registry];
-
-    public func compareRegistryKinds(a: RegistryKind, b: RegistryKind) : Order.Order {
-        Text.compare(debug_show(a), debug_show(b))
-    };
-
+    
     // indexes
     public type IndexKind = {
         #todosIndex;

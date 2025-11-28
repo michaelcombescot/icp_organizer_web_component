@@ -7,10 +7,12 @@ import Iter "mo:core/Iter";
 import Nat64 "mo:core/Nat64";
 import Array "mo:core/Array";
 import Blob "mo:core/Blob";
-import Time "mo:base/Time";
+import Time "mo:core/Time";
+import List "mo:core/List";
 import Group "../models/groupModel";
 import GroupModel "../models/groupModel";
 import Interfaces "../../shared/interfaces";
+import CanistersKinds "../../ops/canistersKinds";
 
 shared ({ caller = owner }) persistent actor class TodosGroupsBucket() = this {
     let coordinator = actor (Principal.toText(owner)) : Interfaces.Coordinator;    
@@ -31,7 +33,7 @@ shared ({ caller = owner }) persistent actor class TodosGroupsBucket() = this {
     // STATES //
     ////////////
 
-    var memoryIndexes = Array.empty<Principal>();
+    var memoryIndexes = List.empty<Principal>();
 
     var memoryGroups = Map.empty<Nat, GroupModel.Group>();
 
@@ -39,22 +41,25 @@ shared ({ caller = owner }) persistent actor class TodosGroupsBucket() = this {
     // SYSTEM //
     ////////////
 
-    // type Msg = {
-    //     // #createTodo : () -> (todo : TodoModel.Todo);
-    //     // #removeTodo : () -> (id : Nat);
-    //     // #setCoordinator : () -> (principal : Principal);
-    //     // #updateTodo : () -> (todo : TodoModel.Todo)
-    // };
+    type Msg = {
+        #systemAddIndex: () -> { indexPrincipal : Principal};
+    };
 
-    //  system func inspect({ arg : Blob; caller : Principal; msg : Msg }) : Bool {
-    //     // check if the user is connected
-    //     if (Principal.isAnonymous(caller)) { return false; };
+     system func inspect({ arg: Blob; caller : Principal; msg : Msg }) : Bool {
+        // check if the user is connected
+        if (Principal.isAnonymous(caller)) { return false; };
 
-    //     // check payload size
-    //     if (Blob.size(arg) > 5000) { return false; };
+        // check payload size
+        // if (Blob.size(arg) > 5000) { return false; };
 
-    //     true
-    // };
+        switch msg {
+            case (#systemAddIndex(_)) caller == owner;
+        }        
+    };
+
+    public shared func systemAddIndex({ indexPrincipal: Principal }) : async () {
+        List.add(memoryIndexes, indexPrincipal);
+    };
 
     /////////
     // API //

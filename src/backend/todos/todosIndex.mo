@@ -53,18 +53,17 @@ shared ({ caller = owner }) persistent actor class TodosIndex() = this {
     ////////////
 
     type Msg = {
-        #addBucket : () -> { kind: CanistersKinds.BucketTodoKind; principal: Principal };
+        #systemAddBucket : () -> { bucketKind: CanistersKinds.BucketTodoKind; bucketPrincipal: Principal };
 
         #createNewUser : () -> ();
     };
 
     system func inspect({ arg : Blob; caller : Principal; msg : Msg }) : Bool {
-        // check if the user is connected
         if (Principal.isAnonymous(caller)) { return false; };
 
         // check per route
         switch msg {
-            case (#addBucket(_)) return caller == owner;
+            case (#systemAddBucket(_)) return caller == owner;
             case (#createNewUser(_)) return Blob.size(arg) > 1000;
         }
     };
@@ -91,10 +90,10 @@ shared ({ caller = owner }) persistent actor class TodosIndex() = this {
         setGlobalTimer(Nat64.fromIntWrap(Time.now()) + TIMER_INTERVAL_NS);
     };
 
-    public shared func addBucket({ kind : CanistersKinds.BucketTodoKind; principal : Principal }) : async () {
-        switch kind {
-            case (#todosUsersDataBucket) Map.add(memoryBucketsUsersData, Principal.compare, principal, actor(Principal.toText(principal)) : TodosUsersDataBucket.TodosUsersDataBucket);
-            case (#todosGroupsBucket) Map.add(memoryBucketsGroups, Principal.compare, principal, actor(Principal.toText(principal)) : TodosGroupsBucket.TodosGroupsBucket);
+    public shared func systemAddBucket({ bucketKind : CanistersKinds.BucketTodoKind; bucketPrincipal : Principal }) : async () {
+        switch (bucketKind) {
+            case (#todosUsersDataBucket) Map.add(memoryBucketsUsersData, Principal.compare, bucketPrincipal, actor(Principal.toText(bucketPrincipal)) : TodosUsersDataBucket.TodosUsersDataBucket);
+            case (#todosGroupsBucket) Map.add(memoryBucketsGroups, Principal.compare, bucketPrincipal, actor(Principal.toText(bucketPrincipal)) : TodosGroupsBucket.TodosGroupsBucket);
         };
     };
 
@@ -104,17 +103,12 @@ shared ({ caller = owner }) persistent actor class TodosIndex() = this {
 
     // Create a new user.
     // a user is a group with a single associated principal.
-    public shared ({ caller }) func createNewUser() : async Result.Result<{ userBucket: Principal; groupBucket: Principal }, Text> {
+    public shared func createNewUser() : async Result.Result<{ userBucket: Principal; groupBucket: Principal }, Text> {
         // 1) find right user buckets
         // 2) create a new entry in a groups bucket
         // 3) return the buckets principal for both uses buckets
 
-        try {
-            ignore coordinatorActor.handlerGiveFreeBucket({ nature = #todos(#todosUsersDataBucket) });
-        } catch (e) {
-            Debug.print("Error while fetching new bucket: " # Error.message(e));
-            List.add(listAPIErrors, #errorCannotFetchNewBucket(#todosUsersDataBucket));
-        };
+        // TODO
         
 
         #err("not done")

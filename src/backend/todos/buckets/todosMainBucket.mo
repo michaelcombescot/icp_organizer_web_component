@@ -9,12 +9,11 @@ import Array "mo:core/Array";
 import Blob "mo:core/Blob";
 import Time "mo:core/Time";
 import List "mo:core/List";
-import Group "../models/groupModel";
-import GroupModel "../models/groupModel";
 import Interfaces "../../shared/interfaces";
 import CanistersKinds "../../ops/canistersKinds";
+import TodoModels "../models/todosModels";
 
-shared ({ caller = owner }) persistent actor class TodosGroupsBucket() = this {
+shared ({ caller = owner }) persistent actor class TodosMainBucket() = this {
     let coordinator = actor (Principal.toText(owner)) : Interfaces.Coordinator;    
 
     ////////////
@@ -35,7 +34,7 @@ shared ({ caller = owner }) persistent actor class TodosGroupsBucket() = this {
 
     var memoryIndexes = List.empty<Principal>();
 
-    var memoryGroups = Map.empty<Nat, GroupModel.Group>();
+    var memoryGroups = Map.empty<Nat, TodoModels.Group.Group>();
 
     ////////////
     // SYSTEM //
@@ -49,7 +48,7 @@ shared ({ caller = owner }) persistent actor class TodosGroupsBucket() = this {
         };
     };
 
-     system func inspect(params: InspectParams) : Bool {
+    system func inspect(params: InspectParams) : Bool {
         // check if the user is connected
         if (Principal.isAnonymous(params.caller)) { return false; };
 

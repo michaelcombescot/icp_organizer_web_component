@@ -13,7 +13,7 @@ import Runtime "mo:core/Runtime";
 import Iter "mo:core/Iter";
 import CanistersKinds "canistersKinds";
 import TodosUsersDataBucket "../todos/buckets/todosUsersDataBucket";
-import TodosGroupsBucket "../todos/buckets/todosGroupsBucket";
+import TodosMainBucket "../todos/buckets/todosMainBucket";
 import TodosIndex "../todos/todosIndex";
 import Registry "registry";
 
@@ -257,7 +257,7 @@ shared ({ caller = owner }) persistent actor class Coordinator({ registryInitPri
                                 case (#todos(todoBucketType)) {
                                     switch (todoBucketType) {
                                         case (#todosUsersDataBucket) await (with cycles = NEW_BUCKET_NB_CYCLES) TodosUsersDataBucket.TodosUsersDataBucket();
-                                        case (#todosGroupsBucket)    await (with cycles = NEW_BUCKET_NB_CYCLES) TodosGroupsBucket.TodosGroupsBucket();
+                                        case (#todosGroupsBucket)    await (with cycles = NEW_BUCKET_NB_CYCLES) TodosMainBucket.TodosMainBucket();
                                     };
                                 };
                             };
@@ -328,7 +328,7 @@ shared ({ caller = owner }) persistent actor class Coordinator({ registryInitPri
                             #ok( await bucketActor.systemAddIndex({ indexPrincipal = indexPrincipal }) );
                         };
                         case (#todosGroupsBucket) {
-                            let bucketActor = actor(Principal.toText(bucketPrincipal)) : TodosGroupsBucket.TodosGroupsBucket;
+                            let bucketActor = actor(Principal.toText(bucketPrincipal)) : TodosMainBucket.TodosMainBucket;
                             #ok( await bucketActor.systemAddIndex({ indexPrincipal = indexPrincipal }) );
                         };
                     }

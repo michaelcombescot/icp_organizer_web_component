@@ -3,21 +3,14 @@ import Result "mo:core/Result";
 import Text "mo:core/Text";
 import Time "mo:core/Time";
 import Map "mo:core/Map";
-import Array "mo:core/Array";
 import Nat64 "mo:core/Nat64";
-import Runtime "mo:core/Runtime";
 import List "mo:core/List";
 import Blob "mo:core/Blob";
 import Error "mo:core/Error";
-import Debug "mo:base/Debug";
 import TodosUsersDataBucket "buckets/todosUsersDataBucket";
-import TodosGroupsBucket "buckets/todosGroupsBucket";
+import TodosMainBucket "buckets/todosMainBucket";
 import CanistersKinds "../ops/canistersKinds";
 import Interfaces "../shared/interfaces";
-import TodoModel "models/todoModel";
-import TodoListModel "models/todoListModel";
-import GroupModel "models/groupModel";
-import UserDataModel "models/userDataModel";
 
 shared ({ caller = owner }) persistent actor class TodosIndex() = this {
     ////////////
@@ -43,10 +36,10 @@ shared ({ caller = owner }) persistent actor class TodosIndex() = this {
     let coordinatorActor = actor(Principal.toText(owner)) : Interfaces.Coordinator;
 
     let memoryBucketsUsersData = Map.empty<Principal, TodosUsersDataBucket.TodosUsersDataBucket>();
-    let memoryBucketsGroups = Map.empty<Principal, TodosGroupsBucket.TodosGroupsBucket>();
+    let memoryBucketsGroups = Map.empty<Principal, TodosMainBucket.TodosMainBucket>();
 
     var currentUsersDataBucket = actor(Principal.toText(owner)) : TodosUsersDataBucket.TodosUsersDataBucket;
-    var currentGroupsBucket = actor(Principal.toText(owner)) : TodosGroupsBucket.TodosGroupsBucket;
+    var currentGroupsBucket = actor(Principal.toText(owner)) : TodosMainBucket.TodosMainBucket;
 
     ////////////
     // SYSTEM //
@@ -72,15 +65,11 @@ shared ({ caller = owner }) persistent actor class TodosIndex() = this {
         // handling retry for errors
         let newErrors = List.empty<ErrorInterCanisterCall>();
         for ( (i, error) in List.enumerate(listAPIErrors)) {
-            ignore List.remove(i);
-
             switch error {
                 case (#errorCannotFetchNewBucket(bucketType)) {
-                    try {
-                        ignore await setNewCurrentBucket(bucketType);
-                    } catch (e) {
-                        Debug.print("Error while fetching new bucket: " # Error.message(e));
-                        List.add(newErrors, error);
+                    switch ( await setNewCurrentBucket(bucketType) ) {
+                        case (#ok) ();
+                        case (#err(_)) List.add(newErrors, error);
                     };
                 };
             };
@@ -95,7 +84,7 @@ shared ({ caller = owner }) persistent actor class TodosIndex() = this {
     public shared func systemAddBucket({ bucketKind : CanistersKinds.BucketTodoKind; bucketPrincipal : Principal }) : async () {
         switch (bucketKind) {
             case (#todosUsersDataBucket) Map.add(memoryBucketsUsersData, Principal.compare, bucketPrincipal, actor(Principal.toText(bucketPrincipal)) : TodosUsersDataBucket.TodosUsersDataBucket);
-            case (#todosGroupsBucket) Map.add(memoryBucketsGroups, Principal.compare, bucketPrincipal, actor(Principal.toText(bucketPrincipal)) : TodosGroupsBucket.TodosGroupsBucket);
+            case (#todosGroupsBucket) Map.add(memoryBucketsGroups, Principal.compare, bucketPrincipal, actor(Principal.toText(bucketPrincipal)) : TodosMainBucket.TodosMainBucket);
         };
     };
 
@@ -130,12 +119,11 @@ shared ({ caller = owner }) persistent actor class TodosIndex() = this {
 
             switch bucketType {
                 case (#todosUsersDataBucket) currentUsersDataBucket := actor(Principal.toText(principal)) : TodosUsersDataBucket.TodosUsersDataBucket;
-                case (#todosGroupsBucket) currentGroupsBucket := actor(Principal.toText(principal)) : TodosGroupsBucket.TodosGroupsBucket;
+                case (#todosGroupsBucket) currentGroupsBucket := actor(Principal.toText(principal)) : TodosMainBucket.TodosMainBucket;
             };
 
             #ok
         } catch (e) {
-            Debug.print("Error while fetching new bucket: " # Error.message(e));
             #err( "Error while fetching bucket: " # Error.message(e) )
         };
     };

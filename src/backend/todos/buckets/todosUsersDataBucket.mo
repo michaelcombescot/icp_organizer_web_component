@@ -1,15 +1,8 @@
 import Map "mo:core/Map";
-import Result "mo:core/Result";
 import Principal "mo:core/Principal";
-import UserData "../models/userDataModel";
-import Iter "mo:core/Iter";
-import Text "mo:core/Text";
-import Time "mo:core/Time";
-import Array "mo:core/Array";
 import List "mo:core/List";
-import Nat64 "mo:core/Nat64";
 import Interfaces "../../shared/interfaces";
-import UserDataModel "../models/userDataModel";
+import UserDataModel "../models/todosUserDataModel";
 
 shared ({ caller = owner }) persistent actor class TodosUsersDataBucket() = this {
     ////////////
@@ -40,7 +33,7 @@ shared ({ caller = owner }) persistent actor class TodosUsersDataBucket() = this
         #systemAddIndex: () -> { indexPrincipal : Principal};
     };
 
-     system func inspect({ arg : Blob; caller : Principal; msg : Msg }) : Bool {
+    system func inspect({ arg : Blob; caller : Principal; msg : Msg }) : Bool {
         if (Principal.isAnonymous(caller)) { return false; };
 
         // check payload size

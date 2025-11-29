@@ -41,19 +41,23 @@ shared ({ caller = owner }) persistent actor class TodosGroupsBucket() = this {
     // SYSTEM //
     ////////////
 
-    type Msg = {
-        #systemAddIndex: () -> { indexPrincipal : Principal};
+    type InspectParams = {
+        arg: Blob;
+        caller : Principal;
+        msg : {
+            #systemAddIndex: () -> { indexPrincipal : Principal};
+        };
     };
 
-     system func inspect({ arg: Blob; caller : Principal; msg : Msg }) : Bool {
+     system func inspect(params: InspectParams) : Bool {
         // check if the user is connected
-        if (Principal.isAnonymous(caller)) { return false; };
+        if (Principal.isAnonymous(params.caller)) { return false; };
 
         // check payload size
         // if (Blob.size(arg) > 5000) { return false; };
 
-        switch msg {
-            case (#systemAddIndex(_)) caller == owner;
+        switch ( params.msg ) {
+            case (#systemAddIndex(_)) params.caller == owner;
         }        
     };
 

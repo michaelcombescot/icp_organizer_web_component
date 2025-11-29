@@ -143,9 +143,8 @@ shared ({ caller = owner }) persistent actor class Coordinator({ registryInitPri
     // API //
     /////////
 
-    //
-    // ADMIN 
-    //
+    
+    /// ADMIN ///
 
     // upgrade a canister of a specific type, is to be used in cli with the command (replace for the right canister path):
     // - dfx canister call organizerMaintenance upgradeAllBuckets '(#buckettype, blob "'$(hexdump -ve '1/1 "\\\\%02x"' .dfx/local/canisters/organizerUsersDataBucket/organizerUsersDataBucket.wasm)'")'
@@ -170,9 +169,7 @@ shared ({ caller = owner }) persistent actor class Coordinator({ registryInitPri
         }
     };
 
-    //
-    // API FOR INDEXES
-    //
+    /// API FOR INDEXES ///
 
     public shared func handlerGiveFreeBucket({ bucketKind: CanistersKinds.BucketKind }) : async Result.Result<Principal, Text> {
         let ?list = Map.get(memoryFreeBuckets, CanistersKinds.compareBucketsKinds, bucketKind) else return #err("No free buckets of type " # debug_show(bucketKind) # " found");

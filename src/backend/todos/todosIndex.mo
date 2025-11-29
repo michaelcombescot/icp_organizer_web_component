@@ -71,17 +71,19 @@ shared ({ caller = owner }) persistent actor class TodosIndex() = this {
     system func timer(setGlobalTimer : (Nat64) -> ()) : async () {
         // handling retry for errors
         let newErrors = List.empty<ErrorInterCanisterCall>();
-        for (error in List.values(listAPIErrors)) {
+        for ( (i, error) in List.enumerate(listAPIErrors)) {
+            ignore List.remove(i);
+
             switch error {
                 case (#errorCannotFetchNewBucket(bucketType)) {
                     try {
-                        ignore await findNewCurrentBucket(bucketType);
+                        ignore await setNewCurrentBucket(bucketType);
                     } catch (e) {
                         Debug.print("Error while fetching new bucket: " # Error.message(e));
                         List.add(newErrors, error);
                     };
                 };
-            }      
+            };
         };
 
         listAPIErrors := newErrors;
@@ -122,18 +124,19 @@ shared ({ caller = owner }) persistent actor class TodosIndex() = this {
     // HELPERS //
     /////////////
 
-    func findNewCurrentBucket(bucketType: CanistersKinds.BucketTodoKind) : async Result.Result<(), Text> {
-        let principal = try {
-                            await coordinatorActor.handlerGiveFreeBucket({ nature = #todos(bucketType) });
-                        } catch (e) {
-                            return #err("Error while fetching new bucket: " # Error.message(e));
-                        };
+    func setNewCurrentBucket(bucketType: CanistersKinds.BucketTodoKind) : async Result.Result<(), Text> {
+        try {
+            let principal = await coordinatorActor.handlerGiveFreeBucket({ bucketKind = #todos(bucketType) });
 
-        switch bucketType {
-            case (#todosUsersDataBucket) currentUsersDataBucket := actor(Principal.toText(principal)) : TodosUsersDataBucket.TodosUsersDataBucket;
-            case (#todosGroupsBucket) currentGroupsBucket := actor(Principal.toText(principal)) : TodosGroupsBucket.TodosGroupsBucket;
+            switch bucketType {
+                case (#todosUsersDataBucket) currentUsersDataBucket := actor(Principal.toText(principal)) : TodosUsersDataBucket.TodosUsersDataBucket;
+                case (#todosGroupsBucket) currentGroupsBucket := actor(Principal.toText(principal)) : TodosGroupsBucket.TodosGroupsBucket;
+            };
+
+            #ok
+        } catch (e) {
+            Debug.print("Error while fetching new bucket: " # Error.message(e));
+            #err( "Error while fetching bucket: " # Error.message(e) )
         };
-
-        #ok
     };
 }

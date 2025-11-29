@@ -1,12 +1,6 @@
-a changer après réflexion:
-- dans le coordinateur, penser à cache les principaux pour les indexes et les buckets plutôt que de tout recalculer à chaque fois.
-- AJOUTER UN system inspect PARTOUT
-- ajouter un registry canister, c'est lui qui aura les infos sur les indexes, et c'est lui qui sera appelé par le front pour reucp les indexes
-- changer le système pour prévenir les buckets/canisters qu'il y a un petit nouveau en event et plus en polling depuis les indexes/buckets
-- remettre les indexes en dynamique, il n'y a que 2 canisters persistants => le coordinateur et le registry
-- modifier les map de buckets dans l'index pour fonctionner avec des arrays a la place, et sauvegarder un id local et un index de bucket plutot que le principal por économiser de la place en mémoire
-- repenser l'architecture maintenant que je connais les perfs d'aller lire en mémoire vs une DB
-- réfléchir au multi step update, et la meilleure façon de corriger les soucis (probablement avec un système d'erreur et de retry tant que c'est pas o, ça semble le plus clean)
+- avant toute chose, réfléchir à comment gérer une liste ou associé pour pouvoir avoir les helpers de contact d'api gérer eux mêmes le pop d'erreur => MAP ?
+- faire l'index et le modèle de données.
+- index => check que le recup free bucket est clean
 
 
 

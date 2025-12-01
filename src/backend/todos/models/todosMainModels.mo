@@ -3,31 +3,43 @@ import Map "mo:core/Map";
 import Result "mo:core/Result";
 import List "mo:core/List";
 import Option "mo:core/Option";
+import Identifier "../../shared/identifiers";
 
 module {
     public module Group {
-        public type Group = {
-            id: Nat;
-            bucket: Principal;
+        public type Memory = {
+            identifier: Identifier.Identifier;
             name: Text;
             todos: Map.Map<Nat, Todo.Todo>;
-            todoLists: Map.Map<Nat, ()>;
+            todoLists: Map.Map<Nat, TodoList.TodoList>;
             users: Map.Map<Principal, UserGroupPermission>;
+            kind: GroupKind;
             createdAt: Time.Time;
             updatedAt: Time.Time;
             createdBy: Principal;
         };
 
+        public type GroupKind = {
+            #personnal;
+            #collective;
+        };
+
         public type UserGroupPermission = {
-            // can do everything related to the group
+            // can do everything AND remove admins
+            #owner;
+            // can do everything related to the group, exept remove other admins
             #admin;
             // create todo/todolist, invite people
             #user;
             // can only read todos, cannot edit anything
             #visitor;
-            //cannot do anything
+            //cannot do anything (user WAS in the group but was removed)
             #archived;
         };
+
+        /// API ///
+
+        
 
         //
         // API

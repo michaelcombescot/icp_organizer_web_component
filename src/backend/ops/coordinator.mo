@@ -23,6 +23,7 @@ import Registry "registry";
 // - create buckets and indexes
 // - top indexes and canisters with cycles
 // - check if there are free buckets in the bucket pool.The bucket pool is here for the different indexes to pick new active buckets when a buckets return a signal it's full.
+//   The goal of this system is to be able to have canisters knowed by all indexes before the moment they are used.
 shared ({ caller = owner }) persistent actor class Coordinator({ registryInitPrincipal: Principal}) = this {
     /////////////
     // CONFIGS //
@@ -146,8 +147,8 @@ shared ({ caller = owner }) persistent actor class Coordinator({ registryInitPri
     
     /// ADMIN ///
 
-    // upgrade a canister of a specific type, is to be used in cli with the command (replace for the right canister path):
-    // - dfx canister call organizerMaintenance upgradeAllBuckets '(#buckettype, blob "'$(hexdump -ve '1/1 "\\\\%02x"' .dfx/local/canisters/organizerUsersDataBucket/organizerUsersDataBucket.wasm)'")'
+    // upgrade a canister of a specific type, used in cli with the command (replace with the right canister path):
+    // - dfx canister call coordinator handlerUpgradeCanister '(#buckettype, blob "'$(hexdump -ve '1/1 "\\\\%02x"' .dfx/local/canisters/organizerUsersDataBucket/organizerUsersDataBucket.wasm)'")'
     public shared func handlerUpgradeCanister({ nature : CanistersKinds.CanisterKind; code: Blob.Blob }) : async () {
         let ?canistersMap = Map.get(memoryCanisters, CanistersKinds.compareCanisterKinds, nature) else Runtime.trap("No canisters of type " # debug_show(nature) # " found");
 
@@ -251,7 +252,7 @@ shared ({ caller = owner }) persistent actor class Coordinator({ registryInitPri
                                         case (?list) List.size(list);
                                     };
 
-                if ( nbFreeBuckets >= nbIndexes + 1 ) { return; };
+                if ( nbFreeBuckets > nbIndexes  ) { return; };
 
                 let aktor = switch (bucketType) {
                                 case (#todos(todoBucketType)) {

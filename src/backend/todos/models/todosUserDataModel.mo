@@ -1,12 +1,10 @@
 import Map "mo:core/Map";
 import Time "mo:core/Time";
+import Identifier "../../shared/identifiers";
 
 module {
     public type UserData = {
-        id: Principal;
-        bucket: Principal;
-        groups: Map.Map<Nat, ()>;
+        groups: Map.Map<Identifier.Identifier, ()>;
         createdAt: Time.Time;
-        updatedAt: Time.Time;
     };
 }

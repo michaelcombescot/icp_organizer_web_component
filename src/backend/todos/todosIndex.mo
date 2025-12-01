@@ -23,6 +23,8 @@ shared ({ caller = owner }) persistent actor class TodosIndex() = this {
     // ERRORS //
     ////////////
 
+    let ERR_CANNOT_FETCH_NEW_BUCKET = "ERR_CANNOT_FETCH_NEW_BUCKET";
+
     type ErrorInterCanisterCall = {
         #errorCannotFetchNewBucket: CanistersKinds.BucketTodoKind;
     };
@@ -38,8 +40,8 @@ shared ({ caller = owner }) persistent actor class TodosIndex() = this {
     let memoryBucketsUsersData = Map.empty<Principal, TodosUsersDataBucket.TodosUsersDataBucket>();
     let memoryBucketsGroups = Map.empty<Principal, TodosMainBucket.TodosMainBucket>();
 
-    var currentUsersDataBucket = actor(Principal.toText(owner)) : TodosUsersDataBucket.TodosUsersDataBucket;
-    var currentGroupsBucket = actor(Principal.toText(owner)) : TodosMainBucket.TodosMainBucket;
+    var currentUsersDataBucket: ?TodosUsersDataBucket.TodosUsersDataBucket = null;
+    var currentMainBucket: ?TodosMainBucket.TodosMainBucket = null;
 
     ////////////
     // SYSTEM //
@@ -61,26 +63,7 @@ shared ({ caller = owner }) persistent actor class TodosIndex() = this {
         }
     };
 
-    system func timer(setGlobalTimer : (Nat64) -> ()) : async () {
-        // handling retry for errors
-        let newErrors = List.empty<ErrorInterCanisterCall>();
-        for ( (i, error) in List.enumerate(listAPIErrors)) {
-            switch error {
-                case (#errorCannotFetchNewBucket(bucketType)) {
-                    switch ( await setNewCurrentBucket(bucketType) ) {
-                        case (#ok) ();
-                        case (#err(_)) List.add(newErrors, error);
-                    };
-                };
-            };
-        };
-
-        listAPIErrors := newErrors;
-
-        // reset timer
-        setGlobalTimer(Nat64.fromIntWrap(Time.now()) + TIMER_INTERVAL_NS);
-    };
-
+    // called only by the coordinator
     public shared func systemAddBucket({ bucketKind : CanistersKinds.BucketTodoKind; bucketPrincipal : Principal }) : async () {
         switch (bucketKind) {
             case (#todosUsersDataBucket) Map.add(memoryBucketsUsersData, Principal.compare, bucketPrincipal, actor(Principal.toText(bucketPrincipal)) : TodosUsersDataBucket.TodosUsersDataBucket);
@@ -94,15 +77,38 @@ shared ({ caller = owner }) persistent actor class TodosIndex() = this {
 
     // Create a new user.
     // a user is a group with a single associated principal.
-    public shared func createNewUser() : async Result.Result<{ userBucket: Principal; groupBucket: Principal }, Text> {
-        // 1) find right user buckets
-        // 2) create a new entry in a groups bucket
-        // 3) return the buckets principal for both uses buckets
+    public shared ({ caller }) func createNewUser() : async Result.Result<{ userBucket: Principal; groupBucket: Principal }, Text> {
+        // get user and main buckets in //
+        let mainBucketPromise = fetchCurrentMainBucket();
+        let userBucketPromise = fetchCurrentUserDataBucket();
+        
+        let mainBucket =    switch ( await mainBucketPromise ) {
+                                case (#ok(bucket)) bucket;
+                                case (#err(err)) return #err(err);
+                            };
 
-        // TODO
+        let userBucket =    switch ( await userBucketPromise ) {
+                                case (#ok(bucket)) bucket;
+                                case (#err(err)) return #err(err);
+                            };
+
+        // create group
+        let groupIdentifier =   switch ( await mainBucket.handlerCreateNewUserGroup( { userPrincipal = caller }) ) {
+                                    case (#ok(response)) {
+                                        if ( response.isFull ) { currentMainBucket := null; };
+                                        response.groupIdentifier
+                                    };
+                                    case (#err(err)) return #err(err);
+                                };
+
+        // add group to user
+        switch ( await userBucket.createUser({ userPrincipal = caller; groupIdentifier = groupIdentifier }) ) {
+            case (#ok) ();
+            case (#err(err)) return #err(err);
+        };
         
 
-        #err("not done")
+        #ok({ userBucket = currentUsersDataBucket; groupBucket = currentMainBucket; });
     };
 
     ////////////
@@ -113,18 +119,38 @@ shared ({ caller = owner }) persistent actor class TodosIndex() = this {
     // HELPERS //
     /////////////
 
-    func setNewCurrentBucket(bucketType: CanistersKinds.BucketTodoKind) : async Result.Result<(), Text> {
-        try {
-            let principal = await coordinatorActor.handlerGiveFreeBucket({ bucketKind = #todos(bucketType) });
-
-            switch bucketType {
-                case (#todosUsersDataBucket) currentUsersDataBucket := actor(Principal.toText(principal)) : TodosUsersDataBucket.TodosUsersDataBucket;
-                case (#todosGroupsBucket) currentGroupsBucket := actor(Principal.toText(principal)) : TodosMainBucket.TodosMainBucket;
+    func fetchCurrentUserDataBucket() : async Result.Result<TodosUsersDataBucket.TodosUsersDataBucket, Text> {
+        switch (currentUsersDataBucket) {
+            case (?bucket) #ok(bucket);
+            case null {
+                try {
+                    let principal = await coordinatorActor.handlerGiveFreeBucket({ bucketKind = #todos(#todosUsersDataBucket) });
+                    let aktor = actor(Principal.toText(principal)) : TodosUsersDataBucket.TodosUsersDataBucket;
+                    currentUsersDataBucket := ?aktor;
+                    #ok( aktor );  
+                } catch (e) {
+                    currentUsersDataBucket := null;
+                    #err( "Error while fetching bucket: " # Error.message(e) )
+                };
             };
+        }
+    };
+    
 
-            #ok
-        } catch (e) {
-            #err( "Error while fetching bucket: " # Error.message(e) )
-        };
+    func fetchCurrentMainBucket() : async Result.Result<TodosMainBucket.TodosMainBucket, Text> {
+        switch (currentMainBucket) {
+            case (?bucket) #ok(bucket);
+            case null {
+                try {
+                    let principal = await coordinatorActor.handlerGiveFreeBucket({ bucketKind = #todos(#todosUsersDataBucket) });
+                    let aktor = actor(Principal.toText(principal)) : TodosMainBucket.TodosMainBucket;
+                    currentMainBucket := ?aktor;
+                    #ok( aktor );  
+                } catch (e) {
+                    currentMainBucket := null;
+                    #err( ERR_CANNOT_FETCH_NEW_BUCKET # ": " # Error.message(e) )
+                };
+            };
+        }
     };
 }

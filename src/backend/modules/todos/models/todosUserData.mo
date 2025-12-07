@@ -7,4 +7,4 @@ module {
         groups: Map.Map<Identifier.Identifier, ()>;
         createdAt: Time.Time;
     };
-}
+};

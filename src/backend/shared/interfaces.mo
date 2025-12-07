@@ -1,5 +1,5 @@
 import Principal "mo:core/Principal";
-import CanistersKinds "../ops/canistersKinds";
+import CanistersKinds "canistersKinds";
 
 module Interfaces {
     public type Coordinator = actor {

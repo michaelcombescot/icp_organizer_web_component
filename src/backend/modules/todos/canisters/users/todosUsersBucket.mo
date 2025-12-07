@@ -1,0 +1,68 @@
+import UserData "../../models/todosUserData";
+import Map "mo:core/Map";
+import CanistersKinds "../../../../shared/canistersKinds";
+import CanistersMap "../../../../shared/canistersMap";
+import Principal "mo:core/Principal";
+import Result "mo:core/Result";
+import Time "mo:core/Time";
+import Identifiers "../../../../shared/identifiers";
+
+shared ({ caller = owner }) persistent actor class TodosUsersBucket() = this {
+    ////////////
+    // ERRORS //
+    ////////////
+
+    let ERR_USER_ALREADY_EXISTS = "ERR_USER_ALREADY_EXISTS";
+
+    ////////////
+    // MEMORY //
+    ////////////
+
+    var memoryCanisters = CanistersMap.arrayToCanistersMap([]);
+
+    let memoryUsersData = Map.empty<Principal, UserData.UserData>();
+
+    ////////////
+    // SYSTEM //
+    ////////////
+
+    type InspectParams = {
+        arg: Blob;
+        caller : Principal;
+        msg : {
+            #systemUpdateCanistersMap : () -> {canisters: [(CanistersKinds.CanisterKind, [Principal])]};
+
+            #handlerCreateUserData : () -> {userPrincipal : Principal};
+        };
+    };
+
+    system func inspect(params: InspectParams) : Bool {
+        if ( params.caller == Principal.anonymous() ) { return false; };
+
+        switch ( params.msg ) {
+            case (#systemUpdateCanistersMap(_))       params.caller == owner;
+            case (#handlerCreateUserData(_))    CanistersMap.isPrincipalInCanistersMap({ canistersMap = memoryCanisters; principal = params.caller; canisterKind = #indexes(#todosUsersIndex) });
+        }
+    };
+
+    public shared func systemUpdateCanistersMap({ canisters: [(CanistersKinds.CanisterKind, [Principal])] }) : async () {
+        memoryCanisters := CanistersMap.arrayToCanistersMap(canisters);
+    };
+
+    /////////
+    // API //
+    /////////
+
+    public shared func handlerCreateUserData({ userPrincipal: Principal }) : async Result.Result<(), Text> {
+        let ?_ = Map.get(memoryUsersData, Principal.compare, userPrincipal) else return #err(ERR_USER_ALREADY_EXISTS);
+
+        let userData: UserData.UserData = {
+            groups = Map.empty<Identifiers.Identifier, ()>();
+            createdAt = Time.now();
+        };
+
+        Map.add(memoryUsersData, Principal.compare, userPrincipal, userData);
+
+        #ok
+    };
+};

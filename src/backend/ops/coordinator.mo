@@ -11,11 +11,18 @@ import IC "mo:ic";
 import List "mo:core/List";
 import Runtime "mo:core/Runtime";
 import Iter "mo:core/Iter";
-import CanistersKinds "canistersKinds";
-import TodosUsersDataBucket "../todos/buckets/todosUsersDataBucket";
-import TodosMainBucket "../todos/buckets/todosMainBucket";
-import TodosIndex "../todos/todosIndex";
-import Registry "registry";
+import CanistersKinds "../shared/canistersKinds";
+import TodosUsersDataBucket "../modules/todos/canisters/users/todosUsersBucket";
+import TodosUsersIndex "../modules/todos/canisters/users/todosUsersIndex";
+import TodosGroupsBucket "../modules/todos/canisters/groups/todosGroupsBucket";
+import TodosGroupsIndex "../modules/todos/canisters/groups/todosGroupsIndex";
+import TodosRegistry "todosRegistry";
+import CanistersMap "../shared/canistersMap";
+
+type ActorParams = {
+    todosRegistryUsersPrincipal: Principal;
+    todosRegistryIndexprincipal: Principal;
+};
 
 // The coordinator is the main entry point to launch the application.
 // Launching the coordinator will create all necessary buckets and indexes, it's the ONLY entry point, everything else is dynamically created.
@@ -24,7 +31,7 @@ import Registry "registry";
 // - top indexes and canisters with cycles
 // - check if there are free buckets in the bucket pool.The bucket pool is here for the different indexes to pick new active buckets when a buckets return a signal it's full.
 //   The goal of this system is to be able to have canisters knowed by all indexes before the moment they are used.
-shared ({ caller = owner }) persistent actor class Coordinator({ registryInitPrincipal: Principal}) = this {
+shared ({ caller = owner }) persistent actor class Coordinator(params: ActorParams) = this {
     /////////////
     // CONFIGS //
     /////////////
@@ -52,12 +59,11 @@ shared ({ caller = owner }) persistent actor class Coordinator({ registryInitPri
     var listAPIErrors = List.empty<APIErrors>();
 
     ////////////
-    // STATES //
+    // MEMORY //
     ////////////
 
-    let registryActor = actor (Principal.toText(registryInitPrincipal)) : Registry.Registry;
+    let memoryCanisters = CanistersMap.arrayToCanistersMap([]);
 
-    let memoryCanisters     = Map.singleton<CanistersKinds.CanisterKind , Map.Map<Principal, ()>>( (#registry, Map.singleton<Principal, ()>( (registryInitPrincipal, () ) )) );
     let memoryFreeBuckets   = Map.empty<CanistersKinds.BucketKind, List.List<Principal>>();
 
     ////////////
@@ -68,7 +74,7 @@ shared ({ caller = owner }) persistent actor class Coordinator({ registryInitPri
         arg : Blob;
         caller : Principal;
         msg : {
-            #handlerUpgradeCanister : () -> {code : Blob; nature : CanistersKinds.CanisterKind};
+            #handlerUpgradeCanisterKind : () -> {code : Blob; nature : CanistersKinds.CanisterKind};
             #handlerAddIndex : () -> { indexKind: CanistersKinds.IndexKind };
             #handlerGiveFreeBucket : () -> {bucketKind : CanistersKinds.BucketKind};
         }
@@ -77,8 +83,8 @@ shared ({ caller = owner }) persistent actor class Coordinator({ registryInitPri
     system func inspect(params: inspectParams) : Bool {
         switch ( params.msg ) {
             case (#handlerAddIndex(_))          params.caller != owner;
-            case (#handlerUpgradeCanister(_))   params.caller != owner;
-            case (#handlerGiveFreeBucket(_))    true ; // TODO: check with known indexes principals
+            case (#handlerUpgradeCanisterKind(_))   params.caller != owner;
+            case (#handlerGiveFreeBucket(_))    CanistersMap.isPrincipalAnIndex(memoryCanisters, params.caller) ;
         }
     };
 
@@ -149,7 +155,7 @@ shared ({ caller = owner }) persistent actor class Coordinator({ registryInitPri
 
     // upgrade a canister of a specific type, used in cli with the command (replace with the right canister path):
     // - dfx canister call coordinator handlerUpgradeCanister '(#buckettype, blob "'$(hexdump -ve '1/1 "\\\\%02x"' .dfx/local/canisters/organizerUsersDataBucket/organizerUsersDataBucket.wasm)'")'
-    public shared func handlerUpgradeCanister({ nature : CanistersKinds.CanisterKind; code: Blob.Blob }) : async () {
+    public shared func handlerUpgradeCanisterKind({ nature : CanistersKinds.CanisterKind; code: Blob.Blob }) : async () {
         let ?canistersMap = Map.get(memoryCanisters, CanistersKinds.compareCanisterKinds, nature) else Runtime.trap("No canisters of type " # debug_show(nature) # " found");
 
         for ( canisterPrincipal in Map.keys(canistersMap) ) {
@@ -187,8 +193,8 @@ shared ({ caller = owner }) persistent actor class Coordinator({ registryInitPri
 
     func helperCreateCanister({ canisterType : CanistersKinds.CanisterKind }) : async () {
         switch (canisterType) {
-            case (#registry) (); // registry is never created by the helper
-            case(#indexes(indexKind)) {
+            case (#registry(_)) (); // registry is never created by the helper
+            case(#indexes(indexKind) or #buckets(bucketKind)) {
                 // for indexes:
                 // - create a new index
                 // - add it to the list of indexes

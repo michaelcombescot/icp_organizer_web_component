@@ -40,7 +40,7 @@ shared ({ caller = owner }) persistent actor class TodosGroupsIndex() = this {
 
     let coordinatorActor = actor(Principal.toText(owner)) : Interfaces.Coordinator;
 
-    var memoryCanisters = CanistersMap.arrayToCanistersMap([]);
+    let memoryCanisters = CanistersMap.newCanisterMap();
 
     var currentBucket: ?TodosGroupsBucket.TodosGroupsBucket = null;
 
@@ -49,7 +49,7 @@ shared ({ caller = owner }) persistent actor class TodosGroupsIndex() = this {
     ////////////
 
     type Msg = {
-        #systemUpdateCanistersMap : () -> {canisters: [(CanistersKinds.CanisterKind, [Principal])];};
+        #systemAddCanisterToMap : () -> { canisterPrincipal: Principal; canisterKind: CanistersKinds.CanisterKind };
 
         #handlerCreateNewUser : () -> ();
     };
@@ -65,8 +65,8 @@ shared ({ caller = owner }) persistent actor class TodosGroupsIndex() = this {
     };
 
     // called only by the coordinator
-    public shared func systemUpdateCanistersMap({ canisters: [(CanistersKinds.CanisterKind, [Principal])] }) : async () {
-        memoryCanisters := CanistersMap.arrayToCanistersMap(canisters);
+    public shared func systemAddCanisterToMap({ canisterPrincipal: Principal; canisterKind: CanistersKinds.CanisterKind }) : async () {
+        CanistersMap.addCanisterToMap({ map = memoryCanisters; canisterPrincipal = canisterPrincipal; canisterKind = canisterKind });
     };
 
     ///////////

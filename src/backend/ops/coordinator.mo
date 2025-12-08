@@ -11,9 +11,10 @@ import IC "mo:ic";
 import List "mo:core/List";
 import Runtime "mo:core/Runtime";
 import Iter "mo:core/Iter";
+import Option "mo:core/Option";
 import CanistersKinds "../shared/canistersKinds";
-import TodosUsersDataBucket "../modules/todos/canisters/users/todosUsersBucket";
 import TodosUsersIndex "../modules/todos/canisters/users/todosUsersIndex";
+import TodosUsersBucket "../modules/todos/canisters/users/todosUsersBucket";
 import TodosGroupsBucket "../modules/todos/canisters/groups/todosGroupsBucket";
 import TodosGroupsIndex "../modules/todos/canisters/groups/todosGroupsIndex";
 import TodosRegistry "todosRegistry";
@@ -46,14 +47,14 @@ shared ({ caller = owner }) persistent actor class Coordinator(params: ActorPara
     let NEW_BUCKET_NB_CYCLES        = 2_000_000_000_000;
     let NEW_INDEX_NB_CYCLES         = 2_000_000_000_000;
 
+    let NB_FREE_BUCKETS             = 2_000_000_000_000;
+
     ////////////
     // ERRORS //
     ////////////
 
     type APIErrors = {
-        #errorUpdateToRegistry:     { indexKind: CanistersKinds.IndexKind; indexPrincipal: Principal };
-        #errorSendBucketToIndex:    { indexPrincipal: Principal; indexKind: CanistersKinds.IndexKind; bucketPrincipal: Principal; bucketKind: CanistersKinds.BucketKind; };
-        #errorSendIndexToBucket:    { bucketPrincipal: Principal; bucketKind: CanistersKinds.BucketKind; indexPrincipal: Principal };
+        #errorSendPrincipalToCanister: { targetPrincipal: Principal; targetKind: CanistersKinds.CanisterKind; canisterKind: CanistersKinds.CanisterKind; canisterPrincipal: Principal };
     };
 
     var listAPIErrors = List.empty<APIErrors>();
@@ -62,7 +63,7 @@ shared ({ caller = owner }) persistent actor class Coordinator(params: ActorPara
     // MEMORY //
     ////////////
 
-    let memoryCanisters = CanistersMap.arrayToCanistersMap([]);
+    let memoryCanisters = CanistersMap.newCanisterMap();
 
     let memoryFreeBuckets   = Map.empty<CanistersKinds.BucketKind, List.List<Principal>>();
 
@@ -88,61 +89,11 @@ shared ({ caller = owner }) persistent actor class Coordinator(params: ActorPara
         }
     };
 
-    // the timer has 2 main function 
-    // => topping buckets/indexes with cycles, the amount of cycles will depend on the canister type (index or bucket)
-    // => handle errors and retry async calls id needed
     system func timer(setGlobalTimer : (Nat64) -> ()) : async () {
-        // topping logic
-        for ( (nature, typeMap) in Map.entries(memoryCanisters) ) {
-            let toppingAmount = switch (nature) {
-                                    case (#indexes(_)) TOPPING_AMOUNT_INDEXES;                        
-                                    case (#buckets(_)) TOPPING_AMOUNT_BUCKETS;                
-                                    case (#registry(_)) TOPPING_AMOUNT_REGISTRY;
-                                };
+        await helperTopCanisters();
+        await helperCreateNewFreeBuckets();
+        await helperHandleErrors();
 
-
-            for ( canisterPrincipal in Map.keys(typeMap) ) { 
-                let status = await IC.ic.canister_status({ canister_id = canisterPrincipal });
-                if (status.cycles < TOPPING_THRESHOLD) {
-                    Debug.print("Bucket low on cycles, requesting top-up for " # Principal.toText(canisterPrincipal) # "with " # Nat.toText(toppingAmount) # " cycles");
-
-                    try {
-                        ignore (with cycles = toppingAmount) IC.ic.deposit_cycles({ canister_id = canisterPrincipal });
-                    } catch (e) {
-                        Debug.print("Error while topping up bucket " # Principal.toText(canisterPrincipal) # ": " # Error.message(e));
-                    };
-                };
-            };
-        };
-
-        // api errors retry
-        let tempList = List.empty<APIErrors>();
-        for ( error in List.values(listAPIErrors) ) {
-            switch (error) {
-                case (#errorUpdateToRegistry(params)) {
-                    switch (await helperUpdateRegistry(params)) {
-                        case (#ok) ();
-                        case (#err(_)) List.add(tempList, error); 
-                    };
-                };
-                case (#errorSendBucketToIndex(params)) {
-                    switch ( await helperSendBucketToIndexes(params) ) {
-                        case (#ok) ();
-                        case (#err(_)) List.add(tempList, error);
-                    };
-                };
-                case (#errorSendIndexToBucket(params)) {
-                    switch ( await helperSendIndexToBucket(params) ) {
-                        case (#ok) ();
-                        case (#err(_)) List.add(tempList, error);
-                    }
-                };
-            };
-        };
-
-        listAPIErrors := tempList;
-
-        // reset timer
         setGlobalTimer(Nat64.fromIntWrap(Time.now()) + Nat64.fromNat(TIMER_INTERVAL_NS));
     };
 
@@ -192,185 +143,152 @@ shared ({ caller = owner }) persistent actor class Coordinator(params: ActorPara
     /////////////
 
     func helperCreateCanister({ canisterType : CanistersKinds.CanisterKind }) : async () {
-        switch (canisterType) {
-            case (#registry(_)) (); // registry is never created by the helper
-            case(#indexes(indexKind) or #buckets(bucketKind)) {
-                // for indexes:
-                // - create a new index
-                // - add it to the list of indexes
-                // - add it to the main store
+        var newPrincipal: ?Principal = null;
 
-                let aktor = switch (indexKind) {
-                                case (#todosIndex) await (with cycles = NEW_INDEX_NB_CYCLES) TodosIndex.TodosIndex();
-                            };
-
-                let newPrincipal = Principal.fromActor(aktor);  
-
-                // update main store
-                switch ( Map.get(memoryCanisters, CanistersKinds.compareCanisterKinds, #indexes(indexKind)) ) {
-                    case null Map.add(memoryCanisters, CanistersKinds.compareCanisterKinds, #indexes(indexKind), Map.singleton<Principal, ()>(newPrincipal, ()));
-                    case (?map) Map.add(map, Principal.compare, newPrincipal, ());
+        try {
+            switch (canisterType) {
+                case (#registries(_)) (); // registry is never created by the helper
+                case (#indexes(indexKind)) {
+                    switch (indexKind) {
+                        case (#todosUsersIndex)     newPrincipal := ?Principal.fromActor(await (with cycles = NEW_INDEX_NB_CYCLES) TodosUsersIndex.TodosUsersIndex());
+                        case (#todosGroupsIndex)    newPrincipal := ?Principal.fromActor(await (with cycles = NEW_INDEX_NB_CYCLES) TodosGroupsIndex.TodosGroupsIndex());
+                    };
                 };
-
-                // update registry
-                switch ( await helperUpdateRegistry({ indexKind = indexKind; indexPrincipal = newPrincipal; }) ) {
-                    case (#ok) ();
-                    case (#err(_)) List.add(listAPIErrors, #errorUpdateToRegistry({ indexKind = indexKind; indexPrincipal = newPrincipal; }));
-                };
-
-                // send new index to all buckets
-                switch ( indexKind ) {
-                    case (#todosIndex) {
-                        for (bucketData in helperFindBucketsForIndex(indexKind).values()) {
-                            let params = { bucketPrincipal = bucketData.bucketPrincipal; bucketKind = bucketData.bucketKind; indexPrincipal = newPrincipal };
-
-                            switch ( await helperSendIndexToBucket(params) ) {
-                                case (#ok) ();
-                                case (#err(_)) List.add(listAPIErrors, #errorSendIndexToBucket(params));
+                case (#buckets(bucketKind)) {
+                    switch (bucketKind) {
+                        case (#todos(todoBucketKind)) {
+                            switch (todoBucketKind) {
+                                case (#todosUsersBucket)  newPrincipal := ?Principal.fromActor(await (with cycles = NEW_BUCKET_NB_CYCLES) TodosUsersBucket.TodosUsersBucket());
+                                case (#todosGroupsBucket) newPrincipal := ?Principal.fromActor(await (with cycles = NEW_BUCKET_NB_CYCLES) TodosGroupsBucket.TodosGroupsBucket());
                             };
                         };
                     };
+
+                    let ?newPrincipalValue = newPrincipal else { Debug.print("newPrincipal has not been set"); return };
+
+                    switch ( Map.get(memoryFreeBuckets, CanistersKinds.compareBucketsKinds, bucketKind) ) {
+                        case null Map.add(memoryFreeBuckets, CanistersKinds.compareBucketsKinds, bucketKind, List.singleton(newPrincipalValue));
+                        case (?list) List.add(list, newPrincipalValue);
+                    };
                 };
             };
-            case(#buckets(bucketType)) {
-                // for buckets:
-                // - create a new bucket
-                // - check if a new bucket is needed (the number of free buckets per type must at least be equal to the number of associated indexes)
-                // - add it to the list of free buckets
-                // - add it to the main store
-                let indexKind = switch ( bucketType ) {
-                                    case (#todos(todoBucketType)) {
-                                        switch (todoBucketType) {
-                                            case (#todosUsersDataBucket) #indexes(#todosIndex);
-                                            case (#todosGroupsBucket)    #indexes(#todosIndex);
-                                        };
-                                    };
-                                };
+        } catch (e) {
+            Debug.print("Cannot create canister of type " # debug_show(canisterType) # ", error: " # Error.message(e));
+        };
 
+        switch (newPrincipal) {
+            case null (); // TODO add error to retry
+            case (?newPrincipalValue) {
+                // add canister to canistersMap
+                CanistersMap.addCanisterToMap({ map = memoryCanisters; canisterPrincipal = newPrincipalValue; canisterKind = canisterType });
 
-                let nbIndexes = switch ( Map.get(memoryCanisters, CanistersKinds.compareCanisterKinds, indexKind) ) {
-                                    case null 0;
-                                    case (?map) Map.size(map);
-                                };
-                    
-                let nbFreeBuckets = switch ( Map.get(memoryFreeBuckets, CanistersKinds.compareBucketsKinds, bucketType) ) {
-                                        case null 0;
-                                        case (?list) List.size(list);
-                                    };
-
-                if ( nbFreeBuckets > nbIndexes  ) { return; };
-
-                let aktor = switch (bucketType) {
-                                case (#todos(todoBucketType)) {
-                                    switch (todoBucketType) {
-                                        case (#todosUsersDataBucket) await (with cycles = NEW_BUCKET_NB_CYCLES) TodosUsersDataBucket.TodosUsersDataBucket();
-                                        case (#todosGroupsBucket)    await (with cycles = NEW_BUCKET_NB_CYCLES) TodosMainBucket.TodosMainBucket();
-                                    };
-                                };
-                            };
-
-                let newPrincipal = Principal.fromActor(aktor);
-
-                // update free buckets store
-                switch ( Map.get(memoryFreeBuckets, CanistersKinds.compareBucketsKinds, bucketType) ) {
-                    case (?list) List.add(list, newPrincipal);
-                    case null Map.add(memoryFreeBuckets, CanistersKinds.compareBucketsKinds, bucketType, List.singleton<Principal>(newPrincipal));
-                };
-
-                // update main store
-                switch ( Map.get(memoryCanisters, CanistersKinds.compareCanisterKinds, #buckets(bucketType)) ) {
-                    case null Map.add(memoryCanisters, CanistersKinds.compareCanisterKinds, #buckets(bucketType), Map.singleton<Principal, ()>(newPrincipal, ()));
-                    case (?map) Map.add(map, Principal.compare, newPrincipal, ());
-                };
-
-                // send new bucket to all indexes
-                switch ( bucketType ) {
-                    case (#todos(_)) {
-                        for (indexPrincipal in helperFindIndexesPrincipals(#todosIndex).values()) {
-                            let params = { indexPrincipal = indexPrincipal; indexKind = #todosIndex; bucketPrincipal = newPrincipal; bucketKind = bucketType; };
-
-                            switch ( await helperSendBucketToIndexes(params) ) {
-                                case (#ok) ();
-                                case (#err(_)) List.add(listAPIErrors, #errorSendBucketToIndex(params));
-                            }; 
-                        };
+                // send the new principal to all canisters
+                for ( (kind, typeMap) in Map.entries(memoryCanisters) ) {
+                    for ( canisterPrincipal in Map.keys(typeMap) ) {
+                        await helperSendPrincipalToCanister({ targetPrincipal = canisterPrincipal; targetKind = kind; canisterPrincipal = newPrincipalValue; canisterKind = canisterType });
                     };
                 };
             };
         };
     };
 
-    func helperUpdateRegistry({ indexKind: CanistersKinds.IndexKind; indexPrincipal: Principal }) : async Result.Result<(), Text> {
+    func helperSendPrincipalToCanister({ targetPrincipal: Principal; targetKind: CanistersKinds.CanisterKind; canisterPrincipal: Principal; canisterKind : CanistersKinds.CanisterKind; }) : async () {
         try {
-            #ok( await registryActor.addIndex({ kind = indexKind; principal = indexPrincipal }) );
-        } catch (e) {
-            #err( "Error while sending indexes to registry: " # Error.message(e) )
-        }  
-    };
-
-    func helperSendBucketToIndexes({ indexPrincipal: Principal; indexKind: CanistersKinds.IndexKind; bucketPrincipal: Principal; bucketKind: CanistersKinds.BucketKind }) : async Result.Result<(), Text> {
-        let bucketType =    switch (bucketKind) {
-                                case (#todos(bucketType)) bucketType;
-                            };
-
-        try {
-            switch (indexKind) {
-                case (#todosIndex) {
-                    let aktor = actor(Principal.toText(indexPrincipal)) : TodosIndex.TodosIndex;
-                    #ok( await aktor.systemAddBucket({ bucketKind = bucketType; bucketPrincipal = bucketPrincipal }));
+            switch (targetKind) {
+                case (#registries(regisryKind)) {
+                    switch (regisryKind) {
+                        case (#todosRegistry)  await (actor(Principal.toText(targetPrincipal)) : TodosRegistry.TodosRegistry).systemAddCanisterToMap({ canisterPrincipal = canisterPrincipal; canisterKind = canisterKind });
+                    };
                 };
-            };
-        } catch (e) {
-            #err( "Error while sending buckets to index: " # Error.message(e) )
-        }
-    };
-
-    func helperSendIndexToBucket({ bucketPrincipal: Principal; bucketKind: CanistersKinds.BucketKind; indexPrincipal: Principal }) : async Result.Result<(), Text> {
-        try {
-            switch (bucketKind) {
-                case (#todos(bucketType)) {
-                    switch (bucketType) {
-                        case (#todosUsersDataBucket) {
-                            let bucketActor = actor(Principal.toText(bucketPrincipal)) : TodosUsersDataBucket.TodosUsersDataBucket;
-                            #ok( await bucketActor.systemAddIndex({ indexPrincipal = indexPrincipal }) );
+                case (#indexes(indexKind)) {
+                    switch (indexKind) {
+                        case (#todosUsersIndex)     await (actor(Principal.toText(targetPrincipal)) : TodosUsersIndex.TodosUsersIndex).systemAddCanisterToMap({ canisterPrincipal = canisterPrincipal; canisterKind = canisterKind });
+                        case (#todosGroupsIndex)    await (actor(Principal.toText(targetPrincipal)) : TodosGroupsIndex.TodosGroupsIndex).systemAddCanisterToMap({ canisterPrincipal = canisterPrincipal; canisterKind = canisterKind });
+                    };
+                };
+                case (#buckets(bucketKind)) {
+                    switch (bucketKind) {
+                        case (#todos(todoBucketKind)) {
+                            switch (todoBucketKind) {
+                                case (#todosUsersBucket)  await (actor(Principal.toText(targetPrincipal)) : TodosUsersBucket.TodosUsersBucket).systemAddCanisterToMap({ canisterPrincipal = canisterPrincipal; canisterKind = canisterKind });
+                                case (#todosGroupsBucket) await (actor(Principal.toText(targetPrincipal)) : TodosGroupsBucket.TodosGroupsBucket).systemAddCanisterToMap({ canisterPrincipal = canisterPrincipal; canisterKind = canisterKind });
+                            };
                         };
-                        case (#todosGroupsBucket) {
-                            let bucketActor = actor(Principal.toText(bucketPrincipal)) : TodosMainBucket.TodosMainBucket;
-                            #ok( await bucketActor.systemAddIndex({ indexPrincipal = indexPrincipal }) );
-                        };
-                    }
+                    };
                 };
             }
         } catch (e) {
-            #err( "Error while sending indexes to bucket: " # Error.message(e) )
+            Debug.print("Cannot send principal to canister, error: " # Error.message(e));
+            List.add(listAPIErrors, #errorSendPrincipalToCanister({ targetPrincipal = targetPrincipal; targetKind = targetKind; canisterKind = canisterKind; canisterPrincipal = canisterPrincipal }));
         }
     };
 
-    func helperFindIndexesPrincipals(indexKind: CanistersKinds.IndexKind) : [Principal] {
-        switch ( Map.get(memoryCanisters, CanistersKinds.compareCanisterKinds, #indexes(indexKind)) ) {
-            case null [];
-            case (?map) Iter.toArray(Map.keys(map));
-        }
+    func helperTopCanisters() : async () {
+        for ( (nature, typeMap) in Map.entries(memoryCanisters) ) {
+            let toppingAmount = switch (nature) {
+                                    case (#indexes(_)) TOPPING_AMOUNT_INDEXES;                        
+                                    case (#buckets(_)) TOPPING_AMOUNT_BUCKETS;                
+                                    case (#registries(_)) TOPPING_AMOUNT_REGISTRY;
+                                };
+
+
+            for ( canisterPrincipal in Map.keys(typeMap) ) { 
+                let status = await IC.ic.canister_status({ canister_id = canisterPrincipal });
+                if (status.cycles < TOPPING_THRESHOLD) {
+                    Debug.print("Bucket low on cycles, requesting top-up for " # Principal.toText(canisterPrincipal) # "with " # Nat.toText(toppingAmount) # " cycles");
+
+                    try {
+                        ignore (with cycles = toppingAmount) IC.ic.deposit_cycles({ canister_id = canisterPrincipal });
+                    } catch (e) {
+                        Debug.print("Error while topping up bucket " # Principal.toText(canisterPrincipal) # ": " # Error.message(e));
+                    };
+                };
+            };
+        };
     };
 
-    func helperFindBucketsForIndex(indexKind: CanistersKinds.IndexKind) : [{bucketKind: CanistersKinds.BucketKind; bucketPrincipal: Principal}] {
-        let list = List.empty<{bucketKind: CanistersKinds.BucketKind; bucketPrincipal: Principal}>();
+    func helperCreateNewFreeBuckets() : async () {
+        for ( (nature, typeMap) in Map.entries(memoryCanisters) ) {
+            switch (nature) {
+                case (#indexes(_) or #registries(_)) ();
+                case (#buckets(bucketKind)) {
+                    let nbFreeBuckets = switch ( Map.get(memoryFreeBuckets, CanistersKinds.compareBucketsKinds, bucketKind) ) {
+                                            case null 0;
+                                            case (?list) List.size(list);
+                                        };
 
-        switch ( indexKind ) {
-            case (#todosIndex) {
-                for (bucketKind in CanistersKinds.bucketTodoKindArray.values()) {
-                    switch ( Map.get(memoryCanisters, CanistersKinds.compareCanisterKinds, #buckets(#todos(bucketKind))) ) {
-                        case null ();
-                        case (?map) {
-                            for (principal in Map.keys(map)) {
-                                List.add( list, {bucketKind = #todos(bucketKind); bucketPrincipal = principal} );  
-                            };
-                        };
+                    let numberOfIndexes =   switch (nature) {
+                                                case (#indexes(_)) Map.size(typeMap);
+                                                case _ 0;
+                                            };
+
+                    var i = 0;
+                    while ( i + nbFreeBuckets <= numberOfIndexes) {
+                        
+                        i := i + 1;
+                    };
+                        
+                };
+            };
+        };
+    };
+
+    func helperHandleErrors() : async () {
+        // api errors retry
+        let tempList = List.empty<APIErrors>();
+        for ( error in List.values(listAPIErrors) ) {
+            switch (error) {
+                case (#errorSendPrincipalToCanister(params)) {
+                    try {
+                        await helperSendPrincipalToCanister(params);
+                    } catch (e) {
+                        Debug.print("Cannot send principal to canister, error: " # Error.message(e));
+                        List.add(tempList, #errorSendPrincipalToCanister(params));
                     };
                 };
             };
         };
 
-        List.toArray(list)
+        listAPIErrors := tempList;
     };
 };

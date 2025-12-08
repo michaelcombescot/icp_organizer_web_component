@@ -6,7 +6,7 @@ module {
     public type CanisterKind = {
         #indexes: IndexKind;
         #buckets: BucketKind;
-        #registry: RegistryKind;
+        #registries: RegistryKind;
     };
 
     public func compareCanisterKinds(a: CanisterKind, b: CanisterKind) : Order.Order {

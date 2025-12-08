@@ -12,7 +12,7 @@ shared ({ caller = owner }) persistent actor class TodosRegistry() = this {
     // MEMORY //
     ////////////
 
-    var memoryCanisters = CanistersMap.arrayToCanistersMap([]);
+    let memoryCanisters = CanistersMap.newCanisterMap();
 
     var coordinatorPrincipal : ?Principal = null;
 
@@ -24,9 +24,10 @@ shared ({ caller = owner }) persistent actor class TodosRegistry() = this {
         arg: Blob;
         caller : Principal;
         msg : {
-            #handlerGetIndexes : () -> (kind : CanistersKinds.IndexKind);
+            #systemAddCanisterToMap : () -> { canisterPrincipal: Principal; canisterKind: CanistersKinds.CanisterKind };
             #systemSetCoordinator : () -> {coordinatorPrincipalArg : Principal};
-            #systemUpdateCanistersMap : () -> {canisters : [(CanistersKinds.CanisterKind, [Principal])]};
+
+            #handlerGetIndexes : () -> (kind : CanistersKinds.IndexKind);
         };
     };
 
@@ -34,14 +35,14 @@ shared ({ caller = owner }) persistent actor class TodosRegistry() = this {
         if ( params.caller == Principal.anonymous() ) { return false; };
 
         switch ( params.msg ) {
-            case (#systemUpdateCanistersMap(_))   ?params.caller == coordinatorPrincipal;
+            case (#systemAddCanisterToMap(_))   ?params.caller == coordinatorPrincipal;
             case (#systemSetCoordinator(_))       params.caller == owner;
             case (#handlerGetIndexes(_))          true
         }
     };
 
-    public shared func systemUpdateCanistersMap({ canisters: [(CanistersKinds.CanisterKind, [Principal])] }) : async () {
-        memoryCanisters := CanistersMap.arrayToCanistersMap(canisters);
+    public shared func systemAddCanisterToMap({ canisterPrincipal: Principal; canisterKind: CanistersKinds.CanisterKind }) : async () {
+        CanistersMap.addCanisterToMap({ map = memoryCanisters; canisterPrincipal = canisterPrincipal; canisterKind = canisterKind });
     };
 
     public shared func systemSetCoordinator({ coordinatorPrincipalArg: Principal }) : async () {

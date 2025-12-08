@@ -22,7 +22,7 @@ shared ({ caller = owner }) persistent actor class TodosGroupsBucket() = this {
     /////////////
 
     let CONFIG_MAX_NUMBER_ENTRIES = 1000;
-    let CONFIG_MAX_TODOS_PER_GROUP = 1000;
+    let CONFIG_MAX_TODOS_PER_GROUP = 10000;
 
     ////////////
     // ERRORS //
@@ -34,7 +34,7 @@ shared ({ caller = owner }) persistent actor class TodosGroupsBucket() = this {
     // STATES //
     ////////////
 
-    var memoryCanisters = CanistersMap.arrayToCanistersMap([]);
+    let memoryCanisters = CanistersMap.newCanisterMap();
 
     var memoryGroups = Map.empty<Nat, Group.Group>();
 
@@ -46,7 +46,7 @@ shared ({ caller = owner }) persistent actor class TodosGroupsBucket() = this {
         arg: Blob;
         caller : Principal;
         msg : {
-            #systemUpdateCanistersMap : () -> {canisters: [(CanistersKinds.CanisterKind, [Principal])]};
+            #systemAddCanisterToMap : () -> { canisterPrincipal: Principal; canisterKind: CanistersKinds.CanisterKind };
 
             #handlerCreateNewUserGroup : () -> {userPrincipal : Principal};
         };
@@ -61,13 +61,13 @@ shared ({ caller = owner }) persistent actor class TodosGroupsBucket() = this {
 
         // check specific right for each route
         switch ( params.msg ) {
-            case (#systemUpdateCanistersMap(_))           params.caller == owner;
+            case (#systemAddCanisterToMap(_))           params.caller == owner;
             case (#handlerCreateNewUserGroup(_))    Map.size(memoryGroups) <= CONFIG_MAX_NUMBER_ENTRIES;
         }
     };
 
-    public shared func systemUpdateCanistersMap({ canisters: [(CanistersKinds.CanisterKind, [Principal])] }) : async () {
-        memoryCanisters := CanistersMap.arrayToCanistersMap(canisters);
+    public shared func systemAddCanisterToMap({ canisterPrincipal: Principal; canisterKind: CanistersKinds.CanisterKind }) : async () {
+        CanistersMap.addCanisterToMap({ map = memoryCanisters; canisterPrincipal = canisterPrincipal; canisterKind = canisterKind });
     };
 
     /////////

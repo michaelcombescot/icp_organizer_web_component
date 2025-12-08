@@ -18,7 +18,7 @@ shared ({ caller = owner }) persistent actor class TodosUsersBucket() = this {
     // MEMORY //
     ////////////
 
-    var memoryCanisters = CanistersMap.arrayToCanistersMap([]);
+    let memoryCanisters = CanistersMap.newCanisterMap();
 
     let memoryUsersData = Map.empty<Principal, UserData.UserData>();
 
@@ -30,7 +30,7 @@ shared ({ caller = owner }) persistent actor class TodosUsersBucket() = this {
         arg: Blob;
         caller : Principal;
         msg : {
-            #systemUpdateCanistersMap : () -> {canisters: [(CanistersKinds.CanisterKind, [Principal])]};
+            #systemAddCanisterToMap : () -> { canisterPrincipal: Principal; canisterKind: CanistersKinds.CanisterKind };
 
             #handlerCreateUserData : () -> {userPrincipal : Principal};
         };
@@ -40,13 +40,13 @@ shared ({ caller = owner }) persistent actor class TodosUsersBucket() = this {
         if ( params.caller == Principal.anonymous() ) { return false; };
 
         switch ( params.msg ) {
-            case (#systemUpdateCanistersMap(_))       params.caller == owner;
+            case (#systemAddCanisterToMap(_))       params.caller == owner;
             case (#handlerCreateUserData(_))    CanistersMap.isPrincipalInCanistersMap({ canistersMap = memoryCanisters; principal = params.caller; canisterKind = #indexes(#todosUsersIndex) });
         }
     };
 
-    public shared func systemUpdateCanistersMap({ canisters: [(CanistersKinds.CanisterKind, [Principal])] }) : async () {
-        memoryCanisters := CanistersMap.arrayToCanistersMap(canisters);
+    public shared func systemAddCanisterToMap({ canisterPrincipal: Principal; canisterKind: CanistersKinds.CanisterKind }) : async () {
+        CanistersMap.addCanisterToMap({ map = memoryCanisters; canisterPrincipal = canisterPrincipal; canisterKind = canisterKind });
     };
 
     /////////

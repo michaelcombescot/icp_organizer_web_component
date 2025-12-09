@@ -7,7 +7,6 @@ import Nat64 "mo:core/Nat64";
 import List "mo:core/List";
 import Blob "mo:core/Blob";
 import Error "mo:core/Error";
-import Debug "mo:core/Debug";
 import Runtime "mo:core/Runtime";
 import CanistersKinds "../../../../shared/canistersKinds";
 import Interfaces "../../../../shared/interfaces";
@@ -16,12 +15,6 @@ import TodosGroupsBucket "todosGroupsBucket";
 
 // the goal of an index is to find or request the right bucket when we don't know beforehand which bucket to use, in the majority of cases to create a new object
 shared ({ caller = owner }) persistent actor class TodosGroupsIndex() = this {
-    ////////////
-    // CONFIG //
-    ////////////
-
-    let TIMER_INTERVAL_NS: Nat64 = 60_000_000_000;
-
     ////////////
     // ERRORS //
     ////////////

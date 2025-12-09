@@ -68,14 +68,18 @@ shared ({ caller = owner }) persistent actor class Coordinator(todosRegistryPrin
         msg : {
             #handlerUpgradeCanisterKind : () -> {code : Blob; nature : CanistersKinds.CanisterKind};
             #handlerAddIndex : () -> { indexKind: CanistersKinds.IndexKind };
+            #handlerGetCanisters: () -> ();
+
             #handlerGiveFreeBucket : () -> {bucketKind : CanistersKinds.BucketKind};
         }
     };
 
     system func inspect(params: inspectParams) : Bool {
         switch ( params.msg ) {
-            case (#handlerAddIndex(_))          params.caller != owner;
-            case (#handlerUpgradeCanisterKind(_))   params.caller != owner;
+            case (#handlerAddIndex(_))              params.caller == owner;
+            case (#handlerUpgradeCanisterKind(_))   params.caller == owner;
+            case (#handlerGetCanisters(_))             params.caller == owner;
+
             case (#handlerGiveFreeBucket(_))    CanistersMap.isPrincipalAnIndex(memoryCanisters, params.caller) ;
         }
     };
@@ -116,6 +120,10 @@ shared ({ caller = owner }) persistent actor class Coordinator(todosRegistryPrin
         } catch (e) {
             Debug.print("Cannot create index, error: " # Error.message(e));
         }
+    };
+
+    public query func handlerGetCanisters() : async () {
+        Debug.print("check buckets");
     };
 
     /// API FOR INDEXES ///

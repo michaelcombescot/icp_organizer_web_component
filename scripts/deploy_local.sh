@@ -1,12 +1,14 @@
 #!/bin/bash
 
-dfx deploy registry
-dfx deploy coordinator
-# do the command to save the coordinator principal in the resitry calling setCoordinator
-# do the command to create the first index calling the coordinator
+dfx deploy organizerTodosRegistry
+dfx deploy organizerCoordinator
 
-# we need to generate the code for all buckets, in order to be able to:
-# - transfer the wasm file to the maintenance canister when we need to upgrade the code of a bucket
-# - having the declarations available for the frontend to access a bucket directly without requesting the associated index
-dfx generate organizerUsersDataBucket
+dfx generate organizerGroupsBucket
+dfx generate organizerGroupsIndex
+
+dfx generate organizerUsersBucket
+dfx generate organizerUsersIndex
+
+# then we do a call to add the registry to the coordinator
+
 ...

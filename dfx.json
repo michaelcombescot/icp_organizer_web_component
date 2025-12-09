@@ -1,26 +1,32 @@
 {
   "canisters": {
-    "organizerMaintenance": {
-      "main": "src/backend/modules/maintenance/maintenanceIndex.mo",
+    "organizerCoordinator": {
+      "main": "src/backend/ops/coordinator.mo",
       "type": "motoko"
     },
 
-    "organizerUsersDataIndex": {
-      "main": "src/backend/modules/usersData/usersDataIndex.mo",
+    "organizerTodosRegistry": {
+      "main": "src/backend/ops/todosRegistry.mo",
       "type": "motoko"
     },
-    "organizerUsersDataBucket": {
-      "main": "src/backend/modules/usersData/usersDataBucket.mo",
+
+    "organizerGroupsBucket": {
+      "main": "src/backend/modules/todos/canisters/groups/todosGroupsBucket.mo",
       "type": "motoko"
     },
     
-
-    "organizerTodosIndex": {
-      "main": "src/backend/modules/todos/todosIndex.mo",
+    "organizerGroupsIndex": {
+      "main": "src/backend/modules/todos/canisters/groups/todosGroupsIndex.mo",
       "type": "motoko"
     },
-    "organizerTodosBucket": {
-      "main": "src/backend/modules/todos/todosBucket.mo",
+    
+    "organizerUsersBucket": {
+      "main": "src/backend/modules/todos/canisters/users/todosUsersBucket.mo",
+      "type": "motoko"
+    },
+    
+    "organizerUsersIndex": {
+      "main": "src/backend/modules/todos/canisters/users/todosUsersIndex.mo",
       "type": "motoko"
     },
 

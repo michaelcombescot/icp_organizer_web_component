@@ -10,8 +10,6 @@ import Blob "mo:core/Blob";
 import IC "mo:ic";
 import List "mo:core/List";
 import Runtime "mo:core/Runtime";
-import Iter "mo:core/Iter";
-import Option "mo:core/Option";
 import CanistersKinds "../shared/canistersKinds";
 import TodosUsersIndex "../modules/todos/canisters/users/todosUsersIndex";
 import TodosUsersBucket "../modules/todos/canisters/users/todosUsersBucket";
@@ -20,11 +18,6 @@ import TodosGroupsIndex "../modules/todos/canisters/groups/todosGroupsIndex";
 import TodosRegistry "todosRegistry";
 import CanistersMap "../shared/canistersMap";
 
-type ActorParams = {
-    todosRegistryUsersPrincipal: Principal;
-    todosRegistryIndexprincipal: Principal;
-};
-
 // The coordinator is the main entry point to launch the application.
 // Launching the coordinator will create all necessary buckets and indexes, it's the ONLY entry point, everything else is dynamically created.
 // It will have several missions:
@@ -32,7 +25,7 @@ type ActorParams = {
 // - top indexes and canisters with cycles
 // - check if there are free buckets in the bucket pool.The bucket pool is here for the different indexes to pick new active buckets when a buckets return a signal it's full.
 //   The goal of this system is to be able to have canisters knowed by all indexes before the moment they are used.
-shared ({ caller = owner }) persistent actor class Coordinator(params: ActorParams) = this {
+shared ({ caller = owner }) persistent actor class Coordinator(todosRegistryPrincipal: Principal) = this {
     /////////////
     // CONFIGS //
     /////////////
@@ -46,8 +39,6 @@ shared ({ caller = owner }) persistent actor class Coordinator(params: ActorPara
 
     let NEW_BUCKET_NB_CYCLES        = 2_000_000_000_000;
     let NEW_INDEX_NB_CYCLES         = 2_000_000_000_000;
-
-    let NB_FREE_BUCKETS             = 2_000_000_000_000;
 
     ////////////
     // ERRORS //
@@ -63,7 +54,7 @@ shared ({ caller = owner }) persistent actor class Coordinator(params: ActorPara
     // MEMORY //
     ////////////
 
-    let memoryCanisters = CanistersMap.newCanisterMap();
+    let memoryCanisters = CanistersMap.arrayToCanistersMap([ (#registries(#todosRegistry), [todosRegistryPrincipal]) ]);
 
     let memoryFreeBuckets   = Map.empty<CanistersKinds.BucketKind, List.List<Principal>>();
 

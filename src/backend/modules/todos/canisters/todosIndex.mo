@@ -1,18 +1,15 @@
-import Map "mo:core/Map";
 import Principal "mo:core/Principal";
-import Option "mo:core/Option";
 import Result "mo:core/Result";
 import Error "mo:core/Error";
 import Runtime "mo:core/Runtime";
-import Debug "mo:base/Debug";
-import CanistersMap "../../../../shared/canistersMap";
-import CanistersKinds "../../../../shared/canistersKinds";
-import TodosUsersBucket "todosUsersBucket";
-import Interfaces "../../../../shared/interfaces";
+import CanistersMap "../../../shared/canistersMap";
+import CanistersKinds "../../../shared/canistersKinds";
+import TodosBucket "todosBucket";
+import Interfaces "../../../shared/interfaces";
 
 // only goal of this canister is too keep track of the relationship between users principals and canisters.
 // this is the main piece of code which should need to change in case of scaling needs (by adding new users buckets )
-shared ({ caller = owner }) persistent actor class TodosUsersIndex() = this {
+shared ({ caller = owner }) persistent actor class TodosIndex() = this {
     ////////////
     // ERRORS //
     ////////////
@@ -27,7 +24,7 @@ shared ({ caller = owner }) persistent actor class TodosUsersIndex() = this {
 
     let memoryCanisters = CanistersMap.newCanisterMap();
 
-    var currentBucket: ?TodosUsersBucket.TodosUsersBucket = null;
+    var currentBucket: ?TodosBucket.TodosBucket = null;
 
     ////////////
     // SYSTEM //
@@ -61,14 +58,15 @@ shared ({ caller = owner }) persistent actor class TodosUsersIndex() = this {
     /////////
 
     public shared ({ caller }) func handlerAddUser() : async Result.Result<Principal, Text> {
+        // save user
         let ?bucket = await fetchCurrentUsersBucket() else return #err(ERR_CANNOT_FIND_CURRENT_BUCKET);
 
-        switch ( await bucket.handlerCreateUserData({ userPrincipal = caller }) ) {
+        switch ( await bucket.handlerCreateUser({ userPrincipal = caller }) ) {
             case (#ok(resp)) {
                 if ( resp.isFull ) { currentBucket := null; };
                 #ok(Principal.fromActor(bucket));
             };
-            case (#err(e)) #err(e);
+            case (#err(e)) return #err(e);
         }
     };
 
@@ -76,13 +74,13 @@ shared ({ caller = owner }) persistent actor class TodosUsersIndex() = this {
     // HELPERS //
     /////////////
 
-    func fetchCurrentUsersBucket() : async ?TodosUsersBucket.TodosUsersBucket {
+    func fetchCurrentUsersBucket() : async ?TodosBucket.TodosBucket {
         switch ( currentBucket ) {
             case (?_) ();
             case (null) {
                 try {
-                    let principal = await coordinatorActor.handlerGiveFreeBucket({ bucketKind = #todos(#todosUsersBucket) });
-                    currentBucket := ?(actor(Principal.toText(principal)) : TodosUsersBucket.TodosUsersBucket);
+                    let principal = await coordinatorActor.handlerGiveFreeBucket({ bucketKind = #todosBucket });
+                    currentBucket := ?(actor(Principal.toText(principal)) : TodosBucket.TodosBucket);
                 } catch (e) {
                     Runtime.trap( "Error while fetching bucket: " # Error.message(e) );
                 };

@@ -11,11 +11,8 @@ dfx deploy organizerCoordinator \
 dfx generate organizerCoordinator
 
 # then we generate all necessary code for the dynamically created canisters
-dfx generate organizerGroupsBucket
-dfx generate organizerGroupsIndex
-
-dfx generate organizerUsersBucket
-dfx generate organizerUsersIndex
+dfx generate organizerTodosBucket
+dfx generate organizerTodosIndex
 
 # deploy internet identity
 dfx deploy internet_identity
@@ -25,5 +22,4 @@ dfx generate internet_identity
 dfx deploy organizerFrontend
 
 # create a first set of indexes
-dfx canister call organizerCoordinator handlerAddIndex '(record { indexKind = variant { todosGroupsIndex } })'
-dfx canister call organizerCoordinator handlerAddIndex '(record { indexKind = variant { todosUsersIndex } })'
+dfx canister call organizerCoordinator handlerAddIndex '(record { indexKind = variant { todosIndex } })'

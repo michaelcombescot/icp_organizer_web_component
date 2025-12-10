@@ -3,7 +3,7 @@ import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import "dayjs/locale/fr";
 import './index.scss';
-import { isAuthenticated } from './components/auth/auth';
+import { isAuthenticated } from './auth/auth';
 import { StoreGlobal } from './modules/todo/stores/storeGlobal';
 
 

@@ -12,12 +12,29 @@ import { canisterId as registerID } from '../../../../../declarations/organizerT
 import { createActor as createActorTodosRegistry } from '../../../../../declarations/organizerTodosRegistry';
 
 import { ActorSubclass } from '@dfinity/agent';
+import { Principal } from '@dfinity/principal';
 
 
-
+export type IndexKind = { 'todosGroupsIndex' : null } |
+  { 'todosUsersIndex' : null };
 
 
 export let registry = createActorTodosRegistry(registerID);
+export var indexesUsers: Principal[] = []
+export let indexesGroups: Principal[] = []
+
+export async function fetchIndexes() {
+    (await registry.handlerGetIndexes()).forEach((res) => {
+        switch ( res[0] ) {
+            case { 'todosGroupsIndex' : null } :
+                indexesGroups.push(res[1]);
+                break;
+            case { 'todosUsersIndex' : null } :
+                indexesUsers.push(res[1]);
+                break;
+        }
+    })
+}
 
 /////////////
 // INDEXES //
@@ -25,34 +42,14 @@ export let registry = createActorTodosRegistry(registerID);
 
 // users
 
-export let usersIndexes : string[] = [];
-
 export function getIndexUser() : ActorSubclass<_SERVICE_INDEX_TODOS_USERDATA> {
-    let id = usersIndexes[Math.floor(Math.random() * usersIndexes.length)];
+    let id = indexesUsers[Math.floor(Math.random() * indexesUsers.length)];
     return createActorIndexTodosUserData(id);
 }
 
 // groups
 
-export let groupsIndexes : string[] = [];
-
 export function getIndexGroup() : ActorSubclass<_SERVICE_INDEX_TODOS_GROUPS> {
-    let id = groupsIndexes[Math.floor(Math.random() * groupsIndexes.length)];
+    let id = indexesGroups[Math.floor(Math.random() * indexesGroups.length)];
     return createActorIndexTodosGroups(id);
-}
-
-/////////////
-// BUCKETS //
-/////////////
-
-// users
-
-export function getBucketUser(id: string) : ActorSubclass<_SERVICE_BUCKET_TODOS_USERDATA> {
-    return createActorBucketTodosUserData(id);
-}
-
-// groups
-
-export function getBucketGroup(id: string) : ActorSubclass<_SERVICE_BUCKET_TODOS_GROUPS> {
-    return createActorBucketTodosGroups(id);
 }

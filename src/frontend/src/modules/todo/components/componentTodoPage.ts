@@ -5,7 +5,7 @@ import { i18n } from "../../../i18n/i18n";
 import { ComponentListForm } from "./componentListForm";
 import { borderRadius } from "../../../css/css";
 import { getPage } from "../../../App";
-import { isAuthenticated } from "../../../components/auth/auth";
+import { isAuthenticated } from "../../../auth/auth";
 import { getLoadingComponent } from "../../../components/loading";
 import { StoreGlobal } from "../stores/storeGlobal";
 

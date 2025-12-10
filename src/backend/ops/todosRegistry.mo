@@ -1,6 +1,4 @@
-import Array "mo:core/Array";
 import Principal "mo:core/Principal";
-import Map "mo:core/Map";
 import CanistersKinds "../shared/canistersKinds";
 import CanistersMap "../shared/canistersMap";
 
@@ -27,7 +25,7 @@ shared ({ caller = owner }) persistent actor class TodosRegistry() = this {
             #systemAddCanisterToMap : () -> { canisterPrincipal: Principal; canisterKind: CanistersKinds.CanisterKind };
             #systemSetCoordinator : () -> {coordinatorPrincipalArg : Principal};
 
-            #handlerGetIndexes : () -> (kind : CanistersKinds.IndexKind);
+            #handlerGetIndexes : () -> ();
         };
     };
 
@@ -53,9 +51,7 @@ shared ({ caller = owner }) persistent actor class TodosRegistry() = this {
     // API //
     /////////
 
-    public shared func handlerGetIndexes(kind: CanistersKinds.IndexKind) : async [Principal] {
-        let ?indexesPrincipals = Map.get(memoryCanisters, CanistersKinds.compareCanisterKinds, #indexes(kind)) else return [];
-        
-        Array.fromIter(Map.keys(indexesPrincipals))
+    public shared func handlerGetIndexes() : async [Principal] {
+        CanistersMap.getPrincipalsForKind(memoryCanisters, #todosIndex)
     };
 };

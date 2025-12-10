@@ -1,13 +1,13 @@
-import UserData "../../models/todosUserData";
+import UserData "../models/todosUserData";
 import Map "mo:core/Map";
-import CanistersKinds "../../../../shared/canistersKinds";
-import CanistersMap "../../../../shared/canistersMap";
+import CanistersKinds "../../../shared/canistersKinds";
+import CanistersMap "../../../shared/canistersMap";
 import Principal "mo:core/Principal";
 import Result "mo:core/Result";
 import Time "mo:core/Time";
-import Identifiers "../../../../shared/identifiers";
+import Identifiers "../../../shared/identifiers";
 
-shared ({ caller = owner }) persistent actor class TodosUsersBucket() = this {
+shared ({ caller = owner }) persistent actor class TodosBucket() = this {
     /////////////
     // CONFIGS //
     /////////////
@@ -38,7 +38,7 @@ shared ({ caller = owner }) persistent actor class TodosUsersBucket() = this {
         msg : {
             #systemAddCanisterToMap : () -> { canisterPrincipal: Principal; canisterKind: CanistersKinds.CanisterKind };
 
-            #handlerCreateUserData : () -> {userPrincipal : Principal};
+            #handlerCreateUser : () -> {userPrincipal : Principal};
         };
     };
 
@@ -47,7 +47,7 @@ shared ({ caller = owner }) persistent actor class TodosUsersBucket() = this {
 
         switch ( params.msg ) {
             case (#systemAddCanisterToMap(_))       params.caller == owner;
-            case (#handlerCreateUserData(_))    CanistersMap.isPrincipalInCanistersMap({ canistersMap = memoryCanisters; principal = params.caller; canisterKind = #indexes(#todosUsersIndex) });
+            case (#handlerCreateUser(_))            CanistersMap.isPrincipalInKind(memoryCanisters, params.caller, #todosIndex);
         }
     };
 
@@ -59,7 +59,7 @@ shared ({ caller = owner }) persistent actor class TodosUsersBucket() = this {
     // API //
     /////////
 
-    public shared func handlerCreateUserData({ userPrincipal: Principal }) : async Result.Result<{ isFull: Bool }, Text> {
+    public shared func handlerCreateUser({ userPrincipal: Principal }) : async Result.Result<{ isFull: Bool }, Text> {
         let ?_ = Map.get(memoryUsersData, Principal.compare, userPrincipal) else return #err(ERR_USER_ALREADY_EXISTS);
 
         let userData: UserData.UserData = {

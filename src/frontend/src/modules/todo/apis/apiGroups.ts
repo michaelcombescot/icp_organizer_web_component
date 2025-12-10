@@ -1,15 +1,8 @@
 import { getIndexGroup } from "./apiRegistry"
+import { Result } from "../../../../../declarations/organizerGroupsIndex/organizerGroupsIndex.did";
 
 export let APITodo = {
-    async createTodo(todo: Todo): Promise<{ ok: bigint } | { err: string[] }> {
-        return actor.createTodo(todo)
-    },
-
-    async updateTodo(todo: Todo) {
-        return actor.updateTodo(todo)
-    },
-
-    async removeTodo(id: bigint) {
-        return actor.removeTodo(id)
+    async createNewUser(): Promise<Result> {
+        return getIndexGroup().handlerCreateNewUser()
     },
 }

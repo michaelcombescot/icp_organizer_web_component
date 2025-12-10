@@ -1,18 +1,13 @@
-// import { Result_1, UserDataSharable } from "../../../../../declarations/backend_todos/backend_todos.did";
-import { Principal } from "@dfinity/principal";
+import { getIndexUser } from "./apiRegistry"
+import { _SERVICE as _SERVICE_INDEX_TODOS_USERDATA } from '../../../../../declarations/organizerUsersIndex/organizerUsersIndex.did';
+import { createActor as createActorIndexTodosUserData } from '../../../../../declarations/organizerUsersIndex';
+import { _SERVICE as _SERVICE_BUCKET_TODOS_USERDATA } from '../../../../../declarations/organizerUsersBucket/organizerUsersBucket.did';
+import { createActor as createActorBucketTodosUserData } from '../../../../../declarations/organizerUsersBucket';
+import { ActorSubclass } from '@dfinity/agent';
 
-import { getRandomUserIndex } from "./apiRegistry";
 
 export let APIUser = {
-    ///////////
-    // INDEX //
-    ///////////
-
-    async addUser() {
-        return createActorIndexTodosUserData( getRandomUserIndex() ).handlerAddUser()
+    async addUser() : Promise<void> {
+        await getIndexUser().handlerAddUser()
     },
-
-    ////////////
-    // BUCKET //
-    ////////////
 }

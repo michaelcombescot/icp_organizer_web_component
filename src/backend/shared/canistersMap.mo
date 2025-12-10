@@ -1,7 +1,6 @@
 import Map "mo:core/Map";
 import Principal "mo:core/Principal";
 import Array "mo:core/Array";
-import Option "mo:core/Option";
 import CanistersKinds "canistersKinds";
 
 module {
@@ -20,7 +19,7 @@ module {
         };
     };
 
-    // used to create a new canistersMap from an array, usefull to sens several canisters at once in an intercanisters call
+    // used to create a new canistersMap from an array, usefull to add several canisters at once in an intercanisters call
     public func arrayToCanistersMap(canisters: [(CanistersKinds.CanisterKind, [Principal])]) : CanistersMap {
         let newMap: CanistersMap = Map.empty<CanistersKinds.CanisterKind, Map.Map<Principal, ()>>();
         for ( (canisterKind, principals) in canisters.values() ) {
@@ -32,26 +31,18 @@ module {
         newMap
     };
 
-    // used to check if a principal is in a canistersMap, usefull when checking the caller
-    public func isPrincipalInCanistersMap({ canistersMap: CanistersMap; principal: Principal; canisterKind: CanistersKinds.CanisterKind }) : Bool {
-        let ?mapPrincipals = Map.get(canistersMap, CanistersKinds.compareCanisterKinds, canisterKind) else return false;
-
-        Option.isSome(Map.get(mapPrincipals, Principal.compare, principal))
+    // used to check if a principal is an index, usefull when checking the caller
+    public func isPrincipalInKind(canistersMap: CanistersMap, principal: Principal, kind: CanistersKinds.CanisterKind) : Bool {
+        let ?principalsMap = Map.get(canistersMap, CanistersKinds.compareCanisterKinds, kind) else return false;
+        let ?_ = Map.get(principalsMap, Principal.compare, principal) else return false;
+        
+        true
     };
 
-    // used to check if a principal is an index, usefull when checking the caller
-    public func isPrincipalAnIndex(canistersMap: CanistersMap, principal: Principal) : Bool {
-        for (kind in CanistersKinds.indexKindArray.values()) {
-            let wrappedKind: CanistersKinds.CanisterKind = switch (kind) {
-                                                            case (#todosGroupsIndex) #indexes(#todosGroupsIndex);
-                                                            case (#todosUsersIndex) #indexes(#todosUsersIndex);
-                                                        };
-
-            let ?principalMap = Map.get(canistersMap, CanistersKinds.compareCanisterKinds, wrappedKind) else return false;
-
-            if ( Option.isSome(Map.get(principalMap, Principal.compare, principal)) ) { return true };
-        };
-
-        return false
+    public func getPrincipalsForKind(canistersMap: CanistersMap, kind: CanistersKinds.CanisterKind) : [Principal] {
+        switch ( Map.get(canistersMap, CanistersKinds.compareCanisterKinds, kind) ) {
+            case null [];
+            case (?mapPrincipals) Array.fromIter( Map.keys(mapPrincipals));
+        }   
     };
 };

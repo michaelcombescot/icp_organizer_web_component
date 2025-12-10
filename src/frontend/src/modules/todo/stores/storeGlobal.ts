@@ -10,24 +10,24 @@ export class StoreGlobal {
     static currentSelectedListId: bigint | null = null
 
     static updateCurrentSelectedListId(listId: bigint | null) {
-        this.currentSelectedListId = listId
-        getTodoPage().render()
+        // this.currentSelectedListId = listId
+        // getTodoPage().render()
     }
 
     static async getUserData() {
-        if (this.loaded) {
-            return
-        }
+        // if (this.loaded) {
+        //     return
+        // }
 
-        await getLoadingComponent().wrapAsync(async () =>{
-            let data = await APIUser.getUserData()
+        // await getLoadingComponent().wrapAsync(async () =>{
+        //     let data = await APIUser.getUserData()
 
-            if ("ok" in data) {
-                data.ok.todos.forEach( ([id, todo]) => StoreTodos.todos.set(id, todo));
-                data.ok.todoLists.forEach( ([id, todoList]) => StoreTodoLists.todoLists.set(id, todoList));
-                this.loaded = true
-            }
-        })
+        //     if ("ok" in data) {
+        //         data.ok.todos.forEach( ([id, todo]) => StoreTodos.todos.set(id, todo));
+        //         data.ok.todoLists.forEach( ([id, todoList]) => StoreTodoLists.todoLists.set(id, todoList));
+        //         this.loaded = true
+        //     }
+        // })
     }
 }
 

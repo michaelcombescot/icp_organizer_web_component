@@ -1,9 +1,8 @@
-import { Todo, TodoList } from "../../../../../declarations/backend_todos/backend_todos.did";
 import "./componentTodo";
 import { getTodoPage } from "./componentTodoPage";
 import { ComponentTodo } from "./componentTodo";
 import { StoreTodos } from "../stores/storeTodo";
-import { isAuthenticated } from "../../../components/auth/auth";
+import { isAuthenticated } from "../../../auth/auth";
 import { StoreGlobal } from "../stores/storeGlobal";
 
 const listTypes = ["scheduled", "priority"]

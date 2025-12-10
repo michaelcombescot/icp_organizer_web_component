@@ -10,37 +10,37 @@ export class StoreTodoLists {
 
     static createTodoList(todoList: TodoList) {
         getLoadingComponent().wrapAsync(async () => {
-            const result = await APITodoList.createList(todoList);
-            if ("ok" in result) {
-                todoList.id = result.ok;
-                this.todoLists.set(result.ok, todoList);
+            // const result = await APITodoList.createList(todoList);
+            // if ("ok" in result) {
+            //     todoList.id = result.ok;
+            //     this.todoLists.set(result.ok, todoList);
 
-                getListsCards().render();
-            }
+            //     getListsCards().render();
+            // }
         })
     }
 
     static updateTodoList(todoList: TodoList) {
         getLoadingComponent().wrapAsync(async () => {
-            await APITodoList.updateList(todoList);
-            this.todoLists.set(todoList.id, todoList);
+            // await APITodoList.updateList(todoList);
+            // this.todoLists.set(todoList.id, todoList);
 
-            getTodoPage().render();
+            // getTodoPage().render();
         })
     }
 
     static deleteTodoList(id: bigint) {
         getLoadingComponent().wrapAsync(async () => {
-            await APITodoList.removeList(id);
-            this.todoLists.delete(id);
+            // await APITodoList.removeList(id);
+            // this.todoLists.delete(id);
 
-            StoreTodos.todos.forEach((todo) => {
-                if (todo.todoListId[0] === id) {
-                    StoreTodos.todos.delete(todo.id)
-                }
-            })
+            // StoreTodos.todos.forEach((todo) => {
+            //     if (todo.todoListId[0] === id) {
+            //         StoreTodos.todos.delete(todo.id)
+            //     }
+            // })
 
-            getTodoPage().render();
+            // getTodoPage().render();
         })
     }
 }

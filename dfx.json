@@ -9,32 +9,20 @@
       "main": "src/backend/ops/todosRegistry.mo",
       "type": "motoko"
     },
-
-    "organizerGroupsBucket": {
-      "main": "src/backend/modules/todos/canisters/groups/todosGroupsBucket.mo",
-      "type": "motoko"
-    },
     
-    "organizerGroupsIndex": {
-      "main": "src/backend/modules/todos/canisters/groups/todosGroupsIndex.mo",
-      "type": "motoko"
-    },
-    
-    "organizerUsersBucket": {
+    "organizerTodosBucket": {
       "main": "src/backend/modules/todos/canisters/users/todosUsersBucket.mo",
       "type": "motoko"
     },
     
-    "organizerUsersIndex": {
+    "organizerTodosIndex": {
       "main": "src/backend/modules/todos/canisters/users/todosUsersIndex.mo",
       "type": "motoko"
     },
 
     "organizerFrontend": {
       "dependencies": [
-        "organizerCoordinator",
-        "organizerTodosRegistry",
-        "internet_identity"
+        "organizerTodosRegistry"
       ],
       "source": [
         "src/frontend/dist"

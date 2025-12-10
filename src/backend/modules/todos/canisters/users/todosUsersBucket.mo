@@ -8,12 +8,18 @@ import Time "mo:core/Time";
 import Identifiers "../../../../shared/identifiers";
 
 shared ({ caller = owner }) persistent actor class TodosUsersBucket() = this {
+    /////////////
+    // CONFIGS //
+    /////////////
+
+    let MAX_NUMBER_ENTRIES = 30000;
+    
     ////////////
     // ERRORS //
     ////////////
 
     let ERR_USER_ALREADY_EXISTS = "ERR_USER_ALREADY_EXISTS";
-
+    
     ////////////
     // MEMORY //
     ////////////
@@ -53,7 +59,7 @@ shared ({ caller = owner }) persistent actor class TodosUsersBucket() = this {
     // API //
     /////////
 
-    public shared func handlerCreateUserData({ userPrincipal: Principal }) : async Result.Result<(), Text> {
+    public shared func handlerCreateUserData({ userPrincipal: Principal }) : async Result.Result<{ isFull: Bool }, Text> {
         let ?_ = Map.get(memoryUsersData, Principal.compare, userPrincipal) else return #err(ERR_USER_ALREADY_EXISTS);
 
         let userData: UserData.UserData = {
@@ -63,6 +69,6 @@ shared ({ caller = owner }) persistent actor class TodosUsersBucket() = this {
 
         Map.add(memoryUsersData, Principal.compare, userPrincipal, userData);
 
-        #ok
+        #ok({ isFull = Map.size(memoryUsersData) >= MAX_NUMBER_ENTRIES });
     };
 };

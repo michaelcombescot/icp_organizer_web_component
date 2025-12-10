@@ -32,8 +32,9 @@
 
     "organizerFrontend": {
       "dependencies": [
-        "organizerUsersDataIndex",
-        "organizerTodosIndex"
+        "organizerCoordinator",
+        "organizerTodosRegistry",
+        "internet_identity"
       ],
       "source": [
         "src/frontend/dist"

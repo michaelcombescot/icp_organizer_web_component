@@ -1,4 +1,3 @@
-- avant toute chose, réfléchir à comment gérer une liste ou associé pour pouvoir avoir les helpers de contact d'api gérer eux mêmes le pop d'erreur => MAP ?
 - faire l'index et le modèle de données.
 - index => check que le recup free bucket est clean
 

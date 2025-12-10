@@ -13,6 +13,11 @@ import Interfaces "../../../../shared/interfaces";
 // only goal of this canister is too keep track of the relationship between users principals and canisters.
 // this is the main piece of code which should need to change in case of scaling needs (by adding new users buckets )
 shared ({ caller = owner }) persistent actor class TodosUsersIndex() = this {
+    ////////////
+    // ERRORS //
+    ////////////
+
+    let ERR_CANNOT_FIND_CURRENT_BUCKET = "ERR_CANNOT_FIND_CURRENT_BUCKET";
 
     ////////////
     // MEMORY //
@@ -56,9 +61,15 @@ shared ({ caller = owner }) persistent actor class TodosUsersIndex() = this {
     /////////
 
     public shared ({ caller }) func handlerAddUser() : async Result.Result<Principal, Text> {
-        let bucket = await fetchCurrentUsersBucket();
+        let ?bucket = await fetchCurrentUsersBucket() else return #err(ERR_CANNOT_FIND_CURRENT_BUCKET);
 
-        #err("ERR_NOT_IMPLEMENTED");
+        switch ( await bucket.handlerCreateUserData({ userPrincipal = caller }) ) {
+            case (#ok(resp)) {
+                if ( resp.isFull ) { currentBucket := null; };
+                #ok(Principal.fromActor(bucket));
+            };
+            case (#err(e)) #err(e);
+        }
     };
 
     /////////////

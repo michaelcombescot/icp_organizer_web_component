@@ -1,5 +1,4 @@
-import { Todo, TodoList, TodoPriority } from "../../../../../declarations/backend_todos/backend_todos.did";
-import { actor } from "../../../components/auth/auth";
+import { getIndexGroup } from "./apiRegistry"
 
 export let APITodo = {
     async createTodo(todo: Todo): Promise<{ ok: bigint } | { err: string[] }> {

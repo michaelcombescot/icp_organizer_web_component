@@ -178,6 +178,7 @@ shared ({ caller = owner }) persistent actor class Coordinator(todosRegistryPrin
                     CanistersMap.addCanistersToMap({ map = memoryCanisters; canistersPrincipals = [newPrincipal]; canisterKind = #todosIndex });
 
                     // send it to all todos users buckets and todos buckets
+                    ignore helperSendUserArrayToCanistersOfKind({ targetKind = #todosIndex; targetsPrincipals = [newPrincipal] });
                     ignore helperSendPrincipalsToCanistersOfKind({ targetKind = #todosBucket; canisterKind = #todosIndex; canistersPrincipals  = [newPrincipal] });
                     ignore helperSendPrincipalsToCanistersOfKind({ targetKind = #todosUsersBucket; canisterKind = #todosIndex; canistersPrincipals  = [newPrincipal] });
 

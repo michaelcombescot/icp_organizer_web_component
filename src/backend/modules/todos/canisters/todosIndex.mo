@@ -8,6 +8,8 @@ import TodosBucket "todosBucket";
 import Interfaces "../../../shared/interfaces";
 import UserData "../models/todosUserData";
 import CanistersVirtualArray "../../../shared/canistersVirtualArray";
+import Identifiers "../../../shared/identifiers";
+import Group "../models/todosGroup";
 
 // only goal of this canister is too keep track of the relationship between users principals and canisters.
 // this is the main piece of code which should need to change in case of scaling needs (by adding new users buckets )
@@ -42,7 +44,7 @@ shared ({ caller = owner }) persistent actor class TodosIndex() = this {
             #systemUpdateUsersBucketsArray : () -> (principals: [Principal]);
 
             #handlerCreateUser : () -> ();
-            #handlerGetUserData : () -> ();
+            #handlerCreateGroup : () -> (params: Group.CreateGroupParams);
         };
     };
 
@@ -54,7 +56,7 @@ shared ({ caller = owner }) persistent actor class TodosIndex() = this {
             case (#systemUpdateUsersBucketsArray(_)) params.caller == owner;
 
             case (#handlerCreateUser(_)) true;
-            case (#handlerGetUserData(_)) true;
+            case (#handlerCreateGroup(_)) true;
         }
     };
 
@@ -71,23 +73,26 @@ shared ({ caller = owner }) persistent actor class TodosIndex() = this {
     ///////////////
 
     public shared ({ caller }) func handlerCreateUser() : async Result.Result<Principal, Text> {
-        // save user
-        let ?bucket = await fetchCurrentUsersBucket(caller) else return #err(ERR_CANNOT_FIND_CURRENT_BUCKET);
+        let bucket = helperFetchUserBucket(caller) else return #err(ERR_CANNOT_FIND_CURRENT_BUCKET);
 
         switch ( await bucket.handlerCreateUser({ userPrincipal = caller }) ) {
-            case (#ok(resp)) {
-                if ( resp.isFull ) { currentGroupBucket := null; };
-                #ok(Principal.fromActor(bucket));
-            };
-            case (#err(e)) return #err(e);
+            case (#ok(resp))    #ok(Principal.fromActor(bucket));
+            case (#err(e))      #err(e);
         }
     };
 
-    public shared ({ caller }) func handlerGetUserData() : async Result.Result<UserData.SharableUserData, Text> {
-        let ?bucket = await fetchCurrentUsersBucket(caller) else return #err(ERR_CANNOT_FIND_CURRENT_BUCKET);
+    ////////////////
+    // API GROUPS //
+    ////////////////
 
-        switch ( await bucket.handlerGetUserData({ userPrincipal = caller }) ) {
-            case (#ok(resp)) #ok(resp);
+    public shared ({ caller }) func handlerCreateGroup(params: Group.CreateGroupParams) : async Result.Result<Identifiers.Identifier, Text> {
+        let ?bucket = await helperFetchCurrentGroupBucket() else return #err(ERR_CANNOT_FIND_CURRENT_BUCKET);
+    
+        switch ( await bucket.handlerCreateGroup(caller, params) ) {
+            case (#ok(resp)) {
+                if ( resp.isFull ) { currentGroupBucket := null; };
+                #ok(resp.identifier);
+            };
             case (#err(e)) return #err(e);
         }
     };
@@ -96,12 +101,7 @@ shared ({ caller = owner }) persistent actor class TodosIndex() = this {
     // HELPERS //
     /////////////
 
-    func fetchCurrentUsersBucket(userPrincipal: Principal) : async ?TodosBucket.TodosBucket {
-        let principal = await coordinatorActor.handlerGiveFreeBucket({ bucketKind = #todosBucket });
-        ?(actor(Principal.toText(principal)) : TodosBucket.TodosBucket)
-    };
-
-    func fetchCurrentGroupBucket() : async ?TodosBucket.TodosBucket {
+    func helperFetchCurrentGroupBucket() : async ?TodosBucket.TodosBucket {
         switch ( currentGroupBucket ) {
             case (?_) ();
             case (null) {
@@ -115,5 +115,10 @@ shared ({ caller = owner }) persistent actor class TodosIndex() = this {
         };
 
         currentGroupBucket
+    };
+
+    func helperFetchUserBucket(userPrincipal: Principal) : TodosBucket.TodosBucket {
+        let principal = CanistersVirtualArray.fetchUserBucket(memoryUsersBuckets, userPrincipal);
+        actor(Principal.toText(principal)) : TodosBucket.TodosBucket
     };
 };

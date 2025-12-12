@@ -48,7 +48,9 @@ shared ({ caller = owner }) persistent actor class TodosBucket() = this {
             #systemAddCanistersToMap : () -> { canistersPrincipals: [Principal]; canisterKind: CanistersKinds.CanisterKind };
 
             #handlerCreateUser : () -> {userPrincipal : Principal};
-            #handlerGetUserData : () -> {userPrincipal : Principal};
+            #handlerGetUserData : () -> (userPrincipal : Principal);
+
+            #handlerCreateGroup : () -> (userPrincipal: Principal, params : Group.CreateGroupParams);
 
             #handlerCreateTodo : () -> {userPrincipal : Principal; groupID : Nat; todo : Todo.Todo; };
         };
@@ -62,6 +64,8 @@ shared ({ caller = owner }) persistent actor class TodosBucket() = this {
 
             case (#handlerCreateUser(_))            CanistersMap.isPrincipalInKind(memoryCanisters, params.caller, #todosIndex);
             case (#handlerGetUserData(_))           CanistersMap.isPrincipalInKind(memoryCanisters, params.caller, #todosIndex);
+
+            case (#handlerCreateGroup(_))           CanistersMap.isPrincipalInKind(memoryCanisters, params.caller, #todosIndex);
 
             case (#handlerCreateTodo(_))            CanistersMap.isPrincipalInKind(memoryCanisters, params.caller, #todosIndex);
         }
@@ -96,7 +100,7 @@ shared ({ caller = owner }) persistent actor class TodosBucket() = this {
         #ok({ isFull = Map.size(memoryGroups) >= MAX_NUMBER_ENTRIES });
     };
 
-    public shared func handlerGetUserData({ userPrincipal: Principal }) : async Result.Result<UserData.SharableUserData, Text> {
+    public shared func handlerGetUserData( userPrincipal: Principal ) : async Result.Result<UserData.SharableUserData, Text> {
         let ?userData = Map.get(memoryUsers, Principal.compare, userPrincipal) else return #err(ERR_USER_NOT_FOUND);
 
         #ok({
@@ -105,6 +109,18 @@ shared ({ caller = owner }) persistent actor class TodosBucket() = this {
             groups = Array.fromIter( Map.keys(userData.groups) );
             createdAt = userData.createdAt;
         })
+    };
+
+    ////////////////
+    // API GROUPS //
+    ////////////////
+
+    public shared func handlerCreateGroup(userPrincipal: Principal, params: Group.CreateGroupParams) : async Result.Result<{ isFull: Bool; identifier: Identifiers.Identifier }, Text> {
+        let group = Group.createGroup({ name = params.name; createdBy = userPrincipal; identifier = { id = Map.size(memoryGroups); bucket = thisPrincipal }; kind = #collective; });
+
+        Map.add(memoryGroups, Nat.compare, Map.size(memoryGroups), group);
+
+        #ok({ isFull = group.identifier.id >= MAX_NUMBER_ENTRIES; identifier = group.identifier; });
     };
 
     ///////////////

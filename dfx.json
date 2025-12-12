@@ -11,12 +11,12 @@
     },
     
     "organizerTodosBucket": {
-      "main": "src/backend/modules/todos/canisters/users/todosUsersBucket.mo",
+      "main": "src/backend/modules/todos/canisters/todosBucket.mo",
       "type": "motoko"
     },
     
     "organizerTodosIndex": {
-      "main": "src/backend/modules/todos/canisters/users/todosUsersIndex.mo",
+      "main": "src/backend/modules/todos/canisters/todosIndex.mo",
       "type": "motoko"
     },
 

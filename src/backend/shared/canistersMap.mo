@@ -12,10 +12,21 @@ module {
     };
 
     // add a canister to a canistersMap
-    public func addCanisterToMap({ map: CanistersMap; canisterPrincipal: Principal; canisterKind: CanistersKinds.CanisterKind }) {
+    public func addCanistersToMap({ map: CanistersMap; canistersPrincipals: [Principal]; canisterKind: CanistersKinds.CanisterKind }) {
         switch ( Map.get(map , CanistersKinds.compareCanisterKinds, canisterKind) ) {
-            case null Map.add(map, CanistersKinds.compareCanisterKinds, canisterKind, Map.singleton<Principal, ()>(canisterPrincipal, ()));
-            case (?canistersMap) Map.add(canistersMap, Principal.compare, canisterPrincipal, ());
+            case null {
+                let internalMap = Map.empty<Principal, ()>();
+                for ( canisterPrincipal in canistersPrincipals.values() ) {
+                    Map.add(internalMap, Principal.compare, canisterPrincipal, ());
+                };
+
+                Map.add(map, CanistersKinds.compareCanisterKinds, canisterKind, internalMap);
+            };
+            case (?canistersMap) {
+                for ( canisterPrincipal in canistersPrincipals.values() ) {
+                    Map.add(canistersMap, Principal.compare, canisterPrincipal, ());
+                };
+            };
         };
     };
 

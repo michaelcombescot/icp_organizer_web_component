@@ -35,7 +35,19 @@ module {
         #archived;
     };
 
-    /// API ///
+    public func createGroup ({ name: Text; createdBy: Principal; identifier: Identifier.Identifier; kind: Kind }) : Group {
+        {
+            identifier = identifier;
+            name = name;
+            todos = Map.empty<Nat, Todo.Todo>();
+            todoLists = Map.empty<Nat, TodoList.TodoList>();
+            users = Map.singleton<Principal, UserGroupPermission>(createdBy, #owner);
+            kind = kind;
+            createdAt = Time.now();
+            updatedAt = Time.now();
+            createdBy = createdBy;
+        }
+    };
 
     
 

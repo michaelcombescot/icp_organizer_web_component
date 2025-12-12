@@ -6,6 +6,8 @@ import CanistersMap "../../../shared/canistersMap";
 import CanistersKinds "../../../shared/canistersKinds";
 import TodosBucket "todosBucket";
 import Interfaces "../../../shared/interfaces";
+import UserData "../models/todosUserData";
+import CanistersVirtualArray "../../../shared/canistersVirtualArray";
 
 // only goal of this canister is too keep track of the relationship between users principals and canisters.
 // this is the main piece of code which should need to change in case of scaling needs (by adding new users buckets )
@@ -24,7 +26,9 @@ shared ({ caller = owner }) persistent actor class TodosIndex() = this {
 
     let memoryCanisters = CanistersMap.newCanisterMap();
 
-    var currentBucket: ?TodosBucket.TodosBucket = null;
+    var memoryUsersBuckets: CanistersVirtualArray.CanistersVirtualArray = [];
+
+    var currentGroupBucket: ?TodosBucket.TodosBucket = null;
 
     ////////////
     // SYSTEM //
@@ -34,9 +38,11 @@ shared ({ caller = owner }) persistent actor class TodosIndex() = this {
         arg: Blob;
         caller : Principal;
         msg : {
-            #systemAddCanisterToMap : () -> { canisterPrincipal: Principal; canisterKind: CanistersKinds.CanisterKind };
+            #systemAddCanistersToMap : () -> { canistersPrincipals: [Principal]; canisterKind: CanistersKinds.CanisterKind };
+            #systemUpdateUsersBucketsArray : () -> (principals: [Principal]);
 
-            #handlerAddUser : () -> ();
+            #handlerCreateUser : () -> ();
+            #handlerGetUserData : () -> ();
         };
     };
 
@@ -44,28 +50,44 @@ shared ({ caller = owner }) persistent actor class TodosIndex() = this {
         if ( params.caller == Principal.anonymous() ) { return false; };
 
         switch ( params.msg ) {
-            case (#systemAddCanisterToMap(_)) params.caller == owner;
-            case (#handlerAddUser(_)) true;
+            case (#systemAddCanistersToMap(_)) params.caller == owner;
+            case (#systemUpdateUsersBucketsArray(_)) params.caller == owner;
+
+            case (#handlerCreateUser(_)) true;
+            case (#handlerGetUserData(_)) true;
         }
     };
 
-    public shared func systemAddCanisterToMap({ canisterPrincipal: Principal; canisterKind: CanistersKinds.CanisterKind }) : async () {
-        CanistersMap.addCanisterToMap({ map = memoryCanisters; canisterPrincipal = canisterPrincipal; canisterKind = canisterKind });
+    public shared func systemAddCanistersToMap({ canistersPrincipals: [Principal]; canisterKind: CanistersKinds.CanisterKind }) : async () {
+        CanistersMap.addCanistersToMap({ map = memoryCanisters; canistersPrincipals = canistersPrincipals; canisterKind = canisterKind });
     };
 
-    /////////
-    // API //
-    /////////
+    public shared func systemUpdateUsersBucketsArray(principals: [Principal]) : async () {
+        memoryUsersBuckets := principals;
+    };
 
-    public shared ({ caller }) func handlerAddUser() : async Result.Result<Principal, Text> {
+    ///////////////
+    // API USERS //
+    ///////////////
+
+    public shared ({ caller }) func handlerCreateUser() : async Result.Result<Principal, Text> {
         // save user
-        let ?bucket = await fetchCurrentUsersBucket() else return #err(ERR_CANNOT_FIND_CURRENT_BUCKET);
+        let ?bucket = await fetchCurrentUsersBucket(caller) else return #err(ERR_CANNOT_FIND_CURRENT_BUCKET);
 
         switch ( await bucket.handlerCreateUser({ userPrincipal = caller }) ) {
             case (#ok(resp)) {
-                if ( resp.isFull ) { currentBucket := null; };
+                if ( resp.isFull ) { currentGroupBucket := null; };
                 #ok(Principal.fromActor(bucket));
             };
+            case (#err(e)) return #err(e);
+        }
+    };
+
+    public shared ({ caller }) func handlerGetUserData() : async Result.Result<UserData.SharableUserData, Text> {
+        let ?bucket = await fetchCurrentUsersBucket(caller) else return #err(ERR_CANNOT_FIND_CURRENT_BUCKET);
+
+        switch ( await bucket.handlerGetUserData({ userPrincipal = caller }) ) {
+            case (#ok(resp)) #ok(resp);
             case (#err(e)) return #err(e);
         }
     };
@@ -74,19 +96,24 @@ shared ({ caller = owner }) persistent actor class TodosIndex() = this {
     // HELPERS //
     /////////////
 
-    func fetchCurrentUsersBucket() : async ?TodosBucket.TodosBucket {
-        switch ( currentBucket ) {
+    func fetchCurrentUsersBucket(userPrincipal: Principal) : async ?TodosBucket.TodosBucket {
+        let principal = await coordinatorActor.handlerGiveFreeBucket({ bucketKind = #todosBucket });
+        ?(actor(Principal.toText(principal)) : TodosBucket.TodosBucket)
+    };
+
+    func fetchCurrentGroupBucket() : async ?TodosBucket.TodosBucket {
+        switch ( currentGroupBucket ) {
             case (?_) ();
             case (null) {
                 try {
                     let principal = await coordinatorActor.handlerGiveFreeBucket({ bucketKind = #todosBucket });
-                    currentBucket := ?(actor(Principal.toText(principal)) : TodosBucket.TodosBucket);
+                    currentGroupBucket := ?(actor(Principal.toText(principal)) : TodosBucket.TodosBucket);
                 } catch (e) {
                     Runtime.trap( "Error while fetching bucket: " # Error.message(e) );
                 };
             }
         };
 
-        currentBucket
+        currentGroupBucket
     };
 };

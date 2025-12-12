@@ -1,6 +1,6 @@
 import Principal "mo:core/Principal";
-import CanistersKinds "../shared/canistersKinds";
-import CanistersMap "../shared/canistersMap";
+import CanistersKinds "../../../shared/canistersKinds";
+import CanistersMap "../../../shared/canistersMap";
 
 // only goal of this canister is too keep track of all the indexes and serve their principal to the frontend.
 // not dynamically created, if the need arise another instance will need to be declared in the dfx.json
@@ -22,7 +22,7 @@ shared ({ caller = owner }) persistent actor class TodosRegistry() = this {
         arg: Blob;
         caller : Principal;
         msg : {
-            #systemAddCanisterToMap : () -> { canisterPrincipal: Principal; canisterKind: CanistersKinds.CanisterKind };
+            #systemAddCanistersToMap : () -> { canistersPrincipals: [Principal]; canisterKind: CanistersKinds.CanisterKind };
             #systemSetCoordinator : () -> {coordinatorPrincipalArg : Principal};
 
             #handlerGetIndexes : () -> ();
@@ -33,14 +33,14 @@ shared ({ caller = owner }) persistent actor class TodosRegistry() = this {
         if ( params.caller == Principal.anonymous() ) { return false; };
 
         switch ( params.msg ) {
-            case (#systemAddCanisterToMap(_))   ?params.caller == coordinatorPrincipal;
-            case (#systemSetCoordinator(_))       params.caller == owner;
-            case (#handlerGetIndexes(_))          true
+            case (#systemAddCanistersToMap(_))   ?params.caller == coordinatorPrincipal;
+            case (#systemSetCoordinator(_))     params.caller == owner;
+            case (#handlerGetIndexes(_))        true
         }
     };
 
-    public shared func systemAddCanisterToMap({ canisterPrincipal: Principal; canisterKind: CanistersKinds.CanisterKind }) : async () {
-        CanistersMap.addCanisterToMap({ map = memoryCanisters; canisterPrincipal = canisterPrincipal; canisterKind = canisterKind });
+    public shared func systemAddCanistersToMap({ canistersPrincipals: [Principal]; canisterKind: CanistersKinds.CanisterKind }) : async () {
+        CanistersMap.addCanistersToMap({ map = memoryCanisters; canistersPrincipals = canistersPrincipals; canisterKind = canisterKind });
     };
 
     public shared func systemSetCoordinator({ coordinatorPrincipalArg: Principal }) : async () {

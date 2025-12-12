@@ -6,7 +6,10 @@ module {
     public type CanisterKind = {
         #todosRegistry;
         #todosIndex;
+
+        // todosBucket and todosUserBucket are the same actor behind the scene, we just need a way to be able to easily route a principal to a specific bucket, it's easier this way.
         #todosBucket;
+        #todosUsersBucket;
     };
 
     public let indexArray: [CanisterKind] = [#todosIndex];

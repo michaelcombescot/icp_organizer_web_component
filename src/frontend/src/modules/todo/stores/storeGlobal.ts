@@ -1,5 +1,5 @@
 import { getLoadingComponent } from "../../../components/loading"
-import { APIUser } from "../apis/apiUsers"
+import { APIUser } from "../apis/apiTodos"
 import { getTodoPage } from "../components/componentTodoPage"
 import { StoreTodos } from "./storeTodo"
 import { StoreTodoLists } from "./storeTodoList"

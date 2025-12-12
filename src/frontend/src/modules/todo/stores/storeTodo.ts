@@ -1,7 +1,7 @@
 import { Todo } from "../../../../../declarations/backend_todos/backend_todos.did";
 import { getLoadingComponent } from "../../../components/loading";
 import { APITodo } from "../apis/apiGroups";
-import { APIUser } from "../apis/apiUsers";
+import { APIUser } from "../apis/apiTodos";
 import { getComponentTodo } from "../components/componentTodo";
 import { getComponentTodoLists } from "../components/componentTodoLists";
 import { StoreGlobal } from "./storeGlobal";

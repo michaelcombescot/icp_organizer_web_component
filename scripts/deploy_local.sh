@@ -22,4 +22,4 @@ dfx generate internet_identity
 dfx deploy organizerFrontend
 
 # create a first set of indexes
-dfx canister call organizerCoordinator handlerAddIndex '(variant todosIndex)'
+dfx canister call organizerCoordinator handlerAddIndex '(variant { todosIndex })'

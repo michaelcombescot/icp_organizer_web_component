@@ -1,5 +1,5 @@
-- faire l'index et le modèle de données.
-- index => check que le recup free bucket est clean
+- know when to update the users data buckets array
+- should I keep the same type for todosUsersBucket and todosBucket ?
 
 
 

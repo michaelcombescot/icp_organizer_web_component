@@ -2,14 +2,18 @@ import Principal "mo:core/Principal";
 import Result "mo:core/Result";
 import Error "mo:core/Error";
 import Runtime "mo:core/Runtime";
+import List "mo:core/List";
+import Nat64 "mo:core/Nat64";
+import Time "mo:core/Time";
+import Debug "mo:core/Debug";
 import CanistersMap "../../../shared/canistersMap";
 import CanistersKinds "../../../shared/canistersKinds";
-import TodosBucket "todosBucket";
+import TodosGroupsBucket "todosGroupsBucket";
 import Interfaces "../../../shared/interfaces";
-import UserData "../models/todosUserData";
 import CanistersVirtualArray "../../../shared/canistersVirtualArray";
 import Identifiers "../../../shared/identifiers";
 import Group "../models/todosGroup";
+import TodosUsersBucket "todosUsersBucket";
 
 // only goal of this canister is too keep track of the relationship between users principals and canisters.
 // this is the main piece of code which should need to change in case of scaling needs (by adding new users buckets )
@@ -18,7 +22,17 @@ shared ({ caller = owner }) persistent actor class TodosIndex() = this {
     // ERRORS //
     ////////////
 
+    let TIMER_INTERVAL_NS = 20_000_000_000;
+
     let ERR_CANNOT_FIND_CURRENT_BUCKET = "ERR_CANNOT_FIND_CURRENT_BUCKET";
+    let ERR_CANNOT_CREATE_GROUP = "ERR_CANNOT_CREATE_GROUP";
+    let ERR_CANNOT_CREATE_USER = "ERR_CANNOT_CREATE_USER";
+
+    type ErrTypes = {
+        #errCannotCreateUserMusrDeleteGroup: { groupIdentifier: Identifiers.Identifier };
+    };
+
+    var errList = List.empty<ErrTypes>();
 
     ////////////
     // MEMORY //
@@ -30,7 +44,7 @@ shared ({ caller = owner }) persistent actor class TodosIndex() = this {
 
     var memoryUsersBuckets: CanistersVirtualArray.CanistersVirtualArray = [];
 
-    var currentGroupBucket: ?TodosBucket.TodosBucket = null;
+    var currentGroupBucket: ?TodosGroupsBucket.TodosGroupsBucket = null;
 
     ////////////
     // SYSTEM //
@@ -60,6 +74,12 @@ shared ({ caller = owner }) persistent actor class TodosIndex() = this {
         }
     };
 
+    system func timer(setGlobalTimer : (Nat64) -> ()) : async () {
+        setGlobalTimer(Nat64.fromIntWrap(Time.now()) + Nat64.fromNat(TIMER_INTERVAL_NS));
+
+        await helperHandleErrors();
+    };
+
     public shared func systemAddCanistersToMap({ canistersPrincipals: [Principal]; canisterKind: CanistersKinds.CanisterKind }) : async () {
         CanistersMap.addCanistersToMap({ map = memoryCanisters; canistersPrincipals = canistersPrincipals; canisterKind = canisterKind });
     };
@@ -72,12 +92,40 @@ shared ({ caller = owner }) persistent actor class TodosIndex() = this {
     // API USERS //
     ///////////////
 
-    public shared ({ caller }) func handlerCreateUser() : async Result.Result<Principal, Text> {
-        let bucket = helperFetchUserBucket(caller) else return #err(ERR_CANNOT_FIND_CURRENT_BUCKET);
+    public shared ({ caller }) func handlerCreateUser() : async Result.Result<{ bucketUser: Principal; groupIdentifier: Identifiers.Identifier }, Text> {
+        // create group
+        let ?bucketGroup = await helperFetchCurrentGroupBucket() else return #err(ERR_CANNOT_FIND_CURRENT_BUCKET);
 
-        switch ( await bucket.handlerCreateUser({ userPrincipal = caller }) ) {
-            case (#ok(resp))    #ok(Principal.fromActor(bucket));
-            case (#err(e))      #err(e);
+        let groupCreationCall = try { await bucketGroup.handlerCreateGroup(caller, { name = "My Group"; kind = #personnal }); }
+                                catch (e) {
+                                    Debug.print("Error while creating group: " # Error.message(e));
+                                    return #err(ERR_CANNOT_CREATE_GROUP); 
+                                };
+
+        let groupIdentifier =   switch ( groupCreationCall ) {
+                                    case (#ok(resp)) {
+                                        if ( resp.isFull ) { currentGroupBucket := null; };
+                                        resp.identifier
+                                    };
+                                    case (#err(e)) return #err(e);
+                                };
+
+        // create user
+        let bucketUser = helperFetchUserBucket(caller);
+
+        let userCreationCall = try { await bucketUser.handlerCreateUser({ userPrincipal = caller; groupIdentifier = groupIdentifier }) }
+                                catch (e) {
+                                    Debug.print("Error while creating user: " # Error.message(e));
+                                    List.add(errList, #errCannotCreateUserMusrDeleteGroup({ groupIdentifier = groupIdentifier }));
+                                    return #err(ERR_CANNOT_CREATE_USER); 
+                                };
+            
+        switch ( userCreationCall ) {
+            case (#ok(_))    #ok({ bucketUser = Principal.fromActor(bucketUser); groupIdentifier = groupIdentifier });
+            case (#err(e)) {
+                List.add(errList, #errCannotCreateUserMusrDeleteGroup({ groupIdentifier = groupIdentifier }));
+                #err(e);
+            };
         }
     };
 
@@ -101,13 +149,13 @@ shared ({ caller = owner }) persistent actor class TodosIndex() = this {
     // HELPERS //
     /////////////
 
-    func helperFetchCurrentGroupBucket() : async ?TodosBucket.TodosBucket {
+    func helperFetchCurrentGroupBucket() : async ?TodosGroupsBucket.TodosGroupsBucket {
         switch ( currentGroupBucket ) {
             case (?_) ();
             case (null) {
                 try {
-                    let principal = await coordinatorActor.handlerGiveFreeBucket({ bucketKind = #todosBucket });
-                    currentGroupBucket := ?(actor(Principal.toText(principal)) : TodosBucket.TodosBucket);
+                    let principal = await coordinatorActor.handlerGiveFreeBucket({ bucketKind = #todosGroupsBucket });
+                    currentGroupBucket := ?(actor(Principal.toText(principal)) : TodosGroupsBucket.TodosGroupsBucket);
                 } catch (e) {
                     Runtime.trap( "Error while fetching bucket: " # Error.message(e) );
                 };
@@ -117,8 +165,34 @@ shared ({ caller = owner }) persistent actor class TodosIndex() = this {
         currentGroupBucket
     };
 
-    func helperFetchUserBucket(userPrincipal: Principal) : TodosBucket.TodosBucket {
+    func helperFetchUserBucket(userPrincipal: Principal) : TodosUsersBucket.TodosUsersBucket {
         let principal = CanistersVirtualArray.fetchUserBucket(memoryUsersBuckets, userPrincipal);
-        actor(Principal.toText(principal)) : TodosBucket.TodosBucket
+        actor(Principal.toText(principal)) : TodosUsersBucket.TodosUsersBucket
+    };
+
+    func helperHandleErrors() : async () {
+        // handle errors
+        let newList = List.empty<ErrTypes>();
+        for ( err in List.values(errList) ) {
+            switch ( err ) {
+                case (#errCannotCreateUserMusrDeleteGroup(params)) {
+                    let aktor = actor(Principal.toText(params.groupIdentifier.bucket)) : TodosGroupsBucket.TodosGroupsBucket;
+                    try {
+                        switch ( await aktor.handlerDeleteGroup(params.groupIdentifier.id) ) {
+                            case (#ok()) ();
+                            case (#err(e)) {
+                                Debug.print("Error while deleting group: " # e);
+                                List.add(newList, err);
+                            };
+                        };
+                    } catch (e) {
+                        Debug.print("Error while deleting group: " # Error.message(e));
+                        List.add(newList, err); 
+                    };
+                };
+            };
+        };
+
+        errList := newList;
     };
 };

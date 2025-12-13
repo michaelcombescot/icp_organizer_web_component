@@ -1,5 +1,5 @@
-- know when to update the users data buckets array
-- should I keep the same type for todosUsersBucket and todosBucket ?
+- trouver comment gérer la création de nouveaux users buckets
+- essayer de voir si je dois split les users buckets et les todos buckets
 
 
 

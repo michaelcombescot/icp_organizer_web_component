@@ -55,7 +55,8 @@ module {
     // API
     //
 
-    public type CreateGroupParam = {
+    public type CreateGroupParams = {
         name: Text;
+        kind: Kind;
     };
 };

@@ -9,12 +9,12 @@ import CanistersMap "../../../shared/canistersMap";
 import CanistersKinds "../../../shared/canistersKinds";
 import Identifiers "../../../shared/identifiers";
 
-shared ({ caller = owner }) persistent actor class TodosUsersBucket() = this {
+shared ({ caller = owner }) persistent actor class UsersBucket() = this {
     /////////////
     // CONFIGS //
     /////////////
 
-    let MAX_NUMBER_ENTRIES = 100_000_000; // TODO handle max number entries in handlerCreateUser
+    let MAX_NUMBER_ENTRIES = 1_000_000; // TODO handle max number entries in handlerCreateUser
 
     ////////////
     // ERRORS //
@@ -50,10 +50,10 @@ shared ({ caller = owner }) persistent actor class TodosUsersBucket() = this {
         if ( params.caller == Principal.anonymous() ) { return false; };
 
         switch ( params.msg ) {
-            case (#systemAddCanistersToMap(_))  CanistersMap.isPrincipalInKind(memoryCanisters, params.caller, #todosIndex);
+            case (#systemAddCanistersToMap(_))  params.caller == owner;
 
-            case (#handlerGetUserData(_))       Option.isSome(Map.get(memoryUsers, Principal.compare, params.caller));
-            case (#handlerCreateUser(_))        CanistersMap.isPrincipalInKind(memoryCanisters, params.caller, #todosIndex);
+            case (#handlerGetUserData(_))       true; // callable directly by the frontend
+            case (#handlerCreateUser(_))        CanistersMap.isPrincipalInKind(memoryCanisters, params.caller, #indexes(#usersIndex));
         }
     };
 

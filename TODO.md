@@ -1,6 +1,4 @@
 - trouver comment gérer la création de nouveaux users buckets
-- essayer de voir si je dois split les users buckets et les todos buckets
-
 
 
 to know:

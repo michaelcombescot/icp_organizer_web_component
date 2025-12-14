@@ -5,11 +5,13 @@ import Principal "mo:core/Principal";
 import Result "mo:core/Result";
 import Time "mo:core/Time";
 import Nat "mo:core/Nat";
+import Array "mo:core/Array";
 import Identifiers "../../../shared/identifiers";
 import Todo "../models/todosTodo";
 import Group "../models/todosGroup";
+import UserData "../models/todosUserData";
 
-shared ({ caller = owner }) persistent actor class TodosGroupsBucket() = this {
+shared ({ caller = owner }) persistent actor class TodosBucket() = this {
     let thisPrincipal = Principal.fromActor(this);
 
     /////////////
@@ -23,12 +25,16 @@ shared ({ caller = owner }) persistent actor class TodosGroupsBucket() = this {
     ////////////
 
     let ERR_GROUP_NOT_FOUND = "ERR_GROUP_NOT_FOUND";
+    let ERR_USER_NOT_FOUND = "ERR_USER_NOT_FOUND";
+    let ERR_USER_ALREADY_EXISTS = "ERR_USER_ALREADY_EXISTS";
     
     ////////////
     // MEMORY //
     ////////////
 
     let memoryCanisters = CanistersMap.newCanisterMap();
+
+    let memoryUsers = Map.empty<Principal, UserData.UserData>();
 
     let memoryGroups = Map.empty<Nat, Group.Group>();
 
@@ -44,9 +50,6 @@ shared ({ caller = owner }) persistent actor class TodosGroupsBucket() = this {
         msg : {
             #systemAddCanistersToMap : () -> { canistersPrincipals: [Principal]; canisterKind: CanistersKinds.CanisterKind };
 
-            #handlerCreateUser : () -> {userPrincipal : Principal};
-            #handlerGetUserData : () -> (userPrincipal : Principal);
-
             #handlerCreateGroup : () -> (userPrincipal: Principal, params : Group.CreateGroupParams);
             #handlerDeleteGroup : () -> (id : Nat);
 
@@ -60,13 +63,10 @@ shared ({ caller = owner }) persistent actor class TodosGroupsBucket() = this {
         switch ( params.msg ) {
             case (#systemAddCanistersToMap(_))       params.caller == owner;
 
-            case (#handlerCreateUser(_))            CanistersMap.isPrincipalInKind(memoryCanisters, params.caller, #todosIndex);
-            case (#handlerGetUserData(_))           CanistersMap.isPrincipalInKind(memoryCanisters, params.caller, #todosIndex);
+            case (#handlerCreateGroup(_))           true;
+            case (#handlerDeleteGroup(_))           true;
 
-            case (#handlerCreateGroup(_))           CanistersMap.isPrincipalInKind(memoryCanisters, params.caller, #todosIndex);
-            case (#handlerDeleteGroup(_))           CanistersMap.isPrincipalInKind(memoryCanisters, params.caller, #todosIndex);
-
-            case (#handlerCreateTodo(_))            CanistersMap.isPrincipalInKind(memoryCanisters, params.caller, #todosIndex);
+            case (#handlerCreateTodo(_))            true;
         }
     };
 

@@ -1,10 +1,11 @@
 import Principal "mo:core/Principal";
-import CanistersKinds "../../../shared/canistersKinds";
-import CanistersMap "../../../shared/canistersMap";
+import Blob "mo:core/Blob";
+import CanistersKinds "../shared/canistersKinds";
+import CanistersMap "../shared/canistersMap";
 
 // only goal of this canister is too keep track of all the indexes and serve their principal to the frontend.
 // not dynamically created, if the need arise another instance will need to be declared in the dfx.json
-shared ({ caller = owner }) persistent actor class TodosRegistry() = this {
+shared ({ caller = owner }) persistent actor class IndexesRegistry() = this {
     
     ////////////
     // MEMORY //
@@ -25,15 +26,17 @@ shared ({ caller = owner }) persistent actor class TodosRegistry() = this {
             #systemAddCanistersToMap : () -> { canistersPrincipals: [Principal]; canisterKind: CanistersKinds.CanisterKind };
             #systemSetCoordinator : () -> {coordinatorPrincipalArg : Principal};
 
-            #handlerGetIndexes : () -> ();
+            #handlerGetIndexes : () -> (kind: CanistersKinds.Indexes);
         };
     };
 
     system func inspect(params: InspectParams) : Bool {
         if ( params.caller == Principal.anonymous() ) { return false; };
 
+        if ( Blob.size(params.arg) > 10 ) { return false; };
+
         switch ( params.msg ) {
-            case (#systemAddCanistersToMap(_))   ?params.caller == coordinatorPrincipal;
+            case (#systemAddCanistersToMap(_))  ?params.caller == coordinatorPrincipal;
             case (#systemSetCoordinator(_))     params.caller == owner;
             case (#handlerGetIndexes(_))        true
         }
@@ -51,7 +54,7 @@ shared ({ caller = owner }) persistent actor class TodosRegistry() = this {
     // API //
     /////////
 
-    public shared func handlerGetIndexes() : async [Principal] {
-        CanistersMap.getPrincipalsForKind(memoryCanisters, #todosIndex)
+    public shared func handlerGetIndexes(kind: CanistersKinds.Indexes) : async [Principal] {
+        CanistersMap.getPrincipalsForKind(memoryCanisters, #indexes(kind))
     };
 };

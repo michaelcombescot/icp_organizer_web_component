@@ -4,12 +4,23 @@ import Order "mo:core/Order";
 module {
     // all canisters
     public type CanisterKind = {
-        #todosRegistry;
-        #todosIndex;
+        #registries: Registries;
+        #indexes: Indexes;
+        #buckets: Buckets;
+    };
 
-        // todosBucket and todosUserBucket are the same actor behind the scene, we just need a way to be able to easily route a principal to a specific bucket, it's easier this way.
-        #todosGroupsBucket;
-        #todosUsersBucket;
+    public type Registries = {
+        #indexesRegistry;
+    };
+
+    public type Indexes = {
+        #todosIndex;
+        #usersIndex;
+    };
+
+    public type Buckets = {
+        #todosBucket;
+        #usersBucket;
     };
 
     public func compareCanisterKinds(a: CanisterKind, b: CanisterKind) : Order.Order {

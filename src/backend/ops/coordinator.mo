@@ -12,13 +12,14 @@ import List "mo:core/List";
 import Runtime "mo:core/Runtime";
 import CanistersKinds "../shared/canistersKinds";
 import TodosIndex "../modules/todos/canisters/todosIndex";
-import TodosGroupsBucket "../modules/todos/canisters/todosGroupsBucket";
-import TodosUsersBucket "../modules/todos/canisters/todosUsersBucket";
-import TodosRegistry "../modules/todos/canisters/todosRegistry";
+import TodosBucket "../modules/todos/canisters/todosBucket";
+import UsersIndex "../modules/users/canisters/usersIndex";
+import UsersBucket "../modules/users/canisters/usersBucket";
+import IndexesRegistry "indexesRegistry";
 import CanistersMap "../shared/canistersMap";
 import Timer "mo:core/Timer";
 import Array "mo:core/Array";
-import CanistersVirtualArray "../shared/canistersVirtualArray";
+import PrincipalsArray "../shared/principalsArray";
 
 // The coordinator is the main entry point to launch the application.
 // Launching the coordinator will create all necessary buckets and indexes, it's the ONLY entry point, everything else is dynamically created.
@@ -27,7 +28,7 @@ import CanistersVirtualArray "../shared/canistersVirtualArray";
 // - top indexes and canisters with cycles
 // - check if there are free buckets in the bucket pool.The bucket pool is here for the different indexes to pick new active buckets when a buckets return a signal it's full.
 //   The goal of this system is to be able to have canisters knowed by all indexes before the moment they are used.
-shared ({ caller = owner }) persistent actor class Coordinator(todosRegistryPrincipal: Principal) = this {
+shared ({ caller = owner }) persistent actor class Coordinator(indexesRegistryPrincipal: Principal) = this {
     /////////////
     // CONFIGS //
     /////////////
@@ -58,40 +59,21 @@ shared ({ caller = owner }) persistent actor class Coordinator(todosRegistryPrin
     // MEMORY //
     ////////////
 
-    let memoryCanisters = CanistersMap.arrayToCanistersMap([ (#todosRegistry, [todosRegistryPrincipal]) ]);
+    let memoryCanisters = CanistersMap.arrayToCanistersMap([ (#registries(#indexesRegistry), [indexesRegistryPrincipal]) ]);
 
     let memoryFreeBuckets  = Map.empty<CanistersKinds.CanisterKind, List.List<Principal>>();
-
-    // this is the array used to map users principal to their buckets.
-    // It use virtual slots in a predefined size array. All slots are initialized with a single bucket to start.
-    // When the count of users increase, some slots will be set with new buckets, and the load will be spreaded.
-    var memoryUsersBuckets: CanistersVirtualArray.CanistersVirtualArray = [];
 
     ////////////
     // SYSTEM //
     ////////////
-
-    // init the canister
-    ignore Timer.setTimer<system>(
-        #seconds(0),
-        func() : async () {
-            if ( memoryUsersBuckets.size() == 0 ) {
-                let principal = Principal.fromActor(await (with cycles = NEW_BUCKET_NB_CYCLES) TodosUsersBucket.TodosUsersBucket());
-                CanistersMap.addCanistersToMap({ map = memoryCanisters; canistersPrincipals = [principal]; canisterKind = #todosUsersBucket });
-                memoryUsersBuckets := CanistersVirtualArray.newCanistersVirtualArray(1, principal);
-            };         
-        }
-    );
 
     type inspectParams = {
         arg : Blob;
         caller : Principal;
         msg : {
             #handlerUpgradeCanisterKind : () -> {code : Blob; nature : CanistersKinds.CanisterKind};
-            #handlerAddIndex : () -> (indexKind: CanistersKinds.CanisterKind);
-            #handlerGetCanisters: () -> ();
-
-            #handlerGiveFreeBucket : () -> (bucketKind: CanistersKinds.CanisterKind);
+            #handlerAddIndex : () -> (indexKind: CanistersKinds.Indexes);
+            #handlerGiveFreeBucket : () -> (bucketKind: CanistersKinds.Buckets);
         }
     };
 
@@ -99,9 +81,7 @@ shared ({ caller = owner }) persistent actor class Coordinator(todosRegistryPrin
         switch ( params.msg ) {
             case (#handlerAddIndex(_))              params.caller == owner;
             case (#handlerUpgradeCanisterKind(_))   params.caller == owner;
-            case (#handlerGetCanisters(_))          params.caller == owner;
-
-            case (#handlerGiveFreeBucket(_))        CanistersMap.isPrincipalInKind(memoryCanisters, params.caller, #todosIndex) ;
+            case (#handlerGiveFreeBucket(_))        CanistersMap.isPrincipalInKind(memoryCanisters, params.caller, #indexes(#todosIndex)) ;
         }
     };
 
@@ -135,14 +115,9 @@ shared ({ caller = owner }) persistent actor class Coordinator(todosRegistryPrin
     };
 
     // add a new index to the index list
-    public shared func handlerAddIndex(indexKind: CanistersKinds.CanisterKind) : async Result.Result<(), Text> {
-        switch indexKind {
-            case (#todosIndex) ();
-            case (#todosRegistry or #todosUsersBucket or #todosGroupsBucket) return #err("Cannot add index of type " # debug_show(indexKind));
-        };
-
+    public shared func handlerAddIndex(indexKind: CanistersKinds.Indexes) : async Result.Result<(), Text> {
         try {
-            await helperCreateCanister(indexKind);
+            await helperCreateCanister(#indexes(indexKind));
             #ok
         } catch (e) {
             #err("Cannot create index, error: " # Error.message(e))
@@ -151,13 +126,8 @@ shared ({ caller = owner }) persistent actor class Coordinator(todosRegistryPrin
 
     /// API FOR INDEXES ///
 
-    public shared func handlerGiveFreeBucket(bucketKind: CanistersKinds.CanisterKind) : async Result.Result<Principal, Text> {
-        switch bucketKind {
-            case (#todosGroupsBucket or #todosUsersBucket) ();
-            case (#todosRegistry or #todosIndex) return #err("Cannot give free bucket of type " # debug_show(bucketKind));
-        };
-
-        let ?list = Map.get(memoryFreeBuckets, CanistersKinds.compareCanisterKinds, bucketKind) else return #err("No free buckets of type " # debug_show(bucketKind) # " found");
+    public shared func handlerGiveFreeBucket(bucketKind: CanistersKinds.Buckets) : async Result.Result<Principal, Text> {
+        let ?list = Map.get(memoryFreeBuckets, CanistersKinds.compareCanisterKinds, #buckets(bucketKind)) else return #err("No free buckets of type " # debug_show(bucketKind) # " found");
 
         switch ( List.removeLast(list) ) {
             case (?principal) #ok(principal);
@@ -172,52 +142,56 @@ shared ({ caller = owner }) persistent actor class Coordinator(todosRegistryPrin
     func helperCreateCanister(canisterType : CanistersKinds.CanisterKind) : async () {
         try {
             switch (canisterType) {
-                case (#todosRegistry)   (); // registry is never created by the helper
-                case (#todosIndex) {
-                    // create the canister
-                    let newPrincipal = Principal.fromActor(await (with cycles = NEW_INDEX_NB_CYCLES) TodosIndex.TodosIndex());
+                case (#registries(_))   (); // registry is never created by the helper
+                case (#indexes(indexKind)) {
+                    switch (indexKind) {
+                        case (#todosIndex) {
+                            // create the canister
+                            let newPrincipal = Principal.fromActor(await (with cycles = NEW_INDEX_NB_CYCLES) TodosIndex.TodosIndex());
+                            // save it in the memoryCanisters map
+                            CanistersMap.addCanistersToMap({ map = memoryCanisters; canistersPrincipals = [newPrincipal]; canisterKind = #indexes(#todosIndex) });
+                            // send it to all todos buckets
+                            ignore helperSendPrincipalsToCanistersOfKind({ targetKind = #buckets(#todosBucket); canisterKind = #indexes(#todosIndex); canistersPrincipals  = [newPrincipal] });
+                            // feed it with all necessary canisters principals
+                            ignore helperSendCanistersKindToPrincipal({ targetKind = #indexes(#todosIndex); targetPrincipal = newPrincipal; canisterKind = #buckets(#todosBucket); });
+                        };
+                        case (#usersIndex) {
+                            let newPrincipal = Principal.fromActor(await (with cycles = NEW_INDEX_NB_CYCLES) UsersIndex.UsersIndex());
 
-                    // save it in the memoryCanisters map
-                    CanistersMap.addCanistersToMap({ map = memoryCanisters; canistersPrincipals = [newPrincipal]; canisterKind = #todosIndex });
-
-                    // send it to all todos users buckets and todos buckets
-                    ignore helperSendUserArrayToCanistersOfKind({ targetKind = #todosIndex; });
-                    ignore helperSendPrincipalsToCanistersOfKind({ targetKind = #todosBucket; canisterKind = #todosIndex; canistersPrincipals  = [newPrincipal] });
-                    ignore helperSendPrincipalsToCanistersOfKind({ targetKind = #todosUsersBucket; canisterKind = #todosIndex; canistersPrincipals  = [newPrincipal] });
-
-                    // feed it with all necessary canisters principals
-                    ignore helperSendCanistersKindToPrincipal({ targetKind = #todosIndex; targetPrincipal = newPrincipal; canisterKind = #todosIndex; });
-                    ignore helperSendCanistersKindToPrincipal({ targetKind = #todosIndex; targetPrincipal = newPrincipal; canisterKind = #todosIndex; });
-                };
-                case (#todosUsersBucket) {
-                    // create the canister
-                    let newPrincipal = Principal.fromActor(await (with cycles = NEW_BUCKET_NB_CYCLES) TodosBucket.TodosBucket());
-
-                    // save in the memoryUsersBuckets
-                    CanistersMap.addCanistersToMap({ map = memoryCanisters; canistersPrincipals = [newPrincipal]; canisterKind = #todosUsersBucket });
-
-                    // rebalance 
-                    // TODO: handle a way to rebalance users buckets
-
-                    // send it to all todos indexes
-                    ignore helperSendUserArrayToCanistersOfKind({ targetKind = #todosIndex; });
-                };
-                case (#todosBucket) {
-                    // create the canister
-                    let newPrincipal = Principal.fromActor(await (with cycles = NEW_BUCKET_NB_CYCLES) TodosBucket.TodosBucket());
-
-                    // save it in the memoryCanisters map
-                    CanistersMap.addCanistersToMap({ map = memoryCanisters; canistersPrincipals = [newPrincipal]; canisterKind = #todosBucket });
-
-                    // add it to free buckets list
-                    switch ( Map.get(memoryFreeBuckets, CanistersKinds.compareCanisterKinds, canisterType) ) {
-                        case null Map.add(memoryFreeBuckets, CanistersKinds.compareCanisterKinds, canisterType, List.singleton(newPrincipal));
-                        case (?list) List.add(list, newPrincipal);
+                            // TODO
+                        };
                     };
+                };
+                case (#buckets(bucketKind)) {
+                    switch (bucketKind) {
+                        case (#usersBucket) {
+                            // create the canister
+                            let newPrincipal = Principal.fromActor(await (with cycles = NEW_BUCKET_NB_CYCLES) UsersBucket.UsersBucket());
+                            // save in the memoryUsersBuckets
+                            CanistersMap.addCanistersToMap({ map = memoryCanisters; canistersPrincipals = [newPrincipal]; canisterKind = #buckets(#usersBucket) });
+                            // add it to free buckets list
+                            switch ( Map.get(memoryFreeBuckets, CanistersKinds.compareCanisterKinds, canisterType) ) {
+                                case null Map.add(memoryFreeBuckets, CanistersKinds.compareCanisterKinds, canisterType, List.singleton(newPrincipal));
+                                case (?list) List.add(list, newPrincipal);
+                            };
+                        };
+                        case (#todosBucket) {
+                            // create the canister
+                            let newPrincipal = Principal.fromActor(await (with cycles = NEW_BUCKET_NB_CYCLES) TodosBucket.TodosBucket());
+                            // save it in the memoryCanisters map
+                            CanistersMap.addCanistersToMap({ map = memoryCanisters; canistersPrincipals = [newPrincipal]; canisterKind = #buckets(#todosBucket) });
+                            // add it to free buckets list
+                            switch ( Map.get(memoryFreeBuckets, CanistersKinds.compareCanisterKinds, canisterType) ) {
+                                case null Map.add(memoryFreeBuckets, CanistersKinds.compareCanisterKinds, canisterType, List.singleton(newPrincipal));
+                                case (?list) List.add(list, newPrincipal);
+                            };
 
-                    // send it to all todos users buckets and todos indexes
-                    ignore helperSendPrincipalsToCanistersOfKind({ targetKind = #todosUsersBucket; canisterKind = #todosBucket; canistersPrincipals = [newPrincipal] });
-                    ignore helperSendPrincipalsToCanistersOfKind({ targetKind = #todosIndex; canisterKind = #todosBucket; canistersPrincipals = [newPrincipal] });
+                            // send it to all todos and users buckets and indexes
+                            ignore helperSendPrincipalsToCanistersOfKind({ targetKind = #buckets(#todosBucket); canisterKind = #buckets(#todosBucket); canistersPrincipals = [newPrincipal] });
+                            ignore helperSendPrincipalsToCanistersOfKind({ targetKind = #indexes(#todosIndex); canisterKind = #buckets(#todosBucket); canistersPrincipals = [newPrincipal] });
+                            ignore helperSendPrincipalsToCanistersOfKind({ targetKind = #indexes(#usersIndex); canisterKind = #buckets(#todosBucket); canistersPrincipals = [newPrincipal] });
+                        };
+                    };
                 };
             };
         } catch (e) {
@@ -242,41 +216,36 @@ shared ({ caller = owner }) persistent actor class Coordinator(todosRegistryPrin
     func helperSendPrincipalsToCanister({ targetPrincipal: Principal; targetKind: CanistersKinds.CanisterKind; canistersPrincipals: [Principal]; canisterKind : CanistersKinds.CanisterKind; }) : async () {
         try {
             switch (targetKind) {
-                case (#todosRegistry)   await (actor(Principal.toText(targetPrincipal)) : TodosRegistry.TodosRegistry).systemAddCanistersToMap({ canistersPrincipals = canistersPrincipals; canisterKind = canisterKind });
-                case (#todosIndex)      await (actor(Principal.toText(targetPrincipal)) : TodosIndex.TodosIndex).systemAddCanistersToMap({ canistersPrincipals = canistersPrincipals; canisterKind = canisterKind });
-                case (#todosGroupsBucket)     await (actor(Principal.toText(targetPrincipal)) : TodosGroupsBucket.TodosGroupsBucket).systemAddCanistersToMap({ canistersPrincipals = canistersPrincipals; canisterKind = canisterKind });
-                case (#todosUsersBucket) await (actor(Principal.toText(targetPrincipal)) : TodosUsersBucket.TodosUsersBucket).systemAddCanistersToMap({ canistersPrincipals = canistersPrincipals; canisterKind = canisterKind });
-            }
+                case (#registries(registrykind)) {
+                    switch (registrykind) {
+                        case (#indexesRegistry) await (actor(Principal.toText(targetPrincipal)) : IndexesRegistry.IndexesRegistry).systemAddCanistersToMap({ canistersPrincipals = canistersPrincipals; canisterKind = canisterKind }); 
+                    };
+                };
+                case (#indexes(indexKind)) {
+                    switch (indexKind) {
+                        case (#usersIndex) await (actor(Principal.toText(targetPrincipal)) : UsersIndex.UsersIndex).systemAddCanistersToMap({ canistersPrincipals = canistersPrincipals; canisterKind = canisterKind });
+                        case (#todosIndex) await (actor(Principal.toText(targetPrincipal)) : TodosIndex.TodosIndex).systemAddCanistersToMap({ canistersPrincipals = canistersPrincipals; canisterKind = canisterKind });
+                    };
+                };
+                case (#buckets(bucketKind)) {
+                    switch (bucketKind) {
+                        case (#usersBucket)     await (actor(Principal.toText(targetPrincipal)) : UsersBucket.UsersBucket).systemAddCanistersToMap({ canistersPrincipals = canistersPrincipals; canisterKind = canisterKind });
+                        case (#todosBucket)    await (actor(Principal.toText(targetPrincipal)) : TodosBucket.TodosBucket).systemAddCanistersToMap({ canistersPrincipals = canistersPrincipals; canisterKind = canisterKind });
+                    };
+                };
+            };
         } catch (e) {
             Debug.print("Cannot send principal to canister, error: " # Error.message(e));
             List.add(listAPIErrors, #errorSendPrincipalsToCanister({ targetPrincipal = targetPrincipal; targetKind = targetKind; canisterKind = canisterKind; canistersPrincipals = canistersPrincipals }));
         }
     };
 
-    func helperSendUserArrayToCanistersOfKind({ targetKind: CanistersKinds.CanisterKind; }) : async () {
-        let ?map = Map.get(memoryCanisters, CanistersKinds.compareCanisterKinds, targetKind) else return;
-
-        switch ( targetKind ) {
-            case (#todosRegistry or #todosBucket or #todosUsersBucket) ();
-            case (#todosIndex) {
-                for ( targetPrincipal in Map.keys(map) ) {
-                    try {
-                        await (actor(Principal.toText(targetPrincipal)) : TodosIndex.TodosIndex).systemUpdateUsersBucketsArray();
-                    } catch (e) {
-                        Debug.print("Cannot send user array to canister, error: " # Error.message(e));
-                    };
-                };
-            };
-        };
-    };
-
     func helperTopCanisters() : async () {
         for ( (nature, typeMap) in Map.entries(memoryCanisters) ) {
             let toppingAmount = switch (nature) {
-                                    case (#todosRegistry)       TOPPING_AMOUNT_REGISTRY;
-                                    case (#todosIndex)          TOPPING_AMOUNT_INDEXES;                        
-                                    case (#todosBucket)         TOPPING_AMOUNT_BUCKETS; 
-                                    case (#todosUsersBucket)    TOPPING_AMOUNT_BUCKETS;               
+                                    case (#registries(_))    TOPPING_AMOUNT_REGISTRY;
+                                    case (#indexes(_))       TOPPING_AMOUNT_INDEXES;
+                                    case (#buckets(_))       TOPPING_AMOUNT_BUCKETS;
                                 };
 
 
@@ -297,17 +266,32 @@ shared ({ caller = owner }) persistent actor class Coordinator(todosRegistryPrin
 
     func helperCreateNewFreeBuckets() : async () {
         label l for ( (kind, listPrincipals) in Map.entries(memoryFreeBuckets) ) {
-            let nbIndexes = switch (kind) {
-                                case (#todosIndex or #todosRegistry or #todosUsersBucket) continue l;
-                                case (#todosBucket) CanistersMap.getPrincipalsForKind(memoryCanisters, #todosIndex).size();
-                            };
-            let nbBuckets = List.size(listPrincipals);
-                                    
-            var i = 0;
-            while ( i + nbBuckets <= nbIndexes) {
-                ignore helperCreateCanister(kind);
+            switch (kind) {
+                case (#registries(_)) continue l;
+                case (#indexes(_)) continue l;
+                case (#buckets(bucketKind)) {
+                    var nbIndexes = 0;
+                    var nbBuckets = 0;
+                    var missingBuckets = 0;
 
-                i := i + 1;
+                    switch (bucketKind) {
+                        case (#todosBucket) {
+                            nbIndexes := CanistersMap.getPrincipalsForKind(memoryCanisters, #indexes(#usersIndex)).size();
+                            nbBuckets := List.size(listPrincipals);
+                            missingBuckets := nbIndexes - nbBuckets;
+                        };
+                        case (#usersBucket) {
+                            nbIndexes := CanistersMap.getPrincipalsForKind(memoryCanisters, #indexes(#todosIndex)).size();
+                            nbBuckets := List.size(listPrincipals);
+                            missingBuckets := 1;
+                        };
+                    };
+                                            
+                    while ( missingBuckets != 0 ) {
+                        ignore helperCreateCanister(kind);
+                        missingBuckets -= 1;
+                    }; 
+                };
             };
         };
     };

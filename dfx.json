@@ -5,7 +5,7 @@
       "type": "motoko"
     },
 
-    "organizerTodosRegistry": {
+    "organizerIndexesRegistry": {
       "main": "src/backend/ops/todosRegistry.mo",
       "type": "motoko"
     },
@@ -17,6 +17,16 @@
     
     "organizerTodosIndex": {
       "main": "src/backend/modules/todos/canisters/todosIndex.mo",
+      "type": "motoko"
+    },
+
+    "organizerUsersIndex": {
+      "main": "src/backend/modules/users/canisters/usersIndex.mo",
+      "type": "motoko"
+    },
+
+    "organizerUsersBucket": {
+      "main": "src/backend/modules/users/canisters/usersBucket.mo",
       "type": "motoko"
     },
 

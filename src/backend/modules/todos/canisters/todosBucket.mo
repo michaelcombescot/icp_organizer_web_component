@@ -34,8 +34,6 @@ shared ({ caller = owner }) persistent actor class TodosBucket() = this {
 
     let memoryCanisters = CanistersMap.newCanisterMap();
 
-    let memoryUsers = Map.empty<Principal, UserData.UserData>();
-
     let memoryGroups = Map.empty<Nat, Group.Group>();
 
     var idGroupCounter = 0;

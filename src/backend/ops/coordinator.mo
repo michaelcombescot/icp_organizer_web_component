@@ -19,7 +19,6 @@ import IndexesRegistry "indexesRegistry";
 import CanistersMap "../shared/canistersMap";
 import Timer "mo:core/Timer";
 import Array "mo:core/Array";
-import PrincipalsArray "../shared/principalsArray";
 
 // The coordinator is the main entry point to launch the application.
 // Launching the coordinator will create all necessary buckets and indexes, it's the ONLY entry point, everything else is dynamically created.
@@ -63,6 +62,8 @@ shared ({ caller = owner }) persistent actor class Coordinator(indexesRegistryPr
 
     let memoryFreeBuckets  = Map.empty<CanistersKinds.CanisterKind, List.List<Principal>>();
 
+    var memoryUsersMapping: [Principal] = [];
+
     ////////////
     // SYSTEM //
     ////////////
@@ -93,11 +94,28 @@ shared ({ caller = owner }) persistent actor class Coordinator(indexesRegistryPr
         setGlobalTimer(Nat64.fromIntWrap(Time.now()) + Nat64.fromNat(TIMER_INTERVAL_NS));
     };
 
+    // initialization
+    func initUsersMapping() : async () {
+        if ( memoryUsersMapping.size() == 0 ) {
+            try { 
+                let newPrincipal = Principal.fromActor(await (with cycles = NEW_BUCKET_NB_CYCLES) UsersBucket.UsersBucket());
+                memoryUsersMapping := Array.tabulate<Principal>(1000, func(i) = newPrincipal);
+            } catch (e) {
+                Debug.print("Cannot create user mapping first bucket, error: " # Error.message(e));
+                ignore Timer.setTimer<system>(#seconds(1), initUsersMapping);
+            };
+        };
+    };
+
+    ignore Timer.setTimer<system>(
+        #seconds(0),
+        initUsersMapping
+    );
+
     /////////
     // API //
     /////////
 
-    
     /// ADMIN ///
 
     // upgrade a canister of a specific type, used in cli with the command (replace with the right canister path):
@@ -199,6 +217,7 @@ shared ({ caller = owner }) persistent actor class Coordinator(indexesRegistryPr
         };
     };
 
+    // send an array of principals to all canisters of a specific kind
     func helperSendPrincipalsToCanistersOfKind({ targetKind: CanistersKinds.CanisterKind; canisterKind : CanistersKinds.CanisterKind; canistersPrincipals: [Principal]; }) : async () {
         let ?map = Map.get(memoryCanisters, CanistersKinds.compareCanisterKinds, targetKind) else return;
 
@@ -207,12 +226,14 @@ shared ({ caller = owner }) persistent actor class Coordinator(indexesRegistryPr
         } 
     };
 
+    // send all buckets of a specific kind to a specific principal
     func helperSendCanistersKindToPrincipal({ targetKind: CanistersKinds.CanisterKind; targetPrincipal: Principal; canisterKind : CanistersKinds.CanisterKind; }) : async () {
         let ?map = Map.get(memoryCanisters, CanistersKinds.compareCanisterKinds, canisterKind) else return;
 
         await helperSendPrincipalsToCanister({ targetPrincipal = targetPrincipal; targetKind = targetKind; canistersPrincipals = Array.fromIter(Map.keys(map)); canisterKind = canisterKind });
     };
 
+    // send a specific list of principals to a specific canister
     func helperSendPrincipalsToCanister({ targetPrincipal: Principal; targetKind: CanistersKinds.CanisterKind; canistersPrincipals: [Principal]; canisterKind : CanistersKinds.CanisterKind; }) : async () {
         try {
             switch (targetKind) {
@@ -240,6 +261,10 @@ shared ({ caller = owner }) persistent actor class Coordinator(indexesRegistryPr
         }
     };
 
+    // send principals to canisters of kind
+    
+
+    // recharge numbers of cycles 
     func helperTopCanisters() : async () {
         for ( (nature, typeMap) in Map.entries(memoryCanisters) ) {
             let toppingAmount = switch (nature) {
@@ -264,6 +289,7 @@ shared ({ caller = owner }) persistent actor class Coordinator(indexesRegistryPr
         };
     };
 
+    // create new free buckets, free buckets are the buckets precreated and put in a pool to be fetched when needed by indexes
     func helperCreateNewFreeBuckets() : async () {
         label l for ( (kind, listPrincipals) in Map.entries(memoryFreeBuckets) ) {
             switch (kind) {
@@ -296,6 +322,7 @@ shared ({ caller = owner }) persistent actor class Coordinator(indexesRegistryPr
         };
     };
 
+    // handle errors which needs to be retried
     func helperHandleErrors() : async () {
         // api errors retry
         let tempList = List.empty<APIErrors>();

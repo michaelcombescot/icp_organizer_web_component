@@ -3,7 +3,6 @@ import Principal "mo:core/Principal";
 import Result "mo:core/Result";
 import Array "mo:core/Array";
 import Time "mo:core/Time";
-import Option "mo:core/Option";
 import UserData "../models/todosUserData";
 import CanistersMap "../../../shared/canistersMap";
 import CanistersKinds "../../../shared/canistersKinds";
@@ -14,7 +13,7 @@ shared ({ caller = owner }) persistent actor class UsersBucket() = this {
     // CONFIGS //
     /////////////
 
-    let MAX_NUMBER_ENTRIES = 1_000_000; // TODO handle max number entries in handlerCreateUser
+    let MAX_NUMBER_ENTRIES = 10_000_000; // TODO handle max number entries in handlerCreateUser
 
     ////////////
     // ERRORS //
@@ -42,7 +41,7 @@ shared ({ caller = owner }) persistent actor class UsersBucket() = this {
             #systemAddCanistersToMap : () -> { canistersPrincipals: [Principal]; canisterKind: CanistersKinds.CanisterKind };
 
             #handlerGetUserData : () -> (userPrincipal: Principal);
-            #handlerCreateUser : () -> { userPrincipal: Principal; groupIdentifier: Identifiers.Identifier };
+            #handlerCreateUser : () -> { userPrincipal: Principal; };
         }
     };
 
@@ -76,7 +75,7 @@ shared ({ caller = owner }) persistent actor class UsersBucket() = this {
         })
     };
 
-    public shared func handlerCreateUser({ userPrincipal: Principal; groupIdentifier: Identifiers.Identifier }) : async Result.Result<(), Text> {
+    public shared func handlerCreateUser({ userPrincipal: Principal; }) : async Result.Result<(), Text> {
         switch ( Map.get(memoryUsers, Principal.compare, userPrincipal) ) {
             case (?_) return #err(ERR_USER_ALREADY_EXISTS);
             case null ();
@@ -86,7 +85,7 @@ shared ({ caller = owner }) persistent actor class UsersBucket() = this {
         let userData: UserData.UserData = {
             name = "";
             email = "";
-            groups = Map.singleton<Identifiers.Identifier, ()>(groupIdentifier, () );
+            groups = Map.empty<Identifiers.Identifier, ()>();
             createdAt = Time.now();
         };
 

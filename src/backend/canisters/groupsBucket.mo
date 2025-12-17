@@ -1,17 +1,16 @@
 import Map "mo:core/Map";
-import CanistersKinds "../../../shared/canistersKinds";
-import CanistersMap "../../../shared/canistersMap";
+import CanistersKinds "../shared/canistersKinds";
+import CanistersMap "../shared/canistersMap";
 import Principal "mo:core/Principal";
 import Result "mo:core/Result";
 import Time "mo:core/Time";
 import Nat "mo:core/Nat";
-import Array "mo:core/Array";
-import Identifiers "../../../shared/identifiers";
+import Identifiers "../shared/identifiers";
 import Todo "../models/todosTodo";
 import Group "../models/todosGroup";
 import UserData "../models/todosUserData";
 
-shared ({ caller = owner }) persistent actor class TodosBucket() = this {
+shared ({ caller = owner }) persistent actor class GroupsBucket() = this {
     let thisPrincipal = Principal.fromActor(this);
 
     /////////////
@@ -25,8 +24,6 @@ shared ({ caller = owner }) persistent actor class TodosBucket() = this {
     ////////////
 
     let ERR_GROUP_NOT_FOUND = "ERR_GROUP_NOT_FOUND";
-    let ERR_USER_NOT_FOUND = "ERR_USER_NOT_FOUND";
-    let ERR_USER_ALREADY_EXISTS = "ERR_USER_ALREADY_EXISTS";
     
     ////////////
     // MEMORY //
@@ -35,6 +32,8 @@ shared ({ caller = owner }) persistent actor class TodosBucket() = this {
     let memoryCanisters = CanistersMap.newCanisterMap();
 
     let memoryGroups = Map.empty<Nat, Group.Group>();
+
+    var memoryUsersMapping: [Principal] = [];
 
     var idGroupCounter = 0;
 
@@ -47,6 +46,7 @@ shared ({ caller = owner }) persistent actor class TodosBucket() = this {
         caller : Principal;
         msg : {
             #systemAddCanistersToMap : () -> { canistersPrincipals: [Principal]; canisterKind: CanistersKinds.CanisterKind };
+            #systemUpdateUsersMapping : () -> (usersMapping: [Principal]);
 
             #handlerCreateGroup : () -> (userPrincipal: Principal, params : Group.CreateGroupParams);
             #handlerDeleteGroup : () -> (id : Nat);
@@ -60,6 +60,7 @@ shared ({ caller = owner }) persistent actor class TodosBucket() = this {
 
         switch ( params.msg ) {
             case (#systemAddCanistersToMap(_))       params.caller == owner;
+            case (#systemUpdateUsersMapping(_))      params.caller == owner;
 
             case (#handlerCreateGroup(_))           true;
             case (#handlerDeleteGroup(_))           true;
@@ -72,6 +73,10 @@ shared ({ caller = owner }) persistent actor class TodosBucket() = this {
         CanistersMap.addCanistersToMap({ map = memoryCanisters; canistersPrincipals = canistersPrincipals; canisterKind = canisterKind });
     };
 
+    public shared func systemUpdateUsersMapping(usersMapping: [Principal]) : async () {
+        memoryUsersMapping := usersMapping;
+    };
+
     ////////////////
     // API GROUPS //
     ////////////////
@@ -79,14 +84,14 @@ shared ({ caller = owner }) persistent actor class TodosBucket() = this {
     public shared func handlerCreateGroup(userPrincipal: Principal, params: Group.CreateGroupParams) : async Result.Result<{ isFull: Bool; identifier: Identifiers.Identifier }, Text> {
         let group = Group.createGroup({ name = params.name; createdBy = userPrincipal; identifier = { id = idGroupCounter; bucket = thisPrincipal }; kind = params.kind; });
 
-        Map.add(memoryGroups, Nat.compare, Map.size(memoryGroups), group);
+        memoryGroups.add(Map.size(memoryGroups), group);
         idGroupCounter += 1;
 
-        #ok({ isFull = Map.size(memoryGroups) >= MAX_NUMBER_ENTRIES; identifier = group.identifier; });
+        #ok({ isFull = memoryGroups.size() >= MAX_NUMBER_ENTRIES; identifier = group.identifier; });
     };
 
     public shared func handlerDeleteGroup(id: Nat) : async Result.Result<(), Text> {
-        Map.remove(memoryGroups, Nat.compare, id);
+        memoryGroups.remove(id);
 
         #ok();
     };
@@ -96,7 +101,7 @@ shared ({ caller = owner }) persistent actor class TodosBucket() = this {
     ///////////////
 
     public shared func handlerCreateTodo({ userPrincipal: Principal; groupID: Nat; todo: Todo.Todo}) : async Result.Result<(), [Text]> {
-        let ?group = Map.get(memoryGroups, Nat.compare, groupID) else return #err([ERR_GROUP_NOT_FOUND]);
+        let ?group = memoryGroups.get(groupID) else return #err([ERR_GROUP_NOT_FOUND]);
 
         switch ( Todo.validateTodo(todo) ) {
             case (#ok()) ();
@@ -105,7 +110,7 @@ shared ({ caller = owner }) persistent actor class TodosBucket() = this {
 
         let fullTodo = { todo with id = Map.size(group.todos); owner = userPrincipal; createdAt = Time.now(); createdBy = userPrincipal; status = #pending; };
 
-        Map.add(group.todos, Nat.compare, Map.size(group.todos), fullTodo);
+        group.todos.add(Map.size(group.todos), fullTodo);
 
         #ok();
     };

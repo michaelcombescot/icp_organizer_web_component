@@ -6,27 +6,22 @@
     },
 
     "organizerIndexesRegistry": {
-      "main": "src/backend/ops/todosRegistry.mo",
-      "type": "motoko"
-    },
-    
-    "organizerTodosBucket": {
-      "main": "src/backend/modules/todos/canisters/todosBucket.mo",
-      "type": "motoko"
-    },
-    
-    "organizerTodosIndex": {
-      "main": "src/backend/modules/todos/canisters/todosIndex.mo",
+      "main": "src/backend/ops/indexesRegistry.mo",
       "type": "motoko"
     },
 
-    "organizerUsersIndex": {
-      "main": "src/backend/modules/users/canisters/usersIndex.mo",
+    "organizerMainIndex": {
+      "main": "src/backend/canisters/mainIndex.mo",
       "type": "motoko"
     },
 
     "organizerUsersBucket": {
-      "main": "src/backend/modules/users/canisters/usersBucket.mo",
+      "main": "src/backend/canisters/usersBucket.mo",
+      "type": "motoko"
+    },
+
+    "organizerGroupsBucket": {
+      "main": "src/backend/canisters/groupsBucket.mo",
       "type": "motoko"
     },
 

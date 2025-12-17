@@ -11,10 +11,9 @@ import IC "mo:ic";
 import List "mo:core/List";
 import Runtime "mo:core/Runtime";
 import CanistersKinds "../shared/canistersKinds";
-import TodosIndex "../modules/todos/canisters/todosIndex";
-import TodosBucket "../modules/todos/canisters/todosBucket";
-import UsersIndex "../modules/users/canisters/usersIndex";
-import UsersBucket "../modules/users/canisters/usersBucket";
+import MainIndex "../canisters/mainIndex";
+import GroupsBucket "../canisters/groupsBucket";
+import UsersBucket "../canisters/usersBucket";
 import IndexesRegistry "indexesRegistry";
 import CanistersMap "../shared/canistersMap";
 import Timer "mo:core/Timer";
@@ -82,7 +81,7 @@ shared ({ caller = owner }) persistent actor class Coordinator(indexesRegistryPr
         switch ( params.msg ) {
             case (#handlerAddIndex(_))              params.caller == owner;
             case (#handlerUpgradeCanisterKind(_))   params.caller == owner;
-            case (#handlerGiveFreeBucket(_))        CanistersMap.isPrincipalInKind(memoryCanisters, params.caller, #indexes(#todosIndex)) ;
+            case (#handlerGiveFreeBucket(_))        CanistersMap.isPrincipalInKind(memoryCanisters, params.caller, #indexes(#mainIndex)) ;
         }
     };
 
@@ -121,7 +120,7 @@ shared ({ caller = owner }) persistent actor class Coordinator(indexesRegistryPr
     // upgrade a canister of a specific type, used in cli with the command (replace with the right canister path):
     // - dfx canister call coordinator handlerUpgradeCanister '(#buckettype, blob "'$(hexdump -ve '1/1 "\\\\%02x"' .dfx/local/canisters/organizerUsersDataBucket/organizerUsersDataBucket.wasm)'")'
     public shared func handlerUpgradeCanisterKind({ nature : CanistersKinds.CanisterKind; code: Blob.Blob }) : async () {
-        let ?canistersMap = Map.get(memoryCanisters, CanistersKinds.compareCanisterKinds, nature) else Runtime.trap("No canisters of type " # debug_show(nature) # " found");
+        let ?canistersMap = memoryCanisters.get(CanistersKinds.compareCanisterKinds, nature) else Runtime.trap("No canisters of type " # debug_show(nature) # " found");
 
         for ( canisterPrincipal in Map.keys(canistersMap) ) {
             try {
@@ -145,7 +144,7 @@ shared ({ caller = owner }) persistent actor class Coordinator(indexesRegistryPr
     /// API FOR INDEXES ///
 
     public shared func handlerGiveFreeBucket(bucketKind: CanistersKinds.Buckets) : async Result.Result<Principal, Text> {
-        let ?list = Map.get(memoryFreeBuckets, CanistersKinds.compareCanisterKinds, #buckets(bucketKind)) else return #err("No free buckets of type " # debug_show(bucketKind) # " found");
+        let ?list = memoryFreeBuckets.get(CanistersKinds.compareCanisterKinds, #buckets(bucketKind)) else return #err("No free buckets of type " # debug_show(bucketKind) # " found");
 
         switch ( List.removeLast(list) ) {
             case (?principal) #ok(principal);
@@ -163,20 +162,16 @@ shared ({ caller = owner }) persistent actor class Coordinator(indexesRegistryPr
                 case (#registries(_))   (); // registry is never created by the helper
                 case (#indexes(indexKind)) {
                     switch (indexKind) {
-                        case (#todosIndex) {
+                        case (#mainIndex) {
                             // create the canister
-                            let newPrincipal = Principal.fromActor(await (with cycles = NEW_INDEX_NB_CYCLES) TodosIndex.TodosIndex());
+                            let newPrincipal = Principal.fromActor(await (with cycles = NEW_INDEX_NB_CYCLES) MainIndex.MainIndex());
                             // save it in the memoryCanisters map
-                            CanistersMap.addCanistersToMap({ map = memoryCanisters; canistersPrincipals = [newPrincipal]; canisterKind = #indexes(#todosIndex) });
+                            CanistersMap.addCanistersToMap({ map = memoryCanisters; canistersPrincipals = [newPrincipal]; canisterKind = #indexes(#mainIndex) });
                             // send it to all todos buckets
-                            ignore helperSendPrincipalsToCanistersOfKind({ targetKind = #buckets(#todosBucket); canisterKind = #indexes(#todosIndex); canistersPrincipals  = [newPrincipal] });
+                            ignore helperSendPrincipalsToCanistersOfKind({ targetKind = #buckets(#groupsBucket); canisterKind = #indexes(#mainIndex); canistersPrincipals  = [newPrincipal] });
+                            ignore helperSendPrincipalsToCanistersOfKind({ targetKind = #buckets(#usersBucket); canisterKind = #indexes(#mainIndex); canistersPrincipals  = [newPrincipal] });
                             // feed it with all necessary canisters principals
-                            ignore helperSendCanistersKindToPrincipal({ targetKind = #indexes(#todosIndex); targetPrincipal = newPrincipal; canisterKind = #buckets(#todosBucket); });
-                        };
-                        case (#usersIndex) {
-                            let newPrincipal = Principal.fromActor(await (with cycles = NEW_INDEX_NB_CYCLES) UsersIndex.UsersIndex());
-
-                            // TODO
+                            ignore helperSendCanistersKindToPrincipal({ targetKind = #indexes(#mainIndex); targetPrincipal = newPrincipal; canisterKind = #buckets(#groupsBucket); });
                         };
                     };
                 };
@@ -192,22 +187,25 @@ shared ({ caller = owner }) persistent actor class Coordinator(indexesRegistryPr
                                 case null Map.add(memoryFreeBuckets, CanistersKinds.compareCanisterKinds, canisterType, List.singleton(newPrincipal));
                                 case (?list) List.add(list, newPrincipal);
                             };
+
+                            // send it to all relevant canisters
+                            ignore helperSendPrincipalsToCanistersOfKind({ targetKind = #indexes(#mainIndex); canisterKind = #buckets(#usersBucket); canistersPrincipals = [newPrincipal] });
+                            ignore helperSendPrincipalsToCanistersOfKind({ targetKind = #buckets(#groupsBucket); canisterKind = #buckets(#usersBucket); canistersPrincipals = [newPrincipal] });
                         };
-                        case (#todosBucket) {
+                        case (#groupsBucket) {
                             // create the canister
-                            let newPrincipal = Principal.fromActor(await (with cycles = NEW_BUCKET_NB_CYCLES) TodosBucket.TodosBucket());
+                            let newPrincipal = Principal.fromActor(await (with cycles = NEW_BUCKET_NB_CYCLES) GroupsBucket.GroupsBucket());
                             // save it in the memoryCanisters map
-                            CanistersMap.addCanistersToMap({ map = memoryCanisters; canistersPrincipals = [newPrincipal]; canisterKind = #buckets(#todosBucket) });
+                            CanistersMap.addCanistersToMap({ map = memoryCanisters; canistersPrincipals = [newPrincipal]; canisterKind = #buckets(#groupsBucket) });
                             // add it to free buckets list
                             switch ( Map.get(memoryFreeBuckets, CanistersKinds.compareCanisterKinds, canisterType) ) {
                                 case null Map.add(memoryFreeBuckets, CanistersKinds.compareCanisterKinds, canisterType, List.singleton(newPrincipal));
                                 case (?list) List.add(list, newPrincipal);
                             };
 
-                            // send it to all todos and users buckets and indexes
-                            ignore helperSendPrincipalsToCanistersOfKind({ targetKind = #buckets(#todosBucket); canisterKind = #buckets(#todosBucket); canistersPrincipals = [newPrincipal] });
-                            ignore helperSendPrincipalsToCanistersOfKind({ targetKind = #indexes(#todosIndex); canisterKind = #buckets(#todosBucket); canistersPrincipals = [newPrincipal] });
-                            ignore helperSendPrincipalsToCanistersOfKind({ targetKind = #indexes(#usersIndex); canisterKind = #buckets(#todosBucket); canistersPrincipals = [newPrincipal] });
+                            // send it to all relevant canisters
+                            ignore helperSendPrincipalsToCanistersOfKind({ targetKind = #indexes(#mainIndex); canisterKind = #buckets(#groupsBucket); canistersPrincipals = [newPrincipal] });
+                            ignore helperSendPrincipalsToCanistersOfKind({ targetKind = #buckets(#usersBucket); canisterKind = #buckets(#groupsBucket); canistersPrincipals = [newPrincipal] });
                         };
                     };
                 };
@@ -219,7 +217,7 @@ shared ({ caller = owner }) persistent actor class Coordinator(indexesRegistryPr
 
     // send an array of principals to all canisters of a specific kind
     func helperSendPrincipalsToCanistersOfKind({ targetKind: CanistersKinds.CanisterKind; canisterKind : CanistersKinds.CanisterKind; canistersPrincipals: [Principal]; }) : async () {
-        let ?map = Map.get(memoryCanisters, CanistersKinds.compareCanisterKinds, targetKind) else return;
+        let ?map = memoryCanisters.get(CanistersKinds.compareCanisterKinds, targetKind) else return;
 
         for ( targetPrincipal in Map.keys(map) ) {
             await helperSendPrincipalsToCanister({ targetPrincipal = targetPrincipal; targetKind = targetKind; canistersPrincipals = canistersPrincipals; canisterKind = canisterKind });
@@ -228,7 +226,7 @@ shared ({ caller = owner }) persistent actor class Coordinator(indexesRegistryPr
 
     // send all buckets of a specific kind to a specific principal
     func helperSendCanistersKindToPrincipal({ targetKind: CanistersKinds.CanisterKind; targetPrincipal: Principal; canisterKind : CanistersKinds.CanisterKind; }) : async () {
-        let ?map = Map.get(memoryCanisters, CanistersKinds.compareCanisterKinds, canisterKind) else return;
+        let ?map = memoryCanisters.get(CanistersKinds.compareCanisterKinds, canisterKind) else return;
 
         await helperSendPrincipalsToCanister({ targetPrincipal = targetPrincipal; targetKind = targetKind; canistersPrincipals = Array.fromIter(Map.keys(map)); canisterKind = canisterKind });
     };
@@ -244,20 +242,19 @@ shared ({ caller = owner }) persistent actor class Coordinator(indexesRegistryPr
                 };
                 case (#indexes(indexKind)) {
                     switch (indexKind) {
-                        case (#usersIndex) await (actor(Principal.toText(targetPrincipal)) : UsersIndex.UsersIndex).systemAddCanistersToMap({ canistersPrincipals = canistersPrincipals; canisterKind = canisterKind });
-                        case (#todosIndex) await (actor(Principal.toText(targetPrincipal)) : TodosIndex.TodosIndex).systemAddCanistersToMap({ canistersPrincipals = canistersPrincipals; canisterKind = canisterKind });
+                        case (#mainIndex) await (actor(Principal.toText(targetPrincipal)) : MainIndex.MainIndex).systemAddCanistersToMap({ canistersPrincipals = canistersPrincipals; canisterKind = canisterKind });
                     };
                 };
                 case (#buckets(bucketKind)) {
                     switch (bucketKind) {
                         case (#usersBucket)     await (actor(Principal.toText(targetPrincipal)) : UsersBucket.UsersBucket).systemAddCanistersToMap({ canistersPrincipals = canistersPrincipals; canisterKind = canisterKind });
-                        case (#todosBucket)    await (actor(Principal.toText(targetPrincipal)) : TodosBucket.TodosBucket).systemAddCanistersToMap({ canistersPrincipals = canistersPrincipals; canisterKind = canisterKind });
+                        case (#groupsBucket)    await (actor(Principal.toText(targetPrincipal)) : GroupsBucket.GroupsBucket).systemAddCanistersToMap({ canistersPrincipals = canistersPrincipals; canisterKind = canisterKind });
                     };
                 };
             };
         } catch (e) {
             Debug.print("Cannot send principal to canister, error: " # Error.message(e));
-            List.add(listAPIErrors, #errorSendPrincipalsToCanister({ targetPrincipal = targetPrincipal; targetKind = targetKind; canisterKind = canisterKind; canistersPrincipals = canistersPrincipals }));
+            listAPIErrors.add(#errorSendPrincipalsToCanister({ targetPrincipal = targetPrincipal; targetKind = targetKind; canisterKind = canisterKind; canistersPrincipals = canistersPrincipals }));
         }
     };
 
@@ -291,7 +288,7 @@ shared ({ caller = owner }) persistent actor class Coordinator(indexesRegistryPr
 
     // create new free buckets, free buckets are the buckets precreated and put in a pool to be fetched when needed by indexes
     func helperCreateNewFreeBuckets() : async () {
-        label l for ( (kind, listPrincipals) in Map.entries(memoryFreeBuckets) ) {
+        label l for ( (kind, listPrincipals) in memoryFreeBuckets.entries() ) {
             switch (kind) {
                 case (#registries(_)) continue l;
                 case (#indexes(_)) continue l;
@@ -301,14 +298,14 @@ shared ({ caller = owner }) persistent actor class Coordinator(indexesRegistryPr
                     var missingBuckets = 0;
 
                     switch (bucketKind) {
-                        case (#todosBucket) {
-                            nbIndexes := CanistersMap.getPrincipalsForKind(memoryCanisters, #indexes(#usersIndex)).size();
-                            nbBuckets := List.size(listPrincipals);
+                        case (#groupsBucket) {
+                            nbIndexes := CanistersMap.getPrincipalsForKind(memoryCanisters, #indexes(#mainIndex)).size();
+                            nbBuckets := listPrincipals.size();
                             missingBuckets := nbIndexes - nbBuckets;
                         };
                         case (#usersBucket) {
-                            nbIndexes := CanistersMap.getPrincipalsForKind(memoryCanisters, #indexes(#todosIndex)).size();
-                            nbBuckets := List.size(listPrincipals);
+                            nbIndexes := CanistersMap.getPrincipalsForKind(memoryCanisters, #indexes(#mainIndex)).size();
+                            nbBuckets := listPrincipals.size();
                             missingBuckets := 1;
                         };
                     };
@@ -333,7 +330,7 @@ shared ({ caller = owner }) persistent actor class Coordinator(indexesRegistryPr
                         await helperSendPrincipalsToCanister(params);
                     } catch (e) {
                         Debug.print("Cannot send principal to canister, error: " # Error.message(e));
-                        List.add(tempList, #errorSendPrincipalsToCanister(params));
+                        tempList.add(#errorSendPrincipalsToCanister(params));
                     };
                 };
             };

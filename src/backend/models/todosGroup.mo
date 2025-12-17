@@ -1,4 +1,4 @@
-import Identifier "../../../shared/identifiers";
+import Identifier "../shared/identifiers";
 import Map "mo:core/Map";
 import Todo "todosTodo";
 import TodoList "todosTodoList";

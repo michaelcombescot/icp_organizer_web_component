@@ -4,9 +4,9 @@ import Result "mo:core/Result";
 import Array "mo:core/Array";
 import Time "mo:core/Time";
 import UserData "../models/todosUserData";
-import CanistersMap "../../../shared/canistersMap";
-import CanistersKinds "../../../shared/canistersKinds";
-import Identifiers "../../../shared/identifiers";
+import CanistersMap "../shared/canistersMap";
+import CanistersKinds "../shared/canistersKinds";
+import Identifiers "../shared/identifiers";
 
 shared ({ caller = owner }) persistent actor class UsersBucket() = this {
     /////////////
@@ -52,7 +52,7 @@ shared ({ caller = owner }) persistent actor class UsersBucket() = this {
             case (#systemAddCanistersToMap(_))  params.caller == owner;
 
             case (#handlerGetUserData(_))       true; // callable directly by the frontend
-            case (#handlerCreateUser(_))        CanistersMap.isPrincipalInKind(memoryCanisters, params.caller, #indexes(#usersIndex));
+            case (#handlerCreateUser(_))        CanistersMap.isPrincipalInKind(memoryCanisters, params.caller, #indexes(#mainIndex));
         }
     };
 
@@ -65,7 +65,7 @@ shared ({ caller = owner }) persistent actor class UsersBucket() = this {
     /////////
 
     public shared func handlerGetUserData( userPrincipal: Principal ) : async Result.Result<UserData.SharableUserData, Text> {
-        let ?userData = Map.get(memoryUsers, Principal.compare, userPrincipal) else return #err(ERR_USER_NOT_FOUND);
+        let ?userData = memoryUsers.get(userPrincipal) else return #err(ERR_USER_NOT_FOUND);
 
         #ok({
             name = userData.name;
@@ -76,7 +76,7 @@ shared ({ caller = owner }) persistent actor class UsersBucket() = this {
     };
 
     public shared func handlerCreateUser({ userPrincipal: Principal; }) : async Result.Result<(), Text> {
-        switch ( Map.get(memoryUsers, Principal.compare, userPrincipal) ) {
+        switch ( memoryUsers.get(userPrincipal) ) {
             case (?_) return #err(ERR_USER_ALREADY_EXISTS);
             case null ();
         };
@@ -89,7 +89,7 @@ shared ({ caller = owner }) persistent actor class UsersBucket() = this {
             createdAt = Time.now();
         };
 
-        Map.add(memoryUsers, Principal.compare, userPrincipal, userData);
+        memoryUsers.add(userPrincipal, userData);
 
         #ok();
     };

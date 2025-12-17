@@ -14,12 +14,11 @@ module {
     };
 
     public type Indexes = {
-        #todosIndex;
-        #usersIndex;
+        #mainIndex;
     };
 
     public type Buckets = {
-        #todosBucket;
+        #groupsBucket;
         #usersBucket;
     };
 

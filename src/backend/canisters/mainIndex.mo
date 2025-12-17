@@ -2,16 +2,18 @@ import Principal "mo:core/Principal";
 import Result "mo:core/Result";
 import Error "mo:core/Error";
 import Runtime "mo:core/Runtime";
-import CanistersMap "../../../shared/canistersMap";
-import CanistersKinds "../../../shared/canistersKinds";
-import TodosBucket "todosBucket";
-import Interfaces "../../../shared/interfaces";
-import Identifiers "../../../shared/identifiers";
+import CanistersMap "../shared/canistersMap";
+import CanistersKinds "../shared/canistersKinds";
+import GroupsBucket "groupsBucket";
+import UsersBucket "usersBucket";
+import Interfaces "../shared/interfaces";
+import Identifiers "../shared/identifiers";
 import Group "../models/todosGroup";
+import UsersMapping "../shared/usersMapping";
 
 // only goal of this canister is too keep track of the relationship between users principals and canisters.
 // this is the main piece of code which should need to change in case of scaling needs (by adding new users buckets )
-shared ({ caller = owner }) persistent actor class TodosIndex() = this {
+shared ({ caller = owner }) persistent actor class MainIndex() = this {
     ////////////
     // ERRORS //
     ////////////
@@ -26,7 +28,9 @@ shared ({ caller = owner }) persistent actor class TodosIndex() = this {
 
     let memoryCanisters = CanistersMap.newCanisterMap();
 
-    var currentGroupBucket: ?TodosBucket.TodosBucket = null;
+    var memoryUsersMapping: [Principal] = [];
+
+    var currentGroupBucket: ?GroupsBucket.GroupsBucket = null;
 
     ////////////
     // SYSTEM //
@@ -38,6 +42,9 @@ shared ({ caller = owner }) persistent actor class TodosIndex() = this {
         msg : {
             #systemAddCanistersToMap : () -> { canistersPrincipals: [Principal]; canisterKind: CanistersKinds.CanisterKind };
 
+            #handlerFetchUserBucket : () -> ();
+            #createUser : () -> ();
+
             #handlerCreateGroup : () -> (params: Group.CreateGroupParams);
         };
     };
@@ -48,12 +55,32 @@ shared ({ caller = owner }) persistent actor class TodosIndex() = this {
         switch ( params.msg ) {
             case (#systemAddCanistersToMap(_)) params.caller == owner;
 
+            case (#handlerFetchUserBucket(_))        true;
+            case (#createUser(_))                    true;
+
             case (#handlerCreateGroup(_)) true;
         }
     };
 
     public shared func systemAddCanistersToMap({ canistersPrincipals: [Principal]; canisterKind: CanistersKinds.CanisterKind }) : async () {
         CanistersMap.addCanistersToMap({ map = memoryCanisters; canistersPrincipals = canistersPrincipals; canisterKind = canisterKind });
+    };
+
+    ///////////////
+    // API USERS //
+    ///////////////
+
+    public query ({ caller }) func handlerFetchUserBucket() : async Principal {
+        UsersMapping.helperFetchUserBucket(memoryUsersMapping, caller)
+    };
+
+    public shared ({ caller }) func createUser() : async Result.Result<Principal, Text> {
+        let bucketPrincipal = UsersMapping.helperFetchUserBucket(memoryUsersMapping, caller);
+
+        switch ( await (actor(Principal.toText(bucketPrincipal)): UsersBucket.UsersBucket).handlerCreateUser({ userPrincipal = caller }) ) {
+            case (#ok()) #ok(bucketPrincipal);
+            case (#err(e)) #err(e);
+        }
     };
 
     ////////////////
@@ -76,13 +103,13 @@ shared ({ caller = owner }) persistent actor class TodosIndex() = this {
     // HELPERS //
     /////////////
 
-    func helperFetchCurrentGroupBucket() : async ?TodosBucket.TodosBucket {
+    func helperFetchCurrentGroupBucket() : async ?GroupsBucket.GroupsBucket {
         switch ( currentGroupBucket ) {
             case (?_) ();
             case (null) {
                 try {
-                    let principal = await coordinatorActor.handlerGiveFreeBucket({ bucketKind = #todosBucket });
-                    currentGroupBucket := ?(actor(Principal.toText(principal)) : TodosBucket.TodosBucket);
+                    let principal = await coordinatorActor.handlerGiveFreeBucket({ bucketKind = #groupsBucket });
+                    currentGroupBucket := ?(actor(Principal.toText(principal)) : GroupsBucket.GroupsBucket);
                 } catch (e) {
                     Runtime.trap( "Error while fetching bucket: " # Error.message(e) );
                 };

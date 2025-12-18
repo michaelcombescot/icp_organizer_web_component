@@ -1,6 +1,5 @@
 import Map "mo:core/Map";
 import CanistersKinds "../shared/canistersKinds";
-import CanistersMap "../shared/canistersMap";
 import Principal "mo:core/Principal";
 import Result "mo:core/Result";
 import Time "mo:core/Time";
@@ -9,6 +8,7 @@ import Identifiers "../shared/identifiers";
 import Todo "../models/todosTodo";
 import Group "../models/todosGroup";
 import UserData "../models/todosUserData";
+import Interfaces "../shared/interfaces";
 
 shared ({ caller = owner }) persistent actor class GroupsBucket() = this {
     let thisPrincipal = Principal.fromActor(this);
@@ -29,7 +29,9 @@ shared ({ caller = owner }) persistent actor class GroupsBucket() = this {
     // MEMORY //
     ////////////
 
-    let memoryCanisters = CanistersMap.newCanisterMap();
+    let coordinatorActor = actor(Principal.toText(owner)) : Interfaces.Coordinator;
+
+    let allowedCanisters = Map.empty<Principal, ()>();
 
     let memoryGroups = Map.empty<Nat, Group.Group>();
 
@@ -45,7 +47,6 @@ shared ({ caller = owner }) persistent actor class GroupsBucket() = this {
         arg: Blob;
         caller : Principal;
         msg : {
-            #systemAddCanistersToMap : () -> { canistersPrincipals: [Principal]; canisterKind: CanistersKinds.CanisterKind };
             #systemUpdateUsersMapping : () -> (usersMapping: [Principal]);
 
             #handlerCreateGroup : () -> (userPrincipal: Principal, params : Group.CreateGroupParams);
@@ -59,7 +60,6 @@ shared ({ caller = owner }) persistent actor class GroupsBucket() = this {
         if ( params.caller == Principal.anonymous() ) { return false; };
 
         switch ( params.msg ) {
-            case (#systemAddCanistersToMap(_))       params.caller == owner;
             case (#systemUpdateUsersMapping(_))      params.caller == owner;
 
             case (#handlerCreateGroup(_))           true;
@@ -67,10 +67,6 @@ shared ({ caller = owner }) persistent actor class GroupsBucket() = this {
 
             case (#handlerCreateTodo(_))            true;
         }
-    };
-
-    public shared func systemAddCanistersToMap({ canistersPrincipals: [Principal]; canisterKind: CanistersKinds.CanisterKind }) : async () {
-        CanistersMap.addCanistersToMap({ map = memoryCanisters; canistersPrincipals = canistersPrincipals; canisterKind = canisterKind });
     };
 
     public shared func systemUpdateUsersMapping(usersMapping: [Principal]) : async () {

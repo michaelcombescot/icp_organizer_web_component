@@ -27,7 +27,7 @@
 
     "organizerFrontend": {
       "dependencies": [
-        "organizerTodosRegistry"
+        "organizerIndexesRegistry"
       ],
       "source": [
         "src/frontend/dist"

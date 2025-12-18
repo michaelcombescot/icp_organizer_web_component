@@ -1,28 +1,23 @@
-import { _SERVICE as _SERVICE_INDEX } from '../../../../../declarations/organizerTodosIndex/organizerTodosIndex.did';
-import { createActor as createActorIndex } from '../../../../../declarations/organizerTodosIndex';
-import { _SERVICE as _SERVICE_BUCKET } from '../../../../../declarations/organizerTodosBucket/organizerTodosBucket.did';
-import { createActor as createActorBucket } from '../../../../../declarations/organizerTodosBucket';
+import { canisterId as registerID } from '../../../../../declarations/organizerIndexesRegistry/index';
+import { createActor as createActorIndexesRegistry } from '../../../../../declarations/organizerIndexesRegistry';
 
-import { canisterId as registerID } from '../../../../../declarations/organizerTodosRegistry/index';
-import { createActor as createActorTodosRegistry } from '../../../../../declarations/organizerTodosRegistry';
+import { _SERVICE as _SERVICE_INDEX } from '../../../../../declarations/organizerMainIndex/organizerMainIndex.did';
+import { createActor as createActorMainIndex } from '../../../../../declarations/organizerMainIndex';
 
 import { ActorSubclass } from '@dfinity/agent';
 import { Principal } from '@dfinity/principal';
 
-export let registry = createActorTodosRegistry(registerID);
-export var indexesUsers: Principal[] = []
+export class APIRegistry {
+    static registry = createActorIndexesRegistry(registerID);
 
-export async function fetchIndexes() {
-    indexesUsers = await registry.handlerGetIndexes();
-}
+    static indexesUsers: Principal[] = []
 
-/////////////
-// INDEXES //
-/////////////
+    static async fetchIndexes(): Promise<void> {
+        this.indexesUsers = await this.registry.handlerGetIndexes({ mainIndex: null });
+    }
 
-// users
-
-export function getIndex() : ActorSubclass<_SERVICE_INDEX> {
-    let id = indexesUsers[Math.floor(Math.random() * indexesUsers.length)];
-    return createActorIndex(id);
+    static getMainIndex() : ActorSubclass<_SERVICE_INDEX> {
+        let id = this.indexesUsers[Math.floor(Math.random() * this.indexesUsers.length)];
+        return createActorMainIndex(id);
+    }
 }

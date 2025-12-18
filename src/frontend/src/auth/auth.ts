@@ -1,5 +1,6 @@
 import { AuthClient } from '@dfinity/auth-client';
 import { canisterId as identityCanisterID } from '../../../declarations/internet_identity/index';
+import { APIMainIndex } from '../modules/todo/apis/apiMainIndex';
 
 const identityProvider = process.env.DFX_NETWORK === 'ic' ?
                             'https://identity.ic0.app' // Mainnet
@@ -19,6 +20,8 @@ export const login = async () => {
         onSuccess: async () => {
             identity        = authClient.getIdentity();
             isAuthenticated = await authClient.isAuthenticated();
+
+            await APIMainIndex.createUser();
 
             window.location.reload();
         }

@@ -2,27 +2,34 @@ import Text "mo:core/Text";
 import Order "mo:core/Order";
 
 module {
-    // all canisters
-    public type CanisterKind = {
-        #registries: Registries;
-        #indexes: Indexes;
-        #buckets: Buckets;
+    public type CanistersKind = {
+        #dynamic: DynamicsKind;
+        #static: StaticsKind;
     };
 
-    public type Registries = {
+    public type StaticsKind = {
+        #registries: RegistriesKind;
+    };
+
+    public type DynamicsKind = {
+        #indexes: IndexesKind;
+        #buckets: BucketsKind;
+    };
+
+    public type RegistriesKind = {
         #indexesRegistry;
     };
 
-    public type Indexes = {
+    public type IndexesKind = {
         #mainIndex;
     };
 
-    public type Buckets = {
+    public type BucketsKind = {
         #groupsBucket;
         #usersBucket;
     };
 
-    public func compareCanisterKinds(a: CanisterKind, b: CanisterKind) : Order.Order {
+    public func compareCanistersKinds(a: CanistersKind, b: CanistersKind) : Order.Order {
         Text.compare(debug_show(a), debug_show(b))
     };
 }

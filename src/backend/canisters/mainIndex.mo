@@ -2,8 +2,7 @@ import Principal "mo:core/Principal";
 import Result "mo:core/Result";
 import Error "mo:core/Error";
 import Runtime "mo:core/Runtime";
-import CanistersMap "../shared/canistersMap";
-import CanistersKinds "../shared/canistersKinds";
+import Map "mo:core/Map";
 import GroupsBucket "groupsBucket";
 import UsersBucket "usersBucket";
 import Interfaces "../shared/interfaces";
@@ -26,8 +25,6 @@ shared ({ caller = owner }) persistent actor class MainIndex() = this {
 
     let coordinatorActor = actor(Principal.toText(owner)) : Interfaces.Coordinator;
 
-    let memoryCanisters = CanistersMap.newCanisterMap();
-
     var memoryUsersMapping: [Principal] = [];
 
     var currentGroupBucket: ?GroupsBucket.GroupsBucket = null;
@@ -40,10 +37,7 @@ shared ({ caller = owner }) persistent actor class MainIndex() = this {
         arg: Blob;
         caller : Principal;
         msg : {
-            #systemAddCanistersToMap : () -> { canistersPrincipals: [Principal]; canisterKind: CanistersKinds.CanisterKind };
-
-            #handlerFetchUserBucket : () -> ();
-            #createUser : () -> ();
+            #handlerFetchOrCreateUser : () -> ();
 
             #handlerCreateGroup : () -> (params: Group.CreateGroupParams);
         };
@@ -53,28 +47,17 @@ shared ({ caller = owner }) persistent actor class MainIndex() = this {
         if ( params.caller == Principal.anonymous() ) { return false; };
 
         switch ( params.msg ) {
-            case (#systemAddCanistersToMap(_)) params.caller == owner;
-
-            case (#handlerFetchUserBucket(_))        true;
-            case (#createUser(_))                    true;
+            case (#handlerFetchOrCreateUser(_)) true;
 
             case (#handlerCreateGroup(_)) true;
         }
-    };
-
-    public shared func systemAddCanistersToMap({ canistersPrincipals: [Principal]; canisterKind: CanistersKinds.CanisterKind }) : async () {
-        CanistersMap.addCanistersToMap({ map = memoryCanisters; canistersPrincipals = canistersPrincipals; canisterKind = canisterKind });
     };
 
     ///////////////
     // API USERS //
     ///////////////
 
-    public query ({ caller }) func handlerFetchUserBucket() : async Principal {
-        UsersMapping.helperFetchUserBucket(memoryUsersMapping, caller)
-    };
-
-    public shared ({ caller }) func createUser() : async Result.Result<Principal, Text> {
+    public shared ({ caller }) func handlerFetchOrCreateUser() : async Result.Result<Principal, Text> {
         let bucketPrincipal = UsersMapping.helperFetchUserBucket(memoryUsersMapping, caller);
 
         switch ( await (actor(Principal.toText(bucketPrincipal)): UsersBucket.UsersBucket).handlerCreateUser({ userPrincipal = caller }) ) {
@@ -108,7 +91,7 @@ shared ({ caller = owner }) persistent actor class MainIndex() = this {
             case (?_) ();
             case (null) {
                 try {
-                    let principal = await coordinatorActor.handlerGiveFreeBucket({ bucketKind = #groupsBucket });
+                    let principal = await coordinatorActor.handlerGiveNewBucket({ bucketKind = #groupsBucket });
                     currentGroupBucket := ?(actor(Principal.toText(principal)) : GroupsBucket.GroupsBucket);
                 } catch (e) {
                     Runtime.trap( "Error while fetching bucket: " # Error.message(e) );

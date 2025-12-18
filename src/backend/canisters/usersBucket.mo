@@ -4,9 +4,8 @@ import Result "mo:core/Result";
 import Array "mo:core/Array";
 import Time "mo:core/Time";
 import UserData "../models/todosUserData";
-import CanistersMap "../shared/canistersMap";
-import CanistersKinds "../shared/canistersKinds";
 import Identifiers "../shared/identifiers";
+import Interfaces "../shared/interfaces";
 
 shared ({ caller = owner }) persistent actor class UsersBucket() = this {
     /////////////
@@ -26,9 +25,10 @@ shared ({ caller = owner }) persistent actor class UsersBucket() = this {
     // MEMORY //
     ////////////
 
-    let memoryUsers = Map.empty<Principal, UserData.UserData>();
+    let coordinatorActor = actor(Principal.toText(owner)) : Interfaces.Coordinator;
+    let allowedCanisters = Map.empty<Principal, ()>();
 
-    let memoryCanisters = CanistersMap.newCanisterMap();
+    let memoryUsers = Map.empty<Principal, UserData.UserData>();
 
     ////////////
     // SYSTEM //
@@ -38,8 +38,6 @@ shared ({ caller = owner }) persistent actor class UsersBucket() = this {
         arg: Blob;
         caller : Principal;
         msg : {
-            #systemAddCanistersToMap : () -> { canistersPrincipals: [Principal]; canisterKind: CanistersKinds.CanisterKind };
-
             #handlerGetUserData : () -> (userPrincipal: Principal);
             #handlerCreateUser : () -> { userPrincipal: Principal; };
         }
@@ -49,15 +47,15 @@ shared ({ caller = owner }) persistent actor class UsersBucket() = this {
         if ( params.caller == Principal.anonymous() ) { return false; };
 
         switch ( params.msg ) {
-            case (#systemAddCanistersToMap(_))  params.caller == owner;
-
             case (#handlerGetUserData(_))       true; // callable directly by the frontend
-            case (#handlerCreateUser(_))        CanistersMap.isPrincipalInKind(memoryCanisters, params.caller, #indexes(#mainIndex));
+            case (#handlerCreateUser(_))        true
         }
     };
 
-    public shared func systemAddCanistersToMap({ canistersPrincipals: [Principal]; canisterKind: CanistersKinds.CanisterKind }) : async () {
-        CanistersMap.addCanistersToMap({ map = memoryCanisters; canistersPrincipals = canistersPrincipals; canisterKind = canisterKind });
+    func systemHelperIsCanisterAllowed(canisterPrincipal: Principal) : async Bool {
+        switch ( allowedCanisters.get(canisterPrincipal) ) {
+            
+        }
     };
 
     /////////

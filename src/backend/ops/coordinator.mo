@@ -41,10 +41,20 @@ shared ({ caller = owner }) persistent actor class Coordinator(indexesRegistryPr
     let NEW_INDEX_NB_CYCLES         = 2_000_000_000_000;
 
     ////////////
+    // ERRORS //
+    ////////////
+
+    type APIErrors = {
+        #errSendingIndexToIndexesRegistry: { indexPrincipal: Principal; indexKind: CanistersKinds.IndexesKind };
+    };
+
+    var apiErrorsRetryList = List.empty<APIErrors>();
+
+    ////////////
     // MEMORY //
     ////////////
 
-    let memoryCanisters = Map.singleton<CanistersKinds.CanistersKind, Map.Map<Principal, ()>>(#registries(#indexesRegistry), indexesRegistryPrincipal);
+    let memoryCanisters = Map.singleton<CanistersKinds.CanistersKind, Map.Map<Principal, ()>>(#static(#registries(#indexesRegistry)), Map.singleton(indexesRegistryPrincipal, ()));
 
     var memoryUsersMapping: [Principal] = [];
 
@@ -60,7 +70,8 @@ shared ({ caller = owner }) persistent actor class Coordinator(indexesRegistryPr
         msg : {
             #handlerUpgradeCanisterKind : () -> {code : Blob; nature : CanistersKinds.CanistersKind};
             #handlerAddIndex : () -> (indexKind: CanistersKinds.IndexesKind);
-            #handlerGiveFreeBucket : () -> (bucketKind: CanistersKinds.BucketsKind);
+            #handlerGiveNewBucket : () -> (bucketKind: CanistersKinds.BucketsKind);
+            #handlerIsLegitCanister : () -> (canisterPrincipal: Principal);
         }
     };
 
@@ -68,7 +79,8 @@ shared ({ caller = owner }) persistent actor class Coordinator(indexesRegistryPr
         switch ( params.msg ) {
             case (#handlerUpgradeCanisterKind(_))   params.caller == owner;
             case (#handlerAddIndex(_))              params.caller == owner;
-            case (#handlerGiveNewBucket(_))         CanistersMap.isPrincipalInKind(memoryCanisters, params.caller, #indexes(#mainIndex)) ;
+            case (#handlerGiveNewBucket(_))         allowedCanisters.containsKey(params.caller);
+            case (#handlerIsLegitCanister(_))       allowedCanisters.containsKey(params.caller);
         }
     };
 
@@ -128,7 +140,7 @@ shared ({ caller = owner }) persistent actor class Coordinator(indexesRegistryPr
     };
 
     // check if a specific canister belongs to the app
-    public query func isLegitCanister(canisterPrincipal: Principal) : async Bool {
+    public query func handlerIsLegitCanister(canisterPrincipal: Principal) : async Bool {
         let ?_ = allowedCanisters.get(canisterPrincipal) else return false;
         true
     };
@@ -141,9 +153,12 @@ shared ({ caller = owner }) persistent actor class Coordinator(indexesRegistryPr
         try {
             let newPrincipal =  switch (canisterType) {
                                     case (#indexes(indexKind)) {
-                                        switch (indexKind) {
-                                            case (#mainIndex) Principal.fromActor(await (with cycles = NEW_INDEX_NB_CYCLES) MainIndex.MainIndex());
-                                        };
+                                        let newPrincipal =  switch (indexKind) {
+                                                                case (#mainIndex) Principal.fromActor(await (with cycles = NEW_INDEX_NB_CYCLES) MainIndex.MainIndex());
+                                                            };
+
+                                        ignore helperSendIndexToIndexesRegistry(newPrincipal, indexKind);
+                                        newPrincipal
                                     };
                                     case (#buckets(bucketKind)) {
                                         switch (bucketKind) {
@@ -170,9 +185,30 @@ shared ({ caller = owner }) persistent actor class Coordinator(indexesRegistryPr
     func helperTopCanisters() : async () {
         for ( (nature, typeMap) in Map.entries(memoryCanisters) ) {
             let toppingAmount = switch (nature) {
-                                    case (#registries(_))    TOPPING_AMOUNT_REGISTRY;
-                                    case (#indexes(_))       TOPPING_AMOUNT_INDEXES;
-                                    case (#buckets(_))       TOPPING_AMOUNT_BUCKETS;
+                                    case (#static(staticKind)) {
+                                        switch ( staticKind ) {
+                                            case (#registries(registrykind)) {
+                                                switch (registrykind) {
+                                                    case (#indexesRegistry) TOPPING_AMOUNT_REGISTRY;
+                                                };
+                                            };
+                                        };
+                                    };
+                                    case (#dynamic(dynamicKind)) {
+                                        switch ( dynamicKind ) {
+                                            case (#indexes(indexKind)) {
+                                                switch (indexKind) {
+                                                    case (#mainIndex) TOPPING_AMOUNT_INDEXES;
+                                                };
+                                            };
+                                            case (#buckets(bucketKind)) {
+                                                switch (bucketKind) {
+                                                    case (#usersBucket) TOPPING_AMOUNT_BUCKETS;
+                                                    case (#groupsBucket) TOPPING_AMOUNT_BUCKETS;
+                                                };
+                                            };
+                                        };
+                                    };
                                 };
 
 
@@ -189,5 +225,31 @@ shared ({ caller = owner }) persistent actor class Coordinator(indexesRegistryPr
                 };
             };
         };
+    };
+
+    func helperSendIndexToIndexesRegistry(indexPrincipal: Principal, indexKind: CanistersKinds.IndexesKind) : async () {
+        try {
+            await (actor(Principal.toText(indexesRegistryPrincipal)) : IndexesRegistry.IndexesRegistry).systemAddIndex(indexPrincipal, indexKind);
+        } catch (e) {
+            Debug.print("Cannot send index to IndexesRegistry, error: " # Error.message(e));
+            apiErrorsRetryList.add(#errSendingIndexToIndexesRegistry({ indexPrincipal = indexPrincipal; indexKind = indexKind }));
+        };
+    };
+
+    func helperHandleErrors() : async () {
+        let tempErrList = List.empty<APIErrors>();
+
+        for ( err in apiErrorsRetryList.values() ) {
+            try {
+                switch ( err ) {
+                    case (#errSendingIndexToIndexesRegistry(errData)) await helperSendIndexToIndexesRegistry(errData.indexPrincipal, errData.indexKind);
+                };
+            } catch (e) {
+                Debug.print("Error while handling errors: " # Error.message(e));
+                tempErrList.add(err);
+            };
+        };
+
+        apiErrorsRetryList := tempErrList;
     };
 };

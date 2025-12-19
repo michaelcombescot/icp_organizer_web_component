@@ -25,7 +25,7 @@ shared ({ caller = owner }) persistent actor class IndexesRegistry() = this {
         caller : Principal;
         msg : {
             #systemSetCoordinator : () -> (coordinatorPrincipalArg : Principal);
-            #systemSetIndex : () -> (indexPrincipal : Principal, indexKind : CanistersKinds.IndexesKind);
+            #systemAddIndex : () -> (indexPrincipal : Principal, indexKind : CanistersKinds.IndexesKind);
 
             #handlerGetIndexes : () -> ();
         };
@@ -38,7 +38,7 @@ shared ({ caller = owner }) persistent actor class IndexesRegistry() = this {
 
         switch ( params.msg ) {
             case (#systemSetCoordinator(_))     params.caller == owner;
-            case (#systemSetIndex(_))           ?params.caller == coordinatorPrincipal;
+            case (#systemAddIndex(_))           ?params.caller == coordinatorPrincipal;
             case (#handlerGetIndexes(_))        true
         }
     };
@@ -47,7 +47,7 @@ shared ({ caller = owner }) persistent actor class IndexesRegistry() = this {
         coordinatorPrincipal := ?coordinatorPrincipalArg;
     };
 
-    public shared func systemSetIndex(indexPrincipal: Principal, indexKind: CanistersKinds.IndexesKind) : async () {
+    public shared func systemAddIndex(indexPrincipal: Principal, indexKind: CanistersKinds.IndexesKind) : async () {
         memoryIndexes.add(indexPrincipal, indexKind);
     };
 

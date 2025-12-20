@@ -1,4 +1,6 @@
+import { Identifier, TodoList } from "../../../../../declarations/organizerGroupsBucket/organizerGroupsBucket.did";
 import { getLoadingComponent } from "../../../components/loading";
+import { Actors } from "../actors/actors";
 import { getListsCards } from "../components/componentListCards";
 import { getTodoPage } from "../components/componentTodoPage";
 import { StoreTodos } from "./storeTodo";
@@ -6,39 +8,39 @@ import { StoreTodos } from "./storeTodo";
 export class StoreTodoLists {
     static todoLists: Map<bigint, TodoList> = new Map<bigint, TodoList>();
 
-    static createTodoList(todoList: TodoList) {
+    static createTodoList(groupIdentifier: Identifier, todoList: TodoList) {
         getLoadingComponent().wrapAsync(async () => {
-            // const result = await APITodoList.createList(todoList);
-            // if ("ok" in result) {
-            //     todoList.id = result.ok;
-            //     this.todoLists.set(result.ok, todoList);
+            const result = await Actors.createGroupsBucketActor(groupIdentifier.bucket).handlerCreateTodosList(groupIdentifier.id, todoList);
+            if ("ok" in result) {
+                todoList.id = result.ok;
+                this.todoLists.set(result.ok, todoList);
 
-            //     getListsCards().render();
-            // }
+                getListsCards().render();
+            }
         })
     }
 
-    static updateTodoList(todoList: TodoList) {
+    static updateTodoList(groupIdentifier: Identifier, todoList: TodoList) {
         getLoadingComponent().wrapAsync(async () => {
-            // await APITodoList.updateList(todoList);
-            // this.todoLists.set(todoList.id, todoList);
+            await Actors.createGroupsBucketActor(groupIdentifier.bucket).handlerUpdateTodosList(groupIdentifier.id, todoList);;
+            this.todoLists.set(todoList.id, todoList);
 
-            // getTodoPage().render();
+            getTodoPage().render();
         })
     }
 
-    static deleteTodoList(id: bigint) {
+    static deleteTodoList(groupIdentifier: Identifier, id: bigint) {
         getLoadingComponent().wrapAsync(async () => {
-            // await APITodoList.removeList(id);
-            // this.todoLists.delete(id);
+            await Actors.createGroupsBucketActor(groupIdentifier.bucket).handlerDeleteTodosList(groupIdentifier.id, id);
+            this.todoLists.delete(id);
 
-            // StoreTodos.todos.forEach((todo) => {
-            //     if (todo.todoListId[0] === id) {
-            //         StoreTodos.todos.delete(todo.id)
-            //     }
-            // })
+            StoreTodos.todos.forEach((todo) => {
+                if (todo.todoListId[0] === id) {
+                    StoreTodos.todos.delete(todo.id)
+                }
+            })
 
-            // getTodoPage().render();
+            getTodoPage().render();
         })
     }
 }

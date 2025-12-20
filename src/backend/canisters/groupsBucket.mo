@@ -56,9 +56,9 @@ shared ({ caller = owner }) persistent actor class GroupsBucket() = this {
             #handlerDeleteTodo : () -> (groupID : Nat, todoID : Nat);
             #handlerUpdateTodo : () -> (groupID : Nat, todo : Todo.Todo);
 
-            #handlerCreateTodoList : () -> (groupID : Nat, todoList : TodoList.TodoList);
-            #handlerUpdateTodoList : () -> (groupID : Nat, todoList : TodoList.TodoList);
-            #handlerDeleteTodoList : () -> (groupID : Nat, todoListID : Nat);
+            #handlerCreateTodosList : () -> (groupID : Nat, todoList : TodoList.TodoList);
+            #handlerUpdateTodosList : () -> (groupID : Nat, todoList : TodoList.TodoList);
+            #handlerDeleteTodosList : () -> (groupID : Nat, todoListID : Nat);
         };
     };
 
@@ -76,9 +76,9 @@ shared ({ caller = owner }) persistent actor class GroupsBucket() = this {
             case (#handlerUpdateTodo(_))   true;
             case (#handlerDeleteTodo(_))   true;
 
-            case (#handlerCreateTodoList(_)) true;
-            case (#handlerUpdateTodoList(_)) true;
-            case (#handlerDeleteTodoList(_)) true;
+            case (#handlerCreateTodosList(_)) true;
+            case (#handlerUpdateTodosList(_)) true;
+            case (#handlerDeleteTodosList(_)) true;
         }
     };
 
@@ -189,7 +189,7 @@ shared ({ caller = owner }) persistent actor class GroupsBucket() = this {
     // API TODOS LISTS //
     /////////////////////
 
-    public shared ({ caller }) func handlerCreateTodoList(groupID: Nat, todoList: TodoList.TodoList) : async Result.Result<(), [Text]> {
+    public shared ({ caller }) func handlerCreateTodosList(groupID: Nat, todoList: TodoList.TodoList) : async Result.Result<Nat, [Text]> {
         let ?group = memoryGroups.get(groupID) else return #err([ERR_GROUP_NOT_FOUND]);
 
         switch ( group.users.get(caller) ) {
@@ -206,10 +206,10 @@ shared ({ caller = owner }) persistent actor class GroupsBucket() = this {
 
         group.todoLists.add(fullTodoList.id, fullTodoList);
 
-        #ok
+        #ok(fullTodoList.id);
     };
 
-    public shared ({ caller }) func handlerUpdateTodoList(groupID: Nat, todoList: TodoList.TodoList) : async Result.Result<(), [Text]> {
+    public shared ({ caller }) func handlerUpdateTodosList(groupID: Nat, todoList: TodoList.TodoList) : async Result.Result<(), [Text]> {
         let ?group = memoryGroups.get(groupID) else return #err([ERR_GROUP_NOT_FOUND]);
         let ?_ = group.todoLists.get(todoList.id) else return #err([ERR_TODOLIST_NOT_FOUND]);
 
@@ -228,7 +228,7 @@ shared ({ caller = owner }) persistent actor class GroupsBucket() = this {
         #ok
     };
 
-    public shared ({ caller }) func handlerDeleteTodoList(groupID: Nat, todoListID: Nat) : async Result.Result<(), [Text]> {
+    public shared ({ caller }) func handlerDeleteTodosList(groupID: Nat, todoListID: Nat) : async Result.Result<(), [Text]> {
         let ?group = memoryGroups.get(groupID) else return #err([ERR_GROUP_NOT_FOUND]);
         let ?_ = group.todoLists.get(todoListID) else return #err([ERR_TODOLIST_NOT_FOUND]);
 

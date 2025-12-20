@@ -1,7 +1,5 @@
-import { Todo } from "../../../../../declarations/backend_todos/backend_todos.did";
 import { i18n } from "../../../i18n/i18n";
 import { stringDateFromEpoch } from "../../../utils/date";
-import { APITodo } from "../actors/apiGroups";
 import { StoreTodos } from "../stores/storeTodo";
 
 export class ComponentTodoShow extends HTMLElement {

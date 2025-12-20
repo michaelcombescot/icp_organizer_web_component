@@ -1,13 +1,9 @@
 import { openModalWithElement } from "../../../components/modal";
 import { ComponentListForm } from "./componentListForm";
 import { i18n } from "../../../i18n/i18n";
-import { getTodoPage } from "./componentTodoPage";
-import { ComponentTodo, getComponentTodoOfList } from "./componentTodo";
 import { borderRadius, cardFontSize, scaleOnHover } from "../../../css/css";
 import { getListsCards } from "./componentListCards";
-import { Todo, TodoList } from "../../../../../declarations/organizerTodosBucket/organizerTodosBucket.did";
 import { getContrastColor } from "../../../css/helpers";
-import { getLoadingComponent } from "../../../components/loading";
 import { StoreGlobal } from "../stores/storeGlobal";
 import { StoreTodoLists } from "../stores/storeTodoList";
 

@@ -35,7 +35,7 @@ shared ({ caller = owner }) persistent actor class IndexesRegistry() = this {
     system func inspect(params: InspectParams) : Bool {
         if ( params.caller == Principal.anonymous() ) { return false; };
 
-        if ( Blob.size(params.arg) > 0 ) { return false; };
+        if ( Blob.size(params.arg) > 50 ) { return false; };
 
         switch ( params.msg ) {
             case (#systemSetCoordinator(_))     params.caller == owner;
@@ -59,7 +59,7 @@ shared ({ caller = owner }) persistent actor class IndexesRegistry() = this {
     // API //
     /////////
 
-    public shared func handlerGetIndexes() : async [(CanistersKinds.IndexesKind, [Principal])] {
+    public query func handlerGetIndexes() : async [(CanistersKinds.IndexesKind, [Principal])] {
         let newMap = memoryIndexes.map(func(k,v) = v.toArray());
         Iter.toArray(newMap.entries())
     };

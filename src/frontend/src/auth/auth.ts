@@ -1,12 +1,11 @@
 import { AuthClient } from '@dfinity/auth-client';
 import { canisterId as identityCanisterID } from '../../../declarations/internet_identity/index';
-import { APIMainIndex } from '../modules/todo/actors/actors';
+import { Actors } from '../modules/todo/actors/actors';
+import { Identity } from '@dfinity/agent';
 
 const identityProvider = process.env.DFX_NETWORK === 'ic' ?
                             'https://identity.ic0.app' // Mainnet
                             : `http://${identityCanisterID}.localhost:4943/`; // Local
-
-console.log(identityCanisterID)
 
 let authClient = await AuthClient.create();
 
@@ -21,7 +20,8 @@ export const login = async () => {
             identity        = authClient.getIdentity();
             isAuthenticated = await authClient.isAuthenticated();
 
-            await APIMainIndex.createUser();
+            await Actors.fetchIndexes();
+            await Actors.getMainIndex().handlerFetchOrCreateUser();
 
             window.location.reload();
         }

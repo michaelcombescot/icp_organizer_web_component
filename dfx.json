@@ -33,8 +33,7 @@
         "src/frontend/dist"
       ],
       "type": "assets",
-      "workspace": "frontend",
-      "build": "echo 'skip build'"
+      "workspace": "frontend"
     },
 
     "internet_identity": {

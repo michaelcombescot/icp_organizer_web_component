@@ -68,7 +68,7 @@ shared ({ caller = owner }) persistent actor class Coordinator(indexesRegistryPr
         arg : Blob;
         caller : Principal;
         msg : {
-            #handlerUpgradeCanisterKind : () -> {code : Blob; nature : CanistersKinds.CanistersKind};
+            #handlerUpgradeCanisterKind : () -> (nature: CanistersKinds.CanistersKind, wasmModule: Blob.Blob);
             #handlerAddIndex : () -> (indexKind: CanistersKinds.IndexesKind);
             #handlerGiveNewBucket : () -> (bucketKind: CanistersKinds.BucketsKind);
             #handlerIsLegitCanister : () -> (canisterPrincipal: Principal);
@@ -117,12 +117,13 @@ shared ({ caller = owner }) persistent actor class Coordinator(indexesRegistryPr
 
     // upgrade a canister of a specific type, used in cli with the command (replace with the right canister path):
     // - dfx canister call coordinator handlerUpgradeCanister '(#buckettype, blob "'$(hexdump -ve '1/1 "\\\\%02x"' .dfx/local/canisters/organizerUsersDataBucket/organizerUsersDataBucket.wasm)'")'
-    public shared func handlerUpgradeCanisterKind({ nature : CanistersKinds.CanistersKind; code: Blob.Blob }) : async () {
+    public shared func handlerUpgradeCanisterKind(nature : CanistersKinds.CanistersKind, wasmModule: Blob.Blob) : async () {
         let ?canistersMap = memoryCanisters.get(CanistersKinds.compareCanistersKinds, nature) else Runtime.trap("No canisters of type " # debug_show(nature) # " found");
 
         for ( canisterPrincipal in Map.keys(canistersMap) ) {
             try {
-                ignore IC.ic.install_code({ mode = #upgrade(null); canister_id = canisterPrincipal; wasm_module = code; arg = to_candid((Principal.anonymous())); sender_canister_version = null; });                   
+                ignore IC.ic.install_code({ mode = #upgrade(null); canister_id = canisterPrincipal; wasm_module = wasmModule; arg = to_candid((Principal.anonymous())); sender_canister_version = null; });                 
+                Debug.print("Upgraded canister " # Principal.toText(canisterPrincipal));
             } catch (e) {
                 Debug.print("Cannot upgrade bucket, error: " # Error.message(e));
             };

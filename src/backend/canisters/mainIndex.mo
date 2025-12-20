@@ -2,6 +2,7 @@ import Principal "mo:core/Principal";
 import Result "mo:core/Result";
 import Error "mo:core/Error";
 import Runtime "mo:core/Runtime";
+import Debug "mo:core/Debug";
 import GroupsBucket "groupsBucket";
 import UsersBucket "usersBucket";
 import Identifiers "../shared/identifiers";
@@ -58,6 +59,8 @@ shared ({ caller = owner }) persistent actor class MainIndex() = this {
 
     public shared ({ caller }) func handlerFetchOrCreateUser() : async Result.Result<Principal, Text> {
         let bucketPrincipal = UsersMapping.helperFetchUserBucket(memoryUsersMapping, caller);
+
+        Debug.print("entered with principal: " # Principal.toText(caller) # " and bucket: " # Principal.toText(bucketPrincipal));
 
         switch ( await (actor(Principal.toText(bucketPrincipal)): UsersBucket.UsersBucket).handlerCreateUser({ userPrincipal = caller }) ) {
             case (#ok()) #ok(bucketPrincipal);

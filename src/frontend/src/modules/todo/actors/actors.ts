@@ -1,5 +1,5 @@
 import { canisterId as registerID } from '../../../../../declarations/organizerIndexesRegistry/index';
-import { createActor } from '../../../../../declarations/organizerIndexesRegistry';
+import { createActor as createActorIndexesRegistry } from '../../../../../declarations/organizerIndexesRegistry';
 import { IndexesKind } from '../../../../../declarations/organizerIndexesRegistry/organizerIndexesRegistry.did';
 
 
@@ -14,35 +14,39 @@ import { _SERVICE as _SERVICE_USERS } from '../../../../../declarations/organize
 
 import { ActorSubclass } from '@dfinity/agent';
 import { Principal } from '@dfinity/principal';
+import { identity } from '../../../auth/auth';
 
 export class Actors {
-    static registry = createActor(registerID);
+    static indexes: Map<string, Principal[]> = new Map();
 
-    static indexes: Map<IndexesKind, Principal[]> = new Map();
+    private static getVariantTag(variant: IndexesKind): string {
+        return Object.keys(variant)[0];
+    }
 
     static async fetchIndexes(): Promise<void> {
         try {
-            this.indexes = new Map(await this.registry.handlerGetIndexes());
+            let indexesResp = await createActorIndexesRegistry(registerID, { agentOptions: { identity } }).handlerGetIndexes();
+            this.indexes = new Map( indexesResp.map((entries) => [this.getVariantTag(entries[0]), entries[1]]) );
         } catch (e) {
             console.error(`error fetching indexes: ${e}`);
         }
     }
         
     static getMainIndex() : ActorSubclass<_SERVICE_INDEX> {
-        let mainIndexes = this.indexes.get({mainIndex: null})
+        let mainIndexes = this.indexes.get("mainIndex")
         if (mainIndexes === undefined) {
             throw new Error("No main index found");
         }
 
         let id = mainIndexes[Math.floor(Math.random() * mainIndexes.length)];
-        return createActorMainIndex(id);
+        return createActorMainIndex(id, { agentOptions: { identity }});
     }
 
     static createGroupsBucketActor(principal: Principal) : ActorSubclass<_SERVICE_GROUPS> {
-        return createActorGroupsBucket(principal);
+        return createActorGroupsBucket(principal, { agentOptions: { identity } });
     }
 
     static createUsersBucketActor(principal: Principal) : ActorSubclass<_SERVICE_USERS> {
-        return createActorUsersBucket(principal);
+        return createActorUsersBucket(principal, { agentOptions: { identity } });
     }
 }

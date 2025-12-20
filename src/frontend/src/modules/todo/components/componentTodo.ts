@@ -3,10 +3,8 @@ import { ComponentTodoShow } from "./componentTodoShow";
 import { openModalWithElement } from "../../../components/modal";
 import { remainingTimeFromEpoch, stringDateFromEpoch } from "../../../utils/date";
 import { baseCardColor, borderRadius, scaleOnHover } from "../../../css/css";
-import { Todo, TodoList } from "../../../../../declarations/backend_todos/backend_todos.did";
 import { getComponentTodoLists } from "./componentTodoLists";
 import { getContrastColor } from "../../../css/helpers";
-import { getLoadingComponent } from "../../../components/loading";
 import { StoreTodoLists } from "../stores/storeTodoList";
 import { StoreTodos } from "../stores/storeTodo";
 

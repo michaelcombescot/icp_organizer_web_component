@@ -1,5 +1,4 @@
 import { i18n } from "../../../i18n/i18n";
-import { TodoList } from "../../../../../declarations/backend_todos/backend_todos.did";
 import "./componentListCard";
 import { getTodoPage } from "./componentTodoPage";
 import { cardFontSize, scaleOnHover } from "../../../css/css";

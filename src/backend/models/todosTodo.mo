@@ -11,10 +11,9 @@ module {
         scheduledDate: ?Time.Time;
         priority: TodoPriority;
         status: TodoStatus;
+        todoListId: ?Nat;
         createdAt: Time.Time;
         createdBy: Principal;
-        owner: Principal;
-
     };
 
     public type TodoPriority    = { #high; #medium; #low; };

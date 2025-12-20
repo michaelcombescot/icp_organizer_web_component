@@ -8,7 +8,6 @@ import { getComponentTodoLists } from "./componentTodoLists";
 import { getContrastColor } from "../../../css/helpers";
 import { getLoadingComponent } from "../../../components/loading";
 import { StoreTodoLists } from "../stores/storeTodoList";
-import { APITodo } from "../apis/apiGroups";
 import { StoreTodos } from "../stores/storeTodo";
 
 export class ComponentTodo extends HTMLElement {

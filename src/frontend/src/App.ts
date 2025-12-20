@@ -1,10 +1,8 @@
-import './modules/todo/components/componentTodoPage'
 import './components/modal'
 import './components/router/router_link'
 import { i18n } from './i18n/i18n'
 import { navigateTo, routes } from './components/router/router'
 import { login, logout, isAuthenticated } from './auth/auth'
-import { StoreGlobal } from './modules/todo/stores/storeGlobal'
 // import { logo } from '../assets/icp-logo.svg'
 
 class App extends HTMLElement {

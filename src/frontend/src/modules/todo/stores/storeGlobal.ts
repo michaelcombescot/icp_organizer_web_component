@@ -3,7 +3,9 @@ import { getTodoPage } from "../components/componentTodoPage"
 import { StoreTodos } from "./storeTodo"
 
 export class StoreGlobal {
-    static loaded = false
+    static indexesFetched = false
+
+    static currentSelectedGroupId: bigint | null = null
 
     static currentSelectedListId: bigint | null = null
 

@@ -32,4 +32,8 @@ module {
     public func compareCanistersKinds(a: CanistersKind, b: CanistersKind) : Order.Order {
         Text.compare(debug_show(a), debug_show(b))
     };
+
+    public func compareIndexesKind(a: IndexesKind, b: IndexesKind) : Order.Order {
+        Text.compare(debug_show(a), debug_show(b))
+    };
 }

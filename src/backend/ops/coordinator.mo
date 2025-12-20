@@ -229,7 +229,7 @@ shared ({ caller = owner }) persistent actor class Coordinator(indexesRegistryPr
 
     func helperSendIndexToIndexesRegistry(indexPrincipal: Principal, indexKind: CanistersKinds.IndexesKind) : async () {
         try {
-            await (actor(Principal.toText(indexesRegistryPrincipal)) : IndexesRegistry.IndexesRegistry).systemAddIndex(indexPrincipal, indexKind);
+            await (actor(indexesRegistryPrincipal.toText()) : IndexesRegistry.IndexesRegistry).systemAddIndex(indexPrincipal, indexKind);
         } catch (e) {
             Debug.print("Cannot send index to IndexesRegistry, error: " # Error.message(e));
             apiErrorsRetryList.add(#errSendingIndexToIndexesRegistry({ indexPrincipal = indexPrincipal; indexKind = indexKind }));
@@ -237,19 +237,17 @@ shared ({ caller = owner }) persistent actor class Coordinator(indexesRegistryPr
     };
 
     func helperHandleErrors() : async () {
-        let tempErrList = List.empty<APIErrors>();
+        let batchToRetry = apiErrorsRetryList;
+        apiErrorsRetryList := List.empty();
 
-        for ( err in apiErrorsRetryList.values() ) {
+        for ( err in batchToRetry.values() ) {
             try {
                 switch ( err ) {
                     case (#errSendingIndexToIndexesRegistry(errData)) await helperSendIndexToIndexesRegistry(errData.indexPrincipal, errData.indexKind);
                 };
             } catch (e) {
                 Debug.print("Error while handling errors: " # Error.message(e));
-                tempErrList.add(err);
             };
         };
-
-        apiErrorsRetryList := tempErrList;
     };
 };

@@ -4,6 +4,6 @@ import CanistersKinds "canistersKinds";
 module Interfaces {
     public type Coordinator = actor {
         handlerGiveNewBucket: shared ({ bucketKind: CanistersKinds.BucketsKind }) -> async Principal;
-        handlerIsLegitCanister: shared ({ canisterPrincipal: Principal }) -> async Bool;
+        handlerIsLegitCanister: shared (canisterPrincipal: Principal) -> async Bool;
     };
 }

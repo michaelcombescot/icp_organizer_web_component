@@ -2,17 +2,18 @@ import Principal "mo:core/Principal";
 import Result "mo:core/Result";
 import Error "mo:core/Error";
 import Runtime "mo:core/Runtime";
-import Map "mo:core/Map";
 import GroupsBucket "groupsBucket";
 import UsersBucket "usersBucket";
-import Interfaces "../shared/interfaces";
 import Identifiers "../shared/identifiers";
 import Group "../models/todosGroup";
 import UsersMapping "../shared/usersMapping";
+import MixinAllowedCanisters "mixins/mixinAllowedCanisters";
 
 // only goal of this canister is too keep track of the relationship between users principals and canisters.
 // this is the main piece of code which should need to change in case of scaling needs (by adding new users buckets )
 shared ({ caller = owner }) persistent actor class MainIndex() = this {
+    include MixinAllowedCanisters(owner);
+
     ////////////
     // ERRORS //
     ////////////
@@ -22,8 +23,6 @@ shared ({ caller = owner }) persistent actor class MainIndex() = this {
     ////////////
     // MEMORY //
     ////////////
-
-    let coordinatorActor = actor(Principal.toText(owner)) : Interfaces.Coordinator;
 
     var memoryUsersMapping: [Principal] = [];
 

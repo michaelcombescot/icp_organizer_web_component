@@ -3,6 +3,7 @@ import Map "mo:core/Map";
 import Todo "todosTodo";
 import TodoList "todosTodoList";
 import Time "mo:core/Time";
+import Principal "mo:core/Principal";
 
 module {
     public type Group = {
@@ -49,14 +50,20 @@ module {
         }
     };
 
-    
-
     //
     // API
     //
 
     public type CreateGroupParams = {
         name: Text;
+        kind: Kind;
+    };
+
+    public type RespGetGroupDisplayData = {
+        name: Text;
+        todos: [Todo.Todo];
+        todoLists: [TodoList.TodoList];
+        users: [(Principal, UserGroupPermission)];
         kind: Kind;
     };
 };

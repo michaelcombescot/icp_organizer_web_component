@@ -6,8 +6,11 @@ import Time "mo:core/Time";
 import UserData "../models/todosUserData";
 import Identifiers "../shared/identifiers";
 import Interfaces "../shared/interfaces";
+import MixinAllowedCanisters "mixins/mixinAllowedCanisters";
 
 shared ({ caller = owner }) persistent actor class UsersBucket() = this {
+    include MixinAllowedCanisters(owner);
+
     /////////////
     // CONFIGS //
     /////////////
@@ -24,9 +27,6 @@ shared ({ caller = owner }) persistent actor class UsersBucket() = this {
     ////////////
     // MEMORY //
     ////////////
-
-    let coordinatorActor = actor(Principal.toText(owner)) : Interfaces.Coordinator;
-    let allowedCanisters = Map.empty<Principal, ()>();
 
     let memoryUsers = Map.empty<Principal, UserData.UserData>();
 
@@ -47,14 +47,8 @@ shared ({ caller = owner }) persistent actor class UsersBucket() = this {
         if ( params.caller == Principal.anonymous() ) { return false; };
 
         switch ( params.msg ) {
-            case (#handlerGetUserData(_))       true; // callable directly by the frontend
-            case (#handlerCreateUser(_))        true
-        }
-    };
-
-    func systemHelperIsCanisterAllowed(canisterPrincipal: Principal) : async Bool {
-        switch ( allowedCanisters.get(canisterPrincipal) ) {
-            
+            case (#handlerGetUserData(_))       true;
+            case (#handlerCreateUser(_))        true;
         }
     };
 

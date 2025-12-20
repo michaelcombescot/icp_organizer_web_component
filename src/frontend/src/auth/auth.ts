@@ -1,6 +1,6 @@
 import { AuthClient } from '@dfinity/auth-client';
 import { canisterId as identityCanisterID } from '../../../declarations/internet_identity/index';
-import { APIMainIndex } from '../modules/todo/apis/apiMainIndex';
+import { APIMainIndex } from '../modules/todo/actors/actors';
 
 const identityProvider = process.env.DFX_NETWORK === 'ic' ?
                             'https://identity.ic0.app' // Mainnet

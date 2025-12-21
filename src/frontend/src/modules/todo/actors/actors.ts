@@ -1,16 +1,16 @@
-import { canisterId as registerID } from '../../../../../declarations/organizerIndexesRegistry/index';
-import { createActor as createActorIndexesRegistry } from '../../../../../declarations/organizerIndexesRegistry';
-import { IndexesKind } from '../../../../../declarations/organizerIndexesRegistry/organizerIndexesRegistry.did';
+import { canisterId as registerID } from '../../../../../declarations/indexesRegistry/index';
+import { createActor as createActorIndexesRegistry } from '../../../../../declarations/indexesRegistry';
+import { IndexesKind } from '../../../../../declarations/indexesRegistry/indexesRegistry.did';
 
 
-import { _SERVICE as _SERVICE_INDEX } from '../../../../../declarations/organizerMainIndex/organizerMainIndex.did';
-import { createActor as createActorMainIndex } from '../../../../../declarations/organizerMainIndex';
+import { _SERVICE as _SERVICE_INDEX } from '../../../../../declarations/mainIndex/mainIndex.did';
+import { createActor as createActorMainIndex } from '../../../../../declarations/mainIndex';
 
-import { createActor as createActorGroupsBucket } from '../../../../../declarations/organizerGroupsBucket';
-import { _SERVICE as _SERVICE_GROUPS } from '../../../../../declarations/organizerGroupsBucket/organizerGroupsBucket.did';
+import { createActor as createActorGroupsBucket } from '../../../../../declarations/groupsBucket';
+import { _SERVICE as _SERVICE_GROUPS } from '../../../../../declarations/groupsBucket/groupsBucket.did';
 
-import { createActor as createActorUsersBucket } from '../../../../../declarations/organizerUsersBucket';
-import { _SERVICE as _SERVICE_USERS } from '../../../../../declarations/organizerUsersBucket/organizerUsersBucket.did';
+import { createActor as createActorUsersBucket } from '../../../../../declarations/usersBucket';
+import { _SERVICE as _SERVICE_USERS } from '../../../../../declarations/usersBucket/usersBucket.did';
 
 import { ActorSubclass } from '@dfinity/agent';
 import { Principal } from '@dfinity/principal';
@@ -24,6 +24,8 @@ export class Actors {
     }
 
     static async fetchIndexes(): Promise<void> {
+        console.log("ousse", registerID)
+
         try {
             let indexesResp = await createActorIndexesRegistry(registerID, { agentOptions: { identity } }).handlerGetIndexes();
             this.indexes = new Map( indexesResp.map((entries) => [this.getVariantTag(entries[0]), entries[1]]) );

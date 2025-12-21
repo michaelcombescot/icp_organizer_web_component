@@ -1,33 +1,33 @@
 {
   "canisters": {
-    "organizerCoordinator": {
+    "coordinator": {
       "main": "src/backend/ops/coordinator.mo",
       "type": "motoko"
     },
 
-    "organizerIndexesRegistry": {
+    "indexesRegistry": {
       "main": "src/backend/ops/indexesRegistry.mo",
       "type": "motoko"
     },
 
-    "organizerMainIndex": {
+    "mainIndex": {
       "main": "src/backend/canisters/mainIndex.mo",
       "type": "motoko"
     },
 
-    "organizerUsersBucket": {
+    "usersBucket": {
       "main": "src/backend/canisters/usersBucket.mo",
       "type": "motoko"
     },
 
-    "organizerGroupsBucket": {
+    "groupsBucket": {
       "main": "src/backend/canisters/groupsBucket.mo",
       "type": "motoko"
     },
 
-    "organizerFrontend": {
+    "frontend": {
       "dependencies": [
-        "organizerIndexesRegistry"
+        "indexesRegistry"
       ],
       "source": [
         "src/frontend/dist"

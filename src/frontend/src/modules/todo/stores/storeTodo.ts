@@ -1,5 +1,5 @@
 import { group } from "console";
-import { Identifier, Todo } from "../../../../../declarations/organizerGroupsBucket/organizerGroupsBucket.did";
+import { Identifier, Todo } from "../../../../../declarations/groupsBucket/groupsBucket.did";
 import { getLoadingComponent } from "../../../components/loading";
 import { Actors } from "../actors/actors";
 import { getComponentTodo } from "../components/componentTodo";

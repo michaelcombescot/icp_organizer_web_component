@@ -1,4 +1,4 @@
-import { Identifier, TodoList } from "../../../../../declarations/organizerGroupsBucket/organizerGroupsBucket.did";
+import { Identifier, TodoList } from "../../../../../declarations/groupsBucket/groupsBucket.did";
 import { getLoadingComponent } from "../../../components/loading";
 import { Actors } from "../actors/actors";
 import { getListsCards } from "../components/componentListCards";

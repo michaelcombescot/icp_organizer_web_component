@@ -2,7 +2,6 @@ import { openModalWithElement } from "../../../components/modal";
 import { ComponentListForm } from "./componentListForm";
 import { i18n } from "../../../i18n/i18n";
 import { borderRadius, cardFontSize, scaleOnHover } from "../../../css/css";
-import { getListsCards } from "./componentListCards";
 import { getContrastColor } from "../../../css/helpers";
 import { StoreGlobal } from "../stores/storeGlobal";
 import { StoreTodoLists } from "../stores/storeTodoList";

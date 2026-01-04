@@ -1,8 +1,10 @@
 import { AuthClient } from '@dfinity/auth-client';
 import { canisterId as identityCanisterID } from '../../../declarations/internet_identity/index';
 import { Actors } from '../modules/todo/actors/actors';
-import { Identity } from '@dfinity/agent';
 import { getLoadingComponent } from "../components/loading"
+import { StoreUser } from '../modules/todo/stores/storeUser';
+import { getMainApp } from '../App';
+import { navigateTo, routes } from '../components/router/router';
 
 const identityProvider = process.env.DFX_NETWORK === 'ic' ?
                             'https://identity.ic0.app' // Mainnet
@@ -19,22 +21,23 @@ export const login = async () => {
         await new Promise<void>((resolve, reject) => {
             authClient.login({
                 identityProvider,
-                // 2. Resolve the promise ONLY when success happens
                 onSuccess: async () => {
                     try {
                         identity = authClient.getIdentity();
                         isAuthenticated = await authClient.isAuthenticated();
 
                         await Actors.fetchIndexes();
-                        await Actors.getMainIndex().handlerFetchOrCreateUser();
+                        await Actors.fetchUserBucket();  
+                        await StoreUser.fetchUserData();                      
                         
-                        window.location.reload();
-                        resolve(); // <--- This tells the wrapper "We are done"
+                        getMainApp().render()
+                        navigateTo(routes.home)
+
+                        resolve();
                     } catch (e) {
-                        reject(e); // Handle errors inside the async callback
+                        reject(e); 
                     }
                 },
-                // 3. Don't forget to handle errors/cancellation!
                 onError: (err) => {
                     console.error("Login failed", err);
                     reject(err);

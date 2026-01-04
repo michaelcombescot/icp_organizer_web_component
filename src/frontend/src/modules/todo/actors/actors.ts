@@ -18,19 +18,27 @@ import { identity } from '../../../auth/auth';
 
 export class Actors {
     static indexes: Map<string, Principal[]> = new Map();
+    static userBucket: Principal
 
     private static getVariantTag(variant: IndexesKind): string {
         return Object.keys(variant)[0];
     }
 
     static async fetchIndexes(): Promise<void> {
-        console.log("ousse", registerID)
-
         try {
             let indexesResp = await createActorIndexesRegistry(registerID, { agentOptions: { identity } }).handlerGetIndexes();
             this.indexes = new Map( indexesResp.map((entries) => [this.getVariantTag(entries[0]), entries[1]]) );
         } catch (e) {
             console.error(`error fetching indexes: ${e}`);
+        }
+    }
+
+    static async fetchUserBucket() {
+        let res = await Actors.getMainIndex().handlerFetchOrCreateUser();
+        if ( "err" in res) {
+            console.log(res.err)
+        } else {
+            this.userBucket = res.ok
         }
     }
         
@@ -48,7 +56,7 @@ export class Actors {
         return createActorGroupsBucket(principal, { agentOptions: { identity } });
     }
 
-    static createUsersBucketActor(principal: Principal) : ActorSubclass<_SERVICE_USERS> {
-        return createActorUsersBucket(principal, { agentOptions: { identity } });
+    static createUserBucketActor() : ActorSubclass<_SERVICE_USERS> {
+        return createActorUsersBucket(this.userBucket, { agentOptions: { identity } });
     }
 }

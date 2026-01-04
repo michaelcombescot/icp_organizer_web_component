@@ -10,7 +10,12 @@ export const french: Language = {
 
     // homepage
     todoCreateNewButton: "Nouvelle tâche",
+    todoListCreateButton: "Nouvelle liste",
+    groupSelectorLabel: "Sélectionnez un groupe...",
+    groupCreateButton: "Nouveau groupe",
+    listSelectorLabel: "Sélectionnez une liste...",
 
+    // todoForm
     todoFormTitleNew: "Nouvelle tâche",
     todoFormTitleEdit: "Modifier la tâche",
     todoFormFieldResume: "Résumé",
@@ -32,9 +37,7 @@ export const french: Language = {
     todoFormFieldList: "Liste",
     todoFormInputSubmit: "Enregistrer",
 
-    // lists
-    todoListCreateButton: "Nouvelle liste",
-
+    // list form
     todoListFormTitleNew: "Nouvelle liste",
     todoListFormTitleEdit: "Modifier la liste",
     todoListFormFieldName: "Nom",

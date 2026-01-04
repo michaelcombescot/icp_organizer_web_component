@@ -13,6 +13,9 @@ export interface Language {
     // homepage
     todoCreateNewButton: string
     todoListCreateButton: string
+    groupSelectorLabel: string
+    groupCreateButton: string
+    listSelectorLabel: string
 
     // todo form
     todoFormTitleNew: string

@@ -1,6 +1,5 @@
 import { i18n } from "../../../i18n/i18n";
 import { closeModal } from "../../../components/modal";
-import { getListsCards } from "./componentListCards";
 import { getLoadingComponent } from "../../../components/loading";
 import { StoreTodoLists } from "../stores/storeTodoList";
 

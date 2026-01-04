@@ -7,6 +7,7 @@ import UserData "../models/todosUserData";
 import Identifiers "../shared/identifiers";
 import Interfaces "../shared/interfaces";
 import MixinAllowedCanisters "mixins/mixinAllowedCanisters";
+import Errors "../shared/errors"
 
 shared ({ caller = owner }) persistent actor class UsersBucket() = this {
     include MixinAllowedCanisters(owner);
@@ -15,14 +16,7 @@ shared ({ caller = owner }) persistent actor class UsersBucket() = this {
     // CONFIGS //
     /////////////
 
-    let MAX_NUMBER_ENTRIES = 10_000_000; // TODO handle max number entries in handlerCreateUser
-
-    ////////////
-    // ERRORS //
-    ////////////
-
-    let ERR_USER_NOT_FOUND = "ERR_USER_NOT_FOUND";
-    let ERR_USER_ALREADY_EXISTS = "ERR_USER_ALREADY_EXISTS";
+    let MAX_NUMBER_ENTRIES = 10_000_000; // TODO handle max number entries in handlerCreateUser    
 
     ////////////
     // MEMORY //
@@ -38,7 +32,7 @@ shared ({ caller = owner }) persistent actor class UsersBucket() = this {
         arg: Blob;
         caller : Principal;
         msg : {
-            #handlerGetUserData : () -> (userPrincipal: Principal);
+            #handlerGetUserData : () -> ();
             #handlerCreateUser : () -> { userPrincipal: Principal; };
         }
     };
@@ -56,8 +50,8 @@ shared ({ caller = owner }) persistent actor class UsersBucket() = this {
     // API //
     /////////
 
-    public shared func handlerGetUserData( userPrincipal: Principal ) : async Result.Result<UserData.SharableUserData, Text> {
-        let ?userData = memoryUsers.get(userPrincipal) else return #err(ERR_USER_NOT_FOUND);
+    public shared ({ caller }) func handlerGetUserData() : async Result.Result<UserData.SharableUserData, Text> {
+        let ?userData = memoryUsers.get(caller) else return #err(Errors.ERR_USER_NOT_FOUND);
 
         #ok({
             name = userData.name;
@@ -69,7 +63,7 @@ shared ({ caller = owner }) persistent actor class UsersBucket() = this {
 
     public shared func handlerCreateUser({ userPrincipal: Principal; }) : async Result.Result<(), Text> {
         switch ( memoryUsers.get(userPrincipal) ) {
-            case (?_) return #err(ERR_USER_ALREADY_EXISTS);
+            case (?_) return #err(Errors.ERR_USER_ALREADY_EXISTS);
             case null ();
         };
 

@@ -10,6 +10,7 @@ import Group "../models/todosGroup";
 import MixinAllowedCanisters "mixins/mixinAllowedCanisters";
 import Blob "mo:core/Blob";
 import Iter "mo:core/Iter";
+import Errors "../shared/errors";
 
 shared ({ caller = owner }) persistent actor class GroupsBucket() = this {
     include MixinAllowedCanisters(owner);
@@ -20,17 +21,7 @@ shared ({ caller = owner }) persistent actor class GroupsBucket() = this {
     // CONFIGS //
     /////////////
 
-    let MAX_NUMBER_ENTRIES = 30_000;
-    
-    ////////////
-    // ERRORS //
-    ////////////
-
-    let ERR_FORBIDDEN           = "ERR_FORBIDDEN";
-    let ERR_GROUP_NOT_FOUND     = "ERR_GROUP_NOT_FOUND";
-    let ERR_TODO_NOT_FOUND      = "ERR_TODO_NOT_FOUND";
-    let ERR_TODOLIST_NOT_FOUND  = "ERR_TODOLIST_NOT_FOUND";
-    let ERR_INVALID_CALLER      = "ERR_INVALID_CALLER";
+    let MAX_NUMBER_ENTRIES = 30_000;  
     
     ////////////
     // MEMORY //
@@ -87,11 +78,11 @@ shared ({ caller = owner }) persistent actor class GroupsBucket() = this {
     ////////////////
 
     public shared ({ caller }) func handlerGetGroupDisplayData(groupID: Nat) : async Result.Result<Group.RespGetGroupDisplayData, Text> {
-        let ?group = memoryGroups.get(groupID) else return #err(ERR_GROUP_NOT_FOUND);
+        let ?group = memoryGroups.get(groupID) else return #err(Errors.ERR_GROUP_NOT_FOUND);
         
         switch ( group.users.get(caller) ) {
-            case null return #err(ERR_FORBIDDEN);
-            case (?permission) if ( permission == #archived ) return #err(ERR_FORBIDDEN);
+            case null return #err(Errors.ERR_GROUP_ACTION_FORBIDDEN);
+            case (?permission) if ( permission == #archived ) return #err(Errors.ERR_GROUP_ACTION_FORBIDDEN);
         };
 
         let resp = {
@@ -107,7 +98,7 @@ shared ({ caller = owner }) persistent actor class GroupsBucket() = this {
     };
 
     public shared ({ caller }) func handlerCreateGroup(userPrincipal: Principal, params: Group.CreateGroupParams) : async Result.Result<{ isFull: Bool; identifier: Identifiers.Identifier }, Text> {
-        if (await systemHelperIsCanisterAllowed(caller)) return #err(ERR_INVALID_CALLER);
+        if (await systemHelperIsCanisterAllowed(caller)) return #err(Errors.ERR_INVALID_CALLER);
 
         let group = Group.createGroup({ name = params.name; createdBy = userPrincipal; identifier = { id = idGroupCounter; bucket = thisPrincipal }; kind = params.kind; });
 
@@ -118,11 +109,11 @@ shared ({ caller = owner }) persistent actor class GroupsBucket() = this {
     };
 
     public shared ({ caller }) func handlerDeleteGroup(groupID: Nat) : async Result.Result<(), Text> {
-        let ?group = memoryGroups.get(groupID) else return #err(ERR_GROUP_NOT_FOUND);
+        let ?group = memoryGroups.get(groupID) else return #err(Errors.ERR_GROUP_NOT_FOUND);
 
         switch ( group.users.get(caller) ) {
-            case null return #err(ERR_FORBIDDEN);
-            case (?permission) if ( permission != #owner ) return #err(ERR_FORBIDDEN);
+            case null return #err(Errors.ERR_GROUP_ACTION_FORBIDDEN);
+            case (?permission) if ( permission != #owner ) return #err(Errors.ERR_GROUP_ACTION_FORBIDDEN);
         };
 
         memoryGroups.remove(groupID);
@@ -135,11 +126,11 @@ shared ({ caller = owner }) persistent actor class GroupsBucket() = this {
     ///////////////
 
     public shared ({ caller }) func handlerCreateTodo(groupID: Nat, todo: Todo.Todo) : async Result.Result<Nat, [Text]> {
-        let ?group = memoryGroups.get(groupID) else return #err([ERR_GROUP_NOT_FOUND]);
+        let ?group = memoryGroups.get(groupID) else return #err([Errors.ERR_GROUP_NOT_FOUND]);
 
         switch ( group.users.get(caller) ) {
-            case null return #err([ERR_FORBIDDEN]);
-            case (?permission) if ( permission == #visitor or permission == #archived ) return #err([ERR_FORBIDDEN]);
+            case null return #err([Errors.ERR_GROUP_ACTION_FORBIDDEN]);
+            case (?permission) if ( permission == #visitor or permission == #archived ) return #err([Errors.ERR_GROUP_ACTION_FORBIDDEN]);
         };
 
         switch ( Todo.validateTodo(todo) ) {
@@ -155,12 +146,12 @@ shared ({ caller = owner }) persistent actor class GroupsBucket() = this {
     };
 
     public shared ({ caller }) func handlerUpdateTodo(groupID: Nat, todo: Todo.Todo) : async Result.Result<(), [Text]> {
-        let ?group = memoryGroups.get(groupID) else return #err([ERR_GROUP_NOT_FOUND]);
-        let ?_ = group.todos.get(todo.id) else return #err([ERR_TODO_NOT_FOUND]);
+        let ?group = memoryGroups.get(groupID) else return #err([Errors.ERR_GROUP_NOT_FOUND]);
+        let ?_ = group.todos.get(todo.id) else return #err([Errors.ERR_TODO_NOT_FOUND]);
 
         switch ( group.users.get(caller) ) {
-            case null return #err([ERR_FORBIDDEN]);
-            case (?permission) if ( permission == #visitor or permission == #archived ) return #err([ERR_FORBIDDEN]);
+            case null return #err([Errors.ERR_GROUP_ACTION_FORBIDDEN]);
+            case (?permission) if ( permission == #visitor or permission == #archived ) return #err([Errors.ERR_GROUP_ACTION_FORBIDDEN]);
         };
 
         switch ( Todo.validateTodo(todo) ) {
@@ -174,11 +165,11 @@ shared ({ caller = owner }) persistent actor class GroupsBucket() = this {
     };
 
     public shared ({ caller }) func handlerDeleteTodo(groupID: Nat, todoID: Nat) : async Result.Result<(), [Text]> {
-        let ?group = memoryGroups.get(groupID) else return #err([ERR_GROUP_NOT_FOUND]);
+        let ?group = memoryGroups.get(groupID) else return #err([Errors.ERR_GROUP_NOT_FOUND]);
 
         switch ( group.users.get(caller) ) {
-            case null return #err([ERR_FORBIDDEN]);
-            case (?permission) if ( permission == #visitor or permission == #archived ) return #err([ERR_FORBIDDEN]);
+            case null return #err([Errors.ERR_GROUP_ACTION_FORBIDDEN]);
+            case (?permission) if ( permission == #visitor or permission == #archived ) return #err([Errors.ERR_GROUP_ACTION_FORBIDDEN]);
         };
 
         group.todos.remove(todoID);
@@ -190,11 +181,11 @@ shared ({ caller = owner }) persistent actor class GroupsBucket() = this {
     /////////////////////
 
     public shared ({ caller }) func handlerCreateTodosList(groupID: Nat, todoList: TodoList.TodoList) : async Result.Result<Nat, [Text]> {
-        let ?group = memoryGroups.get(groupID) else return #err([ERR_GROUP_NOT_FOUND]);
+        let ?group = memoryGroups.get(groupID) else return #err([Errors.ERR_GROUP_NOT_FOUND]);
 
         switch ( group.users.get(caller) ) {
-            case null return #err([ERR_FORBIDDEN]);
-            case (?permission) if ( permission == #visitor or permission == #archived ) return #err([ERR_FORBIDDEN]);
+            case null return #err([Errors.ERR_GROUP_ACTION_FORBIDDEN]);
+            case (?permission) if ( permission == #visitor or permission == #archived ) return #err([Errors.ERR_GROUP_ACTION_FORBIDDEN]);
         };
 
         switch ( TodoList.validateTodoList(todoList) ) {
@@ -210,12 +201,12 @@ shared ({ caller = owner }) persistent actor class GroupsBucket() = this {
     };
 
     public shared ({ caller }) func handlerUpdateTodosList(groupID: Nat, todoList: TodoList.TodoList) : async Result.Result<(), [Text]> {
-        let ?group = memoryGroups.get(groupID) else return #err([ERR_GROUP_NOT_FOUND]);
-        let ?_ = group.todoLists.get(todoList.id) else return #err([ERR_TODOLIST_NOT_FOUND]);
+        let ?group = memoryGroups.get(groupID) else return #err([Errors.ERR_GROUP_NOT_FOUND]);
+        let ?_ = group.todoLists.get(todoList.id) else return #err([Errors.ERR_TODOLIST_NOT_FOUND]);
 
         switch ( group.users.get(caller) ) {
-            case null return #err([ERR_FORBIDDEN]);
-            case (?permission) if ( permission == #visitor or permission == #archived ) return #err([ERR_FORBIDDEN]);
+            case null return #err([Errors.ERR_GROUP_ACTION_FORBIDDEN]);
+            case (?permission) if ( permission == #visitor or permission == #archived ) return #err([Errors.ERR_GROUP_ACTION_FORBIDDEN]);
         };
 
         switch ( TodoList.validateTodoList(todoList) ) {
@@ -229,12 +220,12 @@ shared ({ caller = owner }) persistent actor class GroupsBucket() = this {
     };
 
     public shared ({ caller }) func handlerDeleteTodosList(groupID: Nat, todoListID: Nat) : async Result.Result<(), [Text]> {
-        let ?group = memoryGroups.get(groupID) else return #err([ERR_GROUP_NOT_FOUND]);
-        let ?_ = group.todoLists.get(todoListID) else return #err([ERR_TODOLIST_NOT_FOUND]);
+        let ?group = memoryGroups.get(groupID) else return #err([Errors.ERR_GROUP_NOT_FOUND]);
+        let ?_ = group.todoLists.get(todoListID) else return #err([Errors.ERR_TODOLIST_NOT_FOUND]);
 
         switch ( group.users.get(caller) ) {
-            case null return #err([ERR_FORBIDDEN]);
-            case (?permission) if ( permission == #visitor or permission == #archived ) return #err([ERR_FORBIDDEN]);
+            case null return #err([Errors.ERR_GROUP_ACTION_FORBIDDEN]);
+            case (?permission) if ( permission == #visitor or permission == #archived ) return #err([Errors.ERR_GROUP_ACTION_FORBIDDEN]);
         };
 
         group.todoLists.remove(todoListID);

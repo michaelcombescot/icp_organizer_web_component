@@ -1,4 +1,5 @@
 import "./componentTodoLists";
+import "../../../components/dropdown"
 import { ComponentTodoForm } from "./componentTodoForm";
 import { openModalWithElement } from "../../../components/modal";
 import { i18n } from "../../../i18n/i18n";
@@ -6,8 +7,8 @@ import { ComponentListForm } from "./componentListForm";
 import { borderRadius } from "../../../css/css";
 import { getPage } from "../../../App";
 import { isAuthenticated } from "../../../auth/auth";
-import { getLoadingComponent } from "../../../components/loading";
 import { StoreGlobal } from "../stores/storeGlobal";
+import { ComponentDropdown } from "../../../components/dropdown";
 
 class ComponentTodoPage extends HTMLElement {
     constructor() {
@@ -28,19 +29,32 @@ class ComponentTodoPage extends HTMLElement {
 
         this.shadowRoot!.innerHTML = /*html*/`
             <div id="todo-page">
+                ${
+                    !isAuthenticated
+                    ? ''
+                    : /*html*/`
+                        <div id="selectors">
+                            <div class="select">
+                                <component-dropdown id="select-group" label="${i18n.groupSelectorLabel}"></component-dropdown>
+                                <img id="todo-open-modal-new-list" class="select-plus" src="/plus.svg" />
+                            </div>
+
+                            <div class="select">
+                                <component-dropdown id="select-list" label="${i18n.listSelectorLabel}"></component-dropdown>
+                                <img id="todo-open-modal-new-list" class="select-plus" src="/plus.svg" />
+                            </div>
+
+                            <button id="todo-open-modal-new-task"><img src="/plus.svg"><span>${ i18n.todoCreateNewButton }</span></button>
+                        </div>
+                    `
+                }
+
                 ${ 
                     !isAuthenticated
                     ?   /*html*/`
                             <p>Not CONNECTED</p>
                         `
                     :   /*html*/`
-                            <div id="todo-page-buttons">
-                                <button id="todo-open-modal-new-task"><img src="/plus.svg"><span>${ i18n.todoCreateNewButton }</span></button>
-                                <button id="todo-open-modal-new-list"><img src="/plus.svg"><span>${ i18n.todoListCreateButton }</span></button>
-                            </div>
-
-                            <component-lists-cards currentListUUID="${ currentListId }" id="component-lists-card"></component-lists-cards>
-
                             <div id="todo-lists">
                                 <component-todo-lists currentListUUID="${ currentListId }"></component-todo-lists>
                             </div>
@@ -50,13 +64,20 @@ class ComponentTodoPage extends HTMLElement {
 
             <style>
                 #todo-page {
-                    display: flex;
-                    flex-direction: column;
-                    gap: 1.5em;
+                    width: 100%; height: 100%;
+                    display: flex; flex-direction: column; gap: 1.5em;
 
-                    #todo-page-buttons {
-                        display: flex;
+                    #selectors {
+                        display: flex; flex-direction: row; align-items: center; justify-content: center;
                         gap: 1.5em;
+
+                        .select {
+                            display: flex;
+
+                            .select-plus {
+                                width: 1.8em;
+                            }
+                        }
 
                         button {
                             font-size: 0.8em;
@@ -106,3 +127,5 @@ class ComponentTodoPage extends HTMLElement {
 customElements.define("component-todo-page", ComponentTodoPage)
 
 export const getTodoPage = () => getPage().querySelector("component-todo-page")! as ComponentTodoPage
+export const getDropdownGroups = () => getTodoPage().querySelector("#select-group")! as ComponentDropdown
+export const getDropdownLists = () => getTodoPage().querySelector("#select-list")! as ComponentDropdown

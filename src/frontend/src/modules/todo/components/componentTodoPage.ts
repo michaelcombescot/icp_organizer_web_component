@@ -9,6 +9,7 @@ import { getPage } from "../../../App";
 import { isAuthenticated } from "../../../auth/auth";
 import { StoreGlobal } from "../stores/storeGlobal";
 import { ComponentDropdown } from "../../../components/dropdown";
+import { StoreUser } from "../stores/storeUser";
 
 class ComponentTodoPage extends HTMLElement {
     constructor() {
@@ -22,7 +23,7 @@ class ComponentTodoPage extends HTMLElement {
 
     async render() {
         if ( isAuthenticated ) {
-            await StoreGlobal.getUserData();
+            await StoreUser.fetchUserData();
         }
 
         let currentListId = StoreGlobal.currentSelectedListId

@@ -26,9 +26,8 @@ export const login = async () => {
                         identity = authClient.getIdentity();
                         isAuthenticated = await authClient.isAuthenticated();
 
-                        await Actors.fetchIndexes();
-                        await Actors.fetchUserBucket();  
-                        await StoreUser.fetchUserData();                      
+                        await Actors.fetchIndexes()
+                        await Actors.fetchUserBucket();           
                         
                         getMainApp().render()
                         navigateTo(routes.home)
@@ -49,5 +48,6 @@ export const login = async () => {
 
 export const logout = async () => {
     await authClient.logout()
+    sessionStorage.removeItem(Actors.userBucketLocalKey)
     window.location.reload();
 };

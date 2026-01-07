@@ -18,7 +18,9 @@ import { identity } from '../../../auth/auth';
 
 export class Actors {
     static indexes: Map<string, Principal[]> = new Map();
-    static userBucket: Principal
+
+    public static userBucketLocalKey = "userBucket"
+    public static userBucket: Principal
 
     private static getVariantTag(variant: IndexesKind): string {
         return Object.keys(variant)[0];
@@ -39,6 +41,7 @@ export class Actors {
             console.log(res.err)
         } else {
             this.userBucket = res.ok
+            sessionStorage.setItem(this.userBucketLocalKey, this.userBucket.toString())
         }
     }
         
@@ -57,6 +60,11 @@ export class Actors {
     }
 
     static createUserBucketActor() : ActorSubclass<_SERVICE_USERS> {
-        return createActorUsersBucket(this.userBucket, { agentOptions: { identity } });
+        let bucket = sessionStorage.getItem(this.userBucketLocalKey)
+        if (!bucket) {
+            console.log("missing user bucker id")
+        }
+
+        return createActorUsersBucket(bucket!, { agentOptions: { identity } });
     }
 }

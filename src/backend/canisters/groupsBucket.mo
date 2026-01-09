@@ -11,17 +11,27 @@ import MixinAllowedCanisters "mixins/mixinAllowedCanisters";
 import Blob "mo:core/Blob";
 import Iter "mo:core/Iter";
 import Errors "../shared/errors";
+import MixinTopCanister "mixins/mixinTopCanister";
+import MixinDefineCoordinatorActor "mixins/mixinDefineCoordinatorActor";
+import { setTimer; recurringTimer } = "mo:core/Timer";
 
 shared ({ caller = owner }) persistent actor class GroupsBucket() = this {
-    include MixinAllowedCanisters(owner);
-
-    let thisPrincipal = Principal.fromActor(this);
-
     /////////////
     // CONFIGS //
     /////////////
 
-    let MAX_NUMBER_ENTRIES = 30_000;  
+    let TOPPING_THRESHOLD   = 1_000_000_000_000;
+    let TOPPING_AMOUNT      = 2_000_000_000_000;
+    let TOPPING_INTERVAL    = 20_000_000_000;
+    let MAX_NUMBER_ENTRIES  = 30_000;
+
+    ////////////
+    // MIXINS //
+    ////////////
+
+    include MixinDefineCoordinatorActor(owner);
+    include MixinTopCanister(coordinatorActor, Principal.fromActor(this), TOPPING_THRESHOLD, TOPPING_AMOUNT);
+    include MixinAllowedCanisters(coordinatorActor);    
     
     ////////////
     // MEMORY //
@@ -30,6 +40,18 @@ shared ({ caller = owner }) persistent actor class GroupsBucket() = this {
     let memoryGroups = Map.empty<Nat, Group.Group>();
 
     var idGroupCounter = 0;
+
+    //////////
+    // JOBS //
+    //////////
+
+    ignore setTimer<system>(
+        #seconds(0),
+        func () : async () {
+            ignore recurringTimer<system>(#seconds(TOPPING_INTERVAL), topCanisterRequest);
+            await topCanisterRequest();
+        }
+    );
 
     ////////////
     // SYSTEM //
@@ -98,9 +120,9 @@ shared ({ caller = owner }) persistent actor class GroupsBucket() = this {
     };
 
     public shared ({ caller }) func handlerCreateGroup(userPrincipal: Principal, params: Group.CreateGroupParams) : async Result.Result<{ isFull: Bool; identifier: Identifiers.Identifier }, Text> {
-        if (await systemHelperIsCanisterAllowed(caller)) return #err(Errors.ERR_INVALID_CALLER);
+        if (await isCanisterAllowed(caller)) return #err(Errors.ERR_INVALID_CALLER);
 
-        let group = Group.createGroup({ name = params.name; createdBy = userPrincipal; identifier = { id = idGroupCounter; bucket = thisPrincipal }; kind = params.kind; });
+        let group = Group.createGroup({ name = params.name; createdBy = userPrincipal; identifier = { id = idGroupCounter; bucket = Principal.fromActor(this) }; kind = params.kind; });
 
         memoryGroups.add(Map.size(memoryGroups), group);
         idGroupCounter += 1;

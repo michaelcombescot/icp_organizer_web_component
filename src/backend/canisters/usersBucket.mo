@@ -5,24 +5,47 @@ import Array "mo:core/Array";
 import Time "mo:core/Time";
 import UserData "../models/todosUserData";
 import Identifiers "../shared/identifiers";
-import Interfaces "../shared/interfaces";
+import MixinDefineCoordinatorActor "mixins/mixinDefineCoordinatorActor";
+import MixinTopCanister "mixins/mixinTopCanister";
 import MixinAllowedCanisters "mixins/mixinAllowedCanisters";
-import Errors "../shared/errors"
+import Errors "../shared/errors";
+import { setTimer; recurringTimer } = "mo:core/Timer";
 
 shared ({ caller = owner }) persistent actor class UsersBucket() = this {
-    include MixinAllowedCanisters(owner);
-
     /////////////
     // CONFIGS //
     /////////////
 
-    let MAX_NUMBER_ENTRIES = 10_000_000; // TODO handle max number entries in handlerCreateUser    
+    let TOPPING_THRESHOLD   = 1_000_000_000_000;
+    let TOPPING_AMOUNT      = 2_000_000_000_000;
+    let TOPPING_INTERVAL    = 20_000_000_000;
+    let MAX_NUMBER_ENTRIES  = 1_000_000;
+
+    ////////////
+    // MIXINS //
+    ////////////
+
+    include MixinDefineCoordinatorActor(owner);
+    include MixinTopCanister(coordinatorActor, Principal.fromActor(this), TOPPING_THRESHOLD, TOPPING_AMOUNT);
+    include MixinAllowedCanisters(coordinatorActor);    
 
     ////////////
     // MEMORY //
     ////////////
 
     let memoryUsers = Map.empty<Principal, UserData.UserData>();
+
+    //////////
+    // JOBS //
+    //////////
+
+    ignore setTimer<system>(
+        #seconds(0),
+        func () : async () {
+            ignore recurringTimer<system>(#seconds(TOPPING_INTERVAL), topCanisterRequest);
+            await topCanisterRequest();
+        }
+    );
 
     ////////////
     // SYSTEM //
@@ -45,6 +68,8 @@ shared ({ caller = owner }) persistent actor class UsersBucket() = this {
             case (#handlerCreateUser(_))        true;
         }
     };
+
+
 
     /////////
     // API //

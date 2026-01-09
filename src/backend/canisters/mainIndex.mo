@@ -8,15 +8,30 @@ import UsersBucket "usersBucket";
 import Identifiers "../shared/identifiers";
 import Group "../models/todosGroup";
 import UsersMapping "../shared/usersMapping";
+import MixinDefineCoordinatorActor "mixins/mixinDefineCoordinatorActor";
+import MixinTopCanister "mixins/mixinTopCanister";
 import MixinAllowedCanisters "mixins/mixinAllowedCanisters";
-import Errors "../shared/errors"
+import Errors "../shared/errors";
+import { setTimer; recurringTimer } = "mo:core/Timer";
 
 // only goal of this canister is too keep track of the relationship between users principals and canisters.
 // this is the main piece of code which should need to change in case of scaling needs (by adding new users buckets )
 shared ({ caller = owner }) persistent actor class MainIndex() = this {
-    let thisPrincipal = Principal.fromActor(this);
+    /////////////
+    // CONFIGS //
+    /////////////
 
-    include MixinAllowedCanisters(owner);    
+    let TOPPING_THRESHOLD   = 1_000_000_000_000;
+    let TOPPING_AMOUNT      = 2_000_000_000_000;
+    let TOPPING_INTERVAL    = 20_000_000_000;
+
+    ////////////
+    // MIXINS //
+    ////////////
+
+    include MixinDefineCoordinatorActor(owner);
+    include MixinTopCanister(coordinatorActor, Principal.fromActor(this), TOPPING_THRESHOLD, TOPPING_AMOUNT);
+    include MixinAllowedCanisters(coordinatorActor);    
 
     ////////////
     // MEMORY //
@@ -25,6 +40,18 @@ shared ({ caller = owner }) persistent actor class MainIndex() = this {
     var memoryUsersMapping: [Principal] = [];
 
     var currentGroupBucket: ?GroupsBucket.GroupsBucket = null;
+
+    //////////
+    // JOBS //
+    //////////
+
+    ignore setTimer<system>(
+        #seconds(0),
+        func () : async () {
+            ignore recurringTimer<system>(#seconds(TOPPING_INTERVAL), topCanisterRequest);
+            await topCanisterRequest();
+        }
+    );
 
     ////////////
     // SYSTEM //
@@ -57,7 +84,7 @@ shared ({ caller = owner }) persistent actor class MainIndex() = this {
 
     public shared func systemSetUserMapping(mapping: [Principal]) : async () {
         memoryUsersMapping := mapping;
-        Debug.print("set users mapping for canister" # Principal.toText(thisPrincipal))
+        Debug.print("set users mapping for canister" # Principal.toText(Principal.fromActor(this)))
     };
 
     ///////////////

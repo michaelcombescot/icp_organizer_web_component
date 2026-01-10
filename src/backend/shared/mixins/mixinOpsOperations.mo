@@ -2,9 +2,12 @@ import IC "mo:ic";
 import Interfaces "../../shared/interfaces";
 import Principal "mo:core/Principal";
 import Debug "mo:core/Debug";
+import Result "mo:base/Result";
 
 // used to handle authorization of canisters
-mixin(coordinatorActor: Interfaces.Coordinator, canisterPrincipal: Principal, toppingThreshold: Nat, toppingAmount: Nat) {
+mixin({ coordinatorPrincipal: Principal; canisterPrincipal: Principal; toppingThreshold: Nat; toppingAmount: Nat; toppingIntervalNs: Nat }) {
+    let coordinatorActor = actor(Principal.toText(coordinatorPrincipal)) : Interfaces.Coordinator;
+
     func topCanisterRequest() : async () {
         let status = await IC.ic.canister_status({ canister_id = canisterPrincipal });
         if (status.cycles <= toppingThreshold) {
@@ -15,4 +18,10 @@ mixin(coordinatorActor: Interfaces.Coordinator, canisterPrincipal: Principal, to
             }
         };
     };
+
+    // func createNewBucket() : async Result.Result<(), Text> {
+    //     try {
+
+    //     }
+    // };
 };

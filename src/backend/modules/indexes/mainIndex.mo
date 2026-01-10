@@ -3,13 +3,11 @@ import Result "mo:core/Result";
 import Error "mo:core/Error";
 import Runtime "mo:core/Runtime";
 import Debug "mo:core/Debug";
-import GroupsBucket "groupsBucket";
-import UsersBucket "usersBucket";
+import GroupsBucket "modules/todos/buckets/groupsBucket";
+import UsersBucket "modules/users/buckets/usersBucket";
 import Identifiers "../shared/identifiers";
-import Group "../models/todosGroup";
 import UsersMapping "../shared/usersMapping";
-import MixinDefineCoordinatorActor "mixins/mixinDefineCoordinatorActor";
-import MixinTopCanister "mixins/mixinTopCanister";
+import MixinOpsOperations "mixins/mixinOpsOperations";
 import MixinAllowedCanisters "mixins/mixinAllowedCanisters";
 import Errors "../shared/errors";
 import { setTimer; recurringTimer } = "mo:core/Timer";
@@ -104,7 +102,7 @@ shared ({ caller = owner }) persistent actor class MainIndex() = this {
     // API GROUPS //
     ////////////////
 
-    public shared ({ caller }) func handlerCreateGroup(params: Group.CreateGroupParams) : async Result.Result<Identifiers.Identifier, Text> {
+    public shared ({ caller }) func handlerCreateGroup({ name: Text; kind: Group.Kind}) : async Result.Result<Identifiers.Identifier, Text> {
         let ?bucket = await helperFetchCurrentGroupBucket() else return #err(Errors.ERR_CANNOT_FIND_CURRENT_GROUP_BUCKET);
     
         switch ( await bucket.handlerCreateGroup(caller, params) ) {

@@ -3,16 +3,15 @@ import Principal "mo:core/Principal";
 import Result "mo:core/Result";
 import Time "mo:core/Time";
 import Nat "mo:core/Nat";
-import Identifiers "../shared/identifiers";
-import Todo "../models/todosTodo";
-import TodoList "../models/todosTodoList";
-import Group "../models/todosGroup";
-import MixinAllowedCanisters "mixins/mixinAllowedCanisters";
+import Identifiers "../../../../shared/identifiers";
+import Todo "../models/todo";
+import TodoList "../models/todoList";
+import Group "../models/group";
+import MixinAllowedCanisters "../../../mixins/mixinAllowedCanisters";
+import MixinOpsOperations "../../../../mixins/mixinOpsOperations";
 import Blob "mo:core/Blob";
 import Iter "mo:core/Iter";
-import Errors "../shared/errors";
-import MixinTopCanister "mixins/mixinTopCanister";
-import MixinDefineCoordinatorActor "mixins/mixinDefineCoordinatorActor";
+import Errors "../../../../shared/errors";
 import { setTimer; recurringTimer } = "mo:core/Timer";
 
 shared ({ caller = owner }) persistent actor class GroupsBucket() = this {
@@ -20,18 +19,20 @@ shared ({ caller = owner }) persistent actor class GroupsBucket() = this {
     // CONFIGS //
     /////////////
 
-    let TOPPING_THRESHOLD   = 1_000_000_000_000;
-    let TOPPING_AMOUNT      = 2_000_000_000_000;
-    let TOPPING_INTERVAL    = 20_000_000_000;
     let MAX_NUMBER_ENTRIES  = 30_000;
 
     ////////////
     // MIXINS //
     ////////////
 
-    include MixinDefineCoordinatorActor(owner);
-    include MixinTopCanister(coordinatorActor, Principal.fromActor(this), TOPPING_THRESHOLD, TOPPING_AMOUNT);
-    include MixinAllowedCanisters(coordinatorActor);    
+    include MixinOpsOperations({
+        coordinatorPrincipal    = coordinatorPrincipal;
+        canisterPrincipal       = Principal.fromActor(this);
+        toppingThreshold        = 2_000_000_000_000;
+        toppingAmount           = 2_000_000_000_000;
+        toppingIntervalNs       = 20_000_000_000;
+    });
+    include MixinAllowedCanisters(coordinatorActor); 
     
     ////////////
     // MEMORY //

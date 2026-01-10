@@ -3,30 +3,24 @@ import Principal "mo:core/Principal";
 import Result "mo:core/Result";
 import Array "mo:core/Array";
 import Time "mo:core/Time";
-import UserData "../models/todosUserData";
-import Identifiers "../shared/identifiers";
-import MixinDefineCoordinatorActor "mixins/mixinDefineCoordinatorActor";
-import MixinTopCanister "mixins/mixinTopCanister";
-import MixinAllowedCanisters "mixins/mixinAllowedCanisters";
-import Errors "../shared/errors";
+import UserData "../models/userData";
+import Identifiers "../../../../shared/identifiers";
+import MixinOpsOperations "../../../../mixins/mixinOpsOperations";
+import MixinAllowedCanisters "../../../../mixins/mixinAllowedCanisters";
 import { setTimer; recurringTimer } = "mo:core/Timer";
 
 shared ({ caller = owner }) persistent actor class UsersBucket() = this {
-    /////////////
-    // CONFIGS //
-    /////////////
-
-    let TOPPING_THRESHOLD   = 1_000_000_000_000;
-    let TOPPING_AMOUNT      = 2_000_000_000_000;
-    let TOPPING_INTERVAL    = 20_000_000_000;
-    let MAX_NUMBER_ENTRIES  = 1_000_000;
-
     ////////////
     // MIXINS //
     ////////////
 
-    include MixinDefineCoordinatorActor(owner);
-    include MixinTopCanister(coordinatorActor, Principal.fromActor(this), TOPPING_THRESHOLD, TOPPING_AMOUNT);
+    include MixinOpsOperations({
+        coordinatorPrincipal    = coordinatorPrincipal;
+        canisterPrincipal       = Principal.fromActor(this);
+        toppingThreshold        = 2_000_000_000_000;
+        toppingAmount           = 2_000_000_000_000;
+        toppingIntervalNs       = 20_000_000_000;
+    });
     include MixinAllowedCanisters(coordinatorActor);    
 
     ////////////
@@ -46,6 +40,13 @@ shared ({ caller = owner }) persistent actor class UsersBucket() = this {
             await topCanisterRequest();
         }
     );
+
+    ////////////
+    // ERRORS //
+    ////////////
+
+    let ERR_USER_NOT_FOUND = "ERR_USER_NOT_FOUND";
+    let ERR_USER_ALREADY_EXISTS = "ERR_USER_ALREADY_EXISTS";
 
     ////////////
     // SYSTEM //
@@ -76,7 +77,7 @@ shared ({ caller = owner }) persistent actor class UsersBucket() = this {
     /////////
 
     public shared ({ caller }) func handlerGetUserData() : async Result.Result<UserData.SharableUserData, Text> {
-        let ?userData = memoryUsers.get(caller) else return #err(Errors.ERR_USER_NOT_FOUND);
+        let ?userData = memoryUsers.get(caller) else return #err(ERR_USER_NOT_FOUND);
 
         #ok({
             name = userData.name;
@@ -88,7 +89,7 @@ shared ({ caller = owner }) persistent actor class UsersBucket() = this {
 
     public shared func handlerCreateUser({ userPrincipal: Principal; }) : async Result.Result<(), Text> {
         switch ( memoryUsers.get(userPrincipal) ) {
-            case (?_) return #err(Errors.ERR_USER_ALREADY_EXISTS);
+            case (?_) return #err(ERR_USER_ALREADY_EXISTS);
             case null ();
         };
 

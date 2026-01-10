@@ -1,7 +1,7 @@
-import Identifier "../shared/identifiers";
+import Identifier "../../../../shared/identifiers";
 import Map "mo:core/Map";
-import Todo "todosTodo";
-import TodoList "todosTodoList";
+import Todo "todo";
+import TodoList "todoList";
 import Time "mo:core/Time";
 import Principal "mo:core/Principal";
 
@@ -48,22 +48,5 @@ module {
             updatedAt = Time.now();
             createdBy = createdBy;
         }
-    };
-
-    //
-    // API
-    //
-
-    public type CreateGroupParams = {
-        name: Text;
-        kind: Kind;
-    };
-
-    public type RespGetGroupDisplayData = {
-        name: Text;
-        todos: [Todo.Todo];
-        todoLists: [TodoList.TodoList];
-        users: [(Principal, UserGroupPermission)];
-        kind: Kind;
-    };
+    };    
 };

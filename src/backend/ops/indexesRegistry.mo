@@ -4,18 +4,32 @@ import Map "mo:core/Map";
 import Iter "mo:core/Iter";
 import List "mo:core/List";
 import CanistersKinds "../shared/canistersKinds";
+import MixinAllowedCanisters "mixins/mixinAllowedCanisters";
+import MixinOpsOperations "mixins/mixinOpsOperations";
 
 // only goal of this canister is too keep track of all the indexes and serve their principal to the frontend.
 // not dynamically created, if the need arise another instance will need to be declared in the dfx.json
-shared ({ caller = owner }) persistent actor class IndexesRegistry() = this {
-    
+shared ({ caller = owner }) persistent actor class IndexesRegistry(coordinatorPrincipal: Principal) = this {    
+    ////////////
+    // MIXINS //
+    ////////////
+
+    include MixinOpsOperations({
+        coordinatorPrincipal    = coordinatorPrincipal;
+        canisterPrincipal       = Principal.fromActor(this);
+        toppingThreshold        = 2_000_000_000_000;
+        toppingAmount           = 2_000_000_000_000;
+        toppingIntervalNs       = 20_000_000_000;
+    });
+    include MixinAllowedCanisters(coordinatorActor);    
+
     ////////////
     // MEMORY //
     ////////////
 
-    var coordinatorPrincipal : ?Principal = null;
-
-    let memoryIndexes = Map.empty<CanistersKinds.IndexesKind, List.List<Principal>>();
+    let memory = {
+        indexes = Map.empty<CanistersKinds.IndexesKind, List.List<Principal>>();
+    };
 
     ////////////
     // SYSTEM //
@@ -25,7 +39,6 @@ shared ({ caller = owner }) persistent actor class IndexesRegistry() = this {
         arg: Blob;
         caller : Principal;
         msg : {
-            #systemSetCoordinator : () -> (coordinatorPrincipalArg : Principal);
             #systemAddIndex : () -> (indexPrincipal : Principal, indexKind : CanistersKinds.IndexesKind);
 
             #handlerGetIndexes : () -> ();
@@ -38,19 +51,14 @@ shared ({ caller = owner }) persistent actor class IndexesRegistry() = this {
         if ( Blob.size(params.arg) > 50 ) { return false; };
 
         switch ( params.msg ) {
-            case (#systemSetCoordinator(_))     params.caller == owner;
-            case (#systemAddIndex(_))           ?params.caller == coordinatorPrincipal or params.caller == owner;
+            case (#systemAddIndex(_))           params.caller == coordinatorPrincipal or params.caller == owner;
             case (#handlerGetIndexes(_))        true
         }
     };
 
-    public shared func systemSetCoordinator(coordinatorPrincipalArg: Principal) : async () {
-        coordinatorPrincipal := ?coordinatorPrincipalArg;
-    };
-
     public shared func systemAddIndex(indexPrincipal: Principal, indexKind: CanistersKinds.IndexesKind) : async () {
-        switch ( memoryIndexes.get(CanistersKinds.compareIndexesKind, indexKind) ) {
-            case (null) memoryIndexes.add(CanistersKinds.compareIndexesKind, indexKind, List.singleton(indexPrincipal));
+        switch ( memory.indexes.get(CanistersKinds.compareIndexesKind, indexKind) ) {
+            case (null) memory.indexes.add(CanistersKinds.compareIndexesKind, indexKind, List.singleton(indexPrincipal));
             case (?list) list.add(indexPrincipal);    
         };
     };
@@ -60,7 +68,7 @@ shared ({ caller = owner }) persistent actor class IndexesRegistry() = this {
     /////////
 
     public query func handlerGetIndexes() : async [(CanistersKinds.IndexesKind, [Principal])] {
-        let newMap = memoryIndexes.map(func(k,v) = v.toArray());
+        let newMap = memory.indexes.map(func(k,v) = v.toArray());
         Iter.toArray(newMap.entries())
     };
 };

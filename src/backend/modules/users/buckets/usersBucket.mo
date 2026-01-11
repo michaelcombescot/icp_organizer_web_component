@@ -4,9 +4,9 @@ import Result "mo:core/Result";
 import Array "mo:core/Array";
 import Time "mo:core/Time";
 import UserData "../models/userData";
-import Identifiers "../../../../shared/identifiers";
-import MixinOpsOperations "../../../../mixins/mixinOpsOperations";
-import MixinAllowedCanisters "../../../../mixins/mixinAllowedCanisters";
+import Identifiers "../../../shared/identifiers";
+import MixinOpsOperations "../../../shared/mixins/mixinOpsOperations";
+import MixinAllowedCanisters "../../../shared/mixins/mixinAllowedCanisters";
 import { setTimer; recurringTimer } = "mo:core/Timer";
 
 shared ({ caller = owner }) persistent actor class UsersBucket() = this {
@@ -15,7 +15,7 @@ shared ({ caller = owner }) persistent actor class UsersBucket() = this {
     ////////////
 
     include MixinOpsOperations({
-        coordinatorPrincipal    = coordinatorPrincipal;
+        coordinatorPrincipal    = owner;
         canisterPrincipal       = Principal.fromActor(this);
         toppingThreshold        = 2_000_000_000_000;
         toppingAmount           = 2_000_000_000_000;
@@ -36,7 +36,7 @@ shared ({ caller = owner }) persistent actor class UsersBucket() = this {
     ignore setTimer<system>(
         #seconds(0),
         func () : async () {
-            ignore recurringTimer<system>(#seconds(TOPPING_INTERVAL), topCanisterRequest);
+            ignore recurringTimer<system>(#seconds(60_000_000_000), topCanisterRequest);
             await topCanisterRequest();
         }
     );

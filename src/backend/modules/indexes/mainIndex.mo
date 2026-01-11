@@ -7,6 +7,7 @@ import GroupsBucket "../todos/buckets/groupsBucket";
 import UsersBucket "../users/buckets/usersBucket";
 import Identifiers "../../shared/identifiers";
 import UsersMapping "../../shared/usersMapping";
+import Group "../todos/models/group";
 import MixinOpsOperations "../../shared/mixins/mixinOpsOperations";
 import MixinAllowedCanisters "../../shared/mixins/mixinAllowedCanisters";
 import { setTimer; recurringTimer } = "mo:core/Timer";
@@ -14,20 +15,24 @@ import { setTimer; recurringTimer } = "mo:core/Timer";
 // only goal of this canister is too keep track of the relationship between users principals and canisters.
 // this is the main piece of code which should need to change in case of scaling needs (by adding new users buckets )
 shared ({ caller = owner }) persistent actor class MainIndex() = this {
-    /////////////
-    // CONFIGS //
-    /////////////
+    ////////////
+    // ERRORS //
+    ////////////
 
-    let TOPPING_THRESHOLD   = 1_000_000_000_000;
-    let TOPPING_AMOUNT      = 2_000_000_000_000;
-    let TOPPING_INTERVAL    = 20_000_000_000;
+    let ERR_CANNOT_FIND_CURRENT_GROUP_BUCKET = "ERR_CANNOT_FIND_CURRENT_GROUP_BUCKET";
+    let ERR_USER_ALREADY_EXISTS = "ERR_USER_ALREADY_EXISTS";
 
     ////////////
     // MIXINS //
     ////////////
 
-    include MixinDefineCoordinatorActor(owner);
-    include MixinTopCanister(coordinatorActor, Principal.fromActor(this), TOPPING_THRESHOLD, TOPPING_AMOUNT);
+    include MixinOpsOperations({
+        coordinatorPrincipal    = owner;
+        canisterPrincipal       = Principal.fromActor(this);
+        toppingThreshold        = 2_000_000_000_000;
+        toppingAmount           = 2_000_000_000_000;
+        toppingIntervalNs       = 60_000_000_000;
+    });
     include MixinAllowedCanisters(coordinatorActor);    
 
     ////////////
@@ -45,7 +50,7 @@ shared ({ caller = owner }) persistent actor class MainIndex() = this {
     ignore setTimer<system>(
         #seconds(0),
         func () : async () {
-            ignore recurringTimer<system>(#seconds(TOPPING_INTERVAL), topCanisterRequest);
+            ignore recurringTimer<system>(#seconds(60_000_000_000), topCanisterRequest);
             await topCanisterRequest();
         }
     );
@@ -93,7 +98,7 @@ shared ({ caller = owner }) persistent actor class MainIndex() = this {
 
         switch ( await (actor(Principal.toText(bucketPrincipal)): UsersBucket.UsersBucket).handlerCreateUser({ userPrincipal = caller }) ) {
             case (#ok()) #ok(bucketPrincipal);
-            case (#err(e)) if ( e == Errors.ERR_USER_ALREADY_EXISTS) { #ok(bucketPrincipal) } else { #err(e) };
+            case (#err(e)) if ( e == ERR_USER_ALREADY_EXISTS) { #ok(bucketPrincipal) } else { #err(e) };
         }
     };
 
@@ -101,8 +106,8 @@ shared ({ caller = owner }) persistent actor class MainIndex() = this {
     // API GROUPS //
     ////////////////
 
-    public shared ({ caller }) func handlerCreateGroup({ name: Text; kind: Group.Kind}) : async Result.Result<Identifiers.Identifier, Text> {
-        let ?bucket = await helperFetchCurrentGroupBucket() else return #err(Errors.ERR_CANNOT_FIND_CURRENT_GROUP_BUCKET);
+    public shared ({ caller }) func handlerCreateGroup(params: Group.CreateGroupParams) : async Result.Result<Identifiers.Identifier, Text> {
+        let ?bucket = await helperFetchCurrentGroupBucket() else return #err(ERR_CANNOT_FIND_CURRENT_GROUP_BUCKET);
     
         switch ( await bucket.handlerCreateGroup(caller, params) ) {
             case (#ok(resp)) {

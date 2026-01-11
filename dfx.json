@@ -11,17 +11,17 @@
     },
 
     "mainIndex": {
-      "main": "src/backend/canisters/mainIndex.mo",
+      "main": "src/backend/modules/indexes/mainIndex.mo",
       "type": "motoko"
     },
 
     "usersBucket": {
-      "main": "src/backend/canisters/usersBucket.mo",
+      "main": "src/backend/modules/todos/buckets/usersBucket.mo",
       "type": "motoko"
     },
 
     "groupsBucket": {
-      "main": "src/backend/canisters/groupsBucket.mo",
+      "main": "src/backend/modules/todo/groupsBucket.mo",
       "type": "motoko"
     },
 

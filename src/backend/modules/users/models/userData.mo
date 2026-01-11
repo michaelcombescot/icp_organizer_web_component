@@ -1,7 +1,7 @@
 import Map "mo:core/Map";
 import Time "mo:core/Time";
 import Text "mo:base/Text";
-import Identifiers "../../../../shared/identifiers";
+import Identifiers "../../../shared/identifiers";
 
 module {
     public type UserData = {

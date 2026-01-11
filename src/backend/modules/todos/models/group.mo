@@ -48,5 +48,22 @@ module {
             updatedAt = Time.now();
             createdBy = createdBy;
         }
-    };    
+    };
+
+    //
+    // API
+    //
+
+    public type CreateGroupParams = {
+        name: Text;
+        kind: Kind;
+    };
+
+    public type RespGetGroupDisplayData = {
+        identifier: Identifier.Identifier;
+        name: Text;
+        todos: [Todo.Todo];
+        todoLists: [TodoList.TodoList];
+        kind: Kind;
+    }
 };

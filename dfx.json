@@ -16,12 +16,12 @@
     },
 
     "usersBucket": {
-      "main": "src/backend/modules/todos/buckets/usersBucket.mo",
+      "main": "src/backend/modules/users/buckets/usersBucket.mo",
       "type": "motoko"
     },
 
     "groupsBucket": {
-      "main": "src/backend/modules/todo/groupsBucket.mo",
+      "main": "src/backend/modules/todos/buckets/groupsBucket.mo",
       "type": "motoko"
     },
 

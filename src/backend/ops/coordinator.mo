@@ -11,9 +11,9 @@ import IC "mo:ic";
 import List "mo:core/List";
 import Runtime "mo:core/Runtime";
 import CanistersKinds "../shared/canistersKinds";
-import MainIndex "../canisters/mainIndex";
-import GroupsBucket "../canisters/groupsBucket";
-import UsersBucket "../canisters/usersBucket";
+import MainIndex "../modules/indexes/mainIndex";
+import GroupsBucket "../modules/todos/buckets/groupsBucket";
+import UsersBucket "../modules/users/buckets/usersBucket";
 import IndexesRegistry "indexesRegistry";
 import Array "mo:core/Array";
 

@@ -3,13 +3,12 @@ import Result "mo:core/Result";
 import Error "mo:core/Error";
 import Runtime "mo:core/Runtime";
 import Debug "mo:core/Debug";
-import GroupsBucket "modules/todos/buckets/groupsBucket";
-import UsersBucket "modules/users/buckets/usersBucket";
-import Identifiers "../shared/identifiers";
-import UsersMapping "../shared/usersMapping";
-import MixinOpsOperations "mixins/mixinOpsOperations";
-import MixinAllowedCanisters "mixins/mixinAllowedCanisters";
-import Errors "../shared/errors";
+import GroupsBucket "../todos/buckets/groupsBucket";
+import UsersBucket "../users/buckets/usersBucket";
+import Identifiers "../../shared/identifiers";
+import UsersMapping "../../shared/usersMapping";
+import MixinOpsOperations "../../shared/mixins/mixinOpsOperations";
+import MixinAllowedCanisters "../../shared/mixins/mixinAllowedCanisters";
 import { setTimer; recurringTimer } = "mo:core/Timer";
 
 // only goal of this canister is too keep track of the relationship between users principals and canisters.

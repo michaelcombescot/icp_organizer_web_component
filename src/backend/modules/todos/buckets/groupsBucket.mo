@@ -3,15 +3,14 @@ import Principal "mo:core/Principal";
 import Result "mo:core/Result";
 import Time "mo:core/Time";
 import Nat "mo:core/Nat";
-import Identifiers "../../../../shared/identifiers";
+import Identifiers "../../../shared/identifiers";
 import Todo "../models/todo";
 import TodoList "../models/todoList";
 import Group "../models/group";
-import MixinAllowedCanisters "../../../mixins/mixinAllowedCanisters";
-import MixinOpsOperations "../../../../mixins/mixinOpsOperations";
+import MixinAllowedCanisters "../../../shared/mixins/mixinAllowedCanisters";
+import MixinOpsOperations "../../../shared/mixins/mixinOpsOperations";
 import Blob "mo:core/Blob";
 import Iter "mo:core/Iter";
-import Errors "../../../../shared/errors";
 import { setTimer; recurringTimer } = "mo:core/Timer";
 
 shared ({ caller = owner }) persistent actor class GroupsBucket() = this {
@@ -120,7 +119,12 @@ shared ({ caller = owner }) persistent actor class GroupsBucket() = this {
         #ok(resp);
     };
 
-    public shared ({ caller }) func handlerCreateGroup(userPrincipal: Principal, params: Group.CreateGroupParams) : async Result.Result<{ isFull: Bool; identifier: Identifiers.Identifier }, Text> {
+    type CreateGroupParams = {
+        name: Text;
+        kind: Group.Kind;
+    };
+
+    public shared ({ caller }) func handlerCreateGroup(userPrincipal: Principal, params: CreateGroupParams) : async Result.Result<{ isFull: Bool; identifier: Identifiers.Identifier }, Text> {
         if (await isCanisterAllowed(caller)) return #err(Errors.ERR_INVALID_CALLER);
 
         let group = Group.createGroup({ name = params.name; createdBy = userPrincipal; identifier = { id = idGroupCounter; bucket = Principal.fromActor(this) }; kind = params.kind; });

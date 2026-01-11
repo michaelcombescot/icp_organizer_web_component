@@ -4,8 +4,8 @@ import Map "mo:core/Map";
 import Iter "mo:core/Iter";
 import List "mo:core/List";
 import CanistersKinds "../shared/canistersKinds";
-import MixinAllowedCanisters "mixins/mixinAllowedCanisters";
-import MixinOpsOperations "mixins/mixinOpsOperations";
+import MixinAllowedCanisters "../shared/mixins/mixinAllowedCanisters";
+import MixinOpsOperations "../shared/mixins/mixinOpsOperations";
 
 // only goal of this canister is too keep track of all the indexes and serve their principal to the frontend.
 // not dynamically created, if the need arise another instance will need to be declared in the dfx.json

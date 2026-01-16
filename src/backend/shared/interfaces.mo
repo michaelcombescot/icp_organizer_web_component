@@ -6,7 +6,7 @@ module Interfaces {
     public type Coordinator = actor {
         topCanister: shared (canisterPrincipal: Principal, nbCycles: Nat) -> async Result.Result<(), Text>;
 
-        handlerGiveNewBucket: shared ({ bucketKind: CanistersKinds.BucketsKind }) -> async Principal;
+        handlerCreateBucket: shared (bucketKind: CanistersKinds.BucketsKind) -> async Result.Result<Principal, Text>;
         handlerIsLegitCanister: shared (canisterPrincipal: Principal) -> async Bool;
     };
 }

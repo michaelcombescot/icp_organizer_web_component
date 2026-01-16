@@ -47,6 +47,7 @@ shared ({ caller = owner }) persistent actor class UsersBucket() = this {
 
     let ERR_USER_NOT_FOUND = "ERR_USER_NOT_FOUND";
     let ERR_USER_ALREADY_EXISTS = "ERR_USER_ALREADY_EXISTS";
+    let ERR_INVALID_CALLER = "ERR_INVALID_CALLER";
 
     ////////////
     // SYSTEM //
@@ -58,6 +59,7 @@ shared ({ caller = owner }) persistent actor class UsersBucket() = this {
         msg : {
             #handlerGetUserData : () -> ();
             #handlerCreateUser : () -> { userPrincipal: Principal; };
+            #handlerAddGroupToUser : () -> (userPrincipal: Principal, groupIdentifier: Identifiers.Identifier);
         }
     };
 
@@ -67,6 +69,7 @@ shared ({ caller = owner }) persistent actor class UsersBucket() = this {
         switch ( params.msg ) {
             case (#handlerGetUserData(_))       true;
             case (#handlerCreateUser(_))        true;
+            case (#handlerAddGroupToUser(_))    true;
         }
     };
 
@@ -102,6 +105,16 @@ shared ({ caller = owner }) persistent actor class UsersBucket() = this {
         };
 
         memoryUsers.add(userPrincipal, userData);
+
+        #ok();
+    };
+
+    public shared ({ caller }) func handlerAddGroupToUser(userPrincipal: Principal, groupIdentifier: Identifiers.Identifier) : async Result.Result<(), Text> {
+        if ( await isCanisterAllowed(caller) ) { return #err(ERR_INVALID_CALLER) };
+
+        let ?userData = memoryUsers.get(userPrincipal) else return #err(ERR_USER_NOT_FOUND);
+
+        userData.groups.add(groupIdentifier, ());
 
         #ok();
     };

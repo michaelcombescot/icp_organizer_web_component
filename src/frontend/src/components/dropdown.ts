@@ -1,3 +1,6 @@
+import { StoreGroups } from "../modules/todo/stores/storeGroups"
+import { StoreUser } from "../modules/todo/stores/storeUser"
+
 export class ComponentDropdown extends HTMLElement {
     #label = "no label"
     #elements: HTMLElement[] = []
@@ -28,12 +31,15 @@ export class ComponentDropdown extends HTMLElement {
     }
 
     render() {
+        const groups: String[] = []
+        StoreGroups.groupsData.forEach((v,k) => groups.push(v.name))
+
+
         this.shadowRoot!.innerHTML = /*html*/`
             <div id="dropdown">
                 <label id="dropdown-label">${this.#label} <img id="dropdown-icon" src="./dropdown.svg" /><label>
                 <div id="dropdown-content" class="hidden">
-                    <div>ITEM 1<div>
-                    <div>ITEM 2</div>
+                    ${ groups }
                 </div>
             </div>
 

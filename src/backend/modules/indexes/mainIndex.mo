@@ -80,7 +80,7 @@ shared ({ caller = owner }) persistent actor class MainIndex() = this {
 
             case (#handlerFetchOrCreateUser(_)) true;
 
-            case (#handlerCreateGroup(_)) true;
+            case (#handlerCreateGroup(_)) not Principal.isAnonymous(params.caller);
         }
     };
 
@@ -108,8 +108,9 @@ shared ({ caller = owner }) persistent actor class MainIndex() = this {
 
     public shared ({ caller }) func handlerCreateGroup(params: Group.CreateGroupParams) : async Result.Result<Identifiers.Identifier, Text> {
         let ?bucket = await helperFetchCurrentGroupBucket() else return #err(ERR_CANNOT_FIND_CURRENT_GROUP_BUCKET);
-    
-        switch ( await bucket.handlerCreateGroup(caller, params) ) {
+        let userBucket = UsersMapping.helperFetchUserBucket(memoryUsersMapping, caller);
+
+        switch ( await bucket.handlerCreateGroup(caller, userBucket, params) ) {
             case (#ok(resp)) {
                 if ( resp.isFull ) { currentGroupBucket := null; };
                 #ok(resp.identifier);
@@ -127,10 +128,13 @@ shared ({ caller = owner }) persistent actor class MainIndex() = this {
             case (?_) ();
             case (null) {
                 try {
-                    let principal = await coordinatorActor.handlerGiveNewBucket({ bucketKind = #groupsBucket });
+                    let principal = switch (await coordinatorActor.handlerCreateBucket(#groupsBucket)) {
+                        case (#ok(principal)) principal;
+                        case (#err(e)) Runtime.trap( "[mainIndex] Error reponse when creating bucket: " # e );
+                    };
                     currentGroupBucket := ?(actor(Principal.toText(principal)) : GroupsBucket.GroupsBucket);
                 } catch (e) {
-                    Runtime.trap( "Error while fetching bucket: " # Error.message(e) );
+                    Runtime.trap( "[mainIndex] Error while fetching bucket: " # Error.message(e) );
                 };
             }
         };

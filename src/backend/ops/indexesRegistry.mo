@@ -6,6 +6,7 @@ import List "mo:core/List";
 import CanistersKinds "../shared/canistersKinds";
 import MixinAllowedCanisters "../shared/mixins/mixinAllowedCanisters";
 import MixinOpsOperations "../shared/mixins/mixinOpsOperations";
+import { setTimer; recurringTimer } = "mo:core/Timer";
 
 // only goal of this canister is too keep track of all the indexes and serve their principal to the frontend.
 // not dynamically created, if the need arise another instance will need to be declared in the dfx.json
@@ -30,6 +31,18 @@ shared ({ caller = owner }) persistent actor class IndexesRegistry(coordinatorPr
     let memory = {
         indexes = Map.empty<CanistersKinds.IndexesKind, List.List<Principal>>();
     };
+
+    //////////
+    // JOBS //
+    //////////
+
+    ignore setTimer<system>(
+        #seconds(0),
+        func () : async () {
+            ignore recurringTimer<system>(#seconds(60_000_000_000), topCanisterRequest);
+            await topCanisterRequest();
+        }
+    );
 
     ////////////
     // SYSTEM //

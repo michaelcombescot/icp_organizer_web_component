@@ -1,6 +1,6 @@
 import { Identifier, TodoList } from "../../../../../declarations/groupsBucket/groupsBucket.did";
 import { getLoadingComponent } from "../../../components/loading";
-import { Actors } from "../actors/actors";
+import { Actors } from "../../../actors/actors";
 import { getTodoPage } from "../components/componentTodoPage";
 import { StoreTodos } from "./storeTodo";
 

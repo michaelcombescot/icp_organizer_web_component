@@ -1,6 +1,6 @@
 import { AuthClient } from '@dfinity/auth-client';
 import { canisterId as identityCanisterID } from '../../../declarations/internet_identity/index';
-import { Actors } from '../modules/todo/actors/actors';
+import { Actors } from '../actors/actors';
 import { getLoadingComponent } from "../components/loading"
 import { StoreUser } from '../modules/todo/stores/storeUser';
 import { getMainApp } from '../App';
@@ -27,7 +27,7 @@ export const login = async () => {
                         isAuthenticated = await authClient.isAuthenticated();
 
                         await Actors.fetchIndexes()
-                        await Actors.fetchUserBucket();           
+                        await Actors.fetchUserBucket();        
                         
                         getMainApp().render()
                         navigateTo(routes.home)
@@ -48,6 +48,6 @@ export const login = async () => {
 
 export const logout = async () => {
     await authClient.logout()
-    sessionStorage.removeItem(Actors.userBucketLocalKey)
+    sessionStorage.removeItem(Actors.SESSION_STORAGE_USER_BUCKET_KEY)
     window.location.reload();
 };

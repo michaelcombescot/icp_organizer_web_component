@@ -1,7 +1,7 @@
 import { group } from "console";
 import { Identifier, Todo } from "../../../../../declarations/groupsBucket/groupsBucket.did";
 import { getLoadingComponent } from "../../../components/loading";
-import { Actors } from "../actors/actors";
+import { Actors } from "../../../actors/actors";
 import { getComponentTodo } from "../components/componentTodo";
 import { getComponentTodoLists } from "../components/componentTodoLists";
 import { StoreGlobal } from "./storeGlobal";

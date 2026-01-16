@@ -7,6 +7,7 @@ import Identifiers "../../../shared/identifiers";
 import Todo "../models/todo";
 import TodoList "../models/todoList";
 import Group "../models/group";
+import UsersBucket "../../users/buckets/usersBucket";
 import MixinAllowedCanisters "../../../shared/mixins/mixinAllowedCanisters";
 import MixinOpsOperations "../../../shared/mixins/mixinOpsOperations";
 import Blob "mo:core/Blob";
@@ -18,7 +19,7 @@ shared ({ caller = owner }) persistent actor class GroupsBucket() = this {
     // CONFIGS //
     /////////////
 
-    let MAX_NUMBER_ENTRIES  = 30_000;
+    let MAX_NUMBER_ENTRIES  = 100_000;
 
     ////////////
     // ERRORS //
@@ -72,7 +73,7 @@ shared ({ caller = owner }) persistent actor class GroupsBucket() = this {
         arg: Blob;
         caller : Principal;
         msg : {
-            #handlerCreateGroup : () -> (userPrincipal : Principal, params : Group.CreateGroupParams);
+            #handlerCreateGroup : () -> (userPrincipal : Principal, userBucket: Principal, params : Group.CreateGroupParams);
             #handlerDeleteGroup : () -> (groupID : Nat);
 
             #handlerGetGroupDisplayData : () -> (groupID : Nat);
@@ -130,10 +131,15 @@ shared ({ caller = owner }) persistent actor class GroupsBucket() = this {
         #ok(resp);
     };
 
-    public shared ({ caller }) func handlerCreateGroup(userPrincipal: Principal, params: Group.CreateGroupParams) : async Result.Result<{ isFull: Bool; identifier: Identifiers.Identifier }, Text> {
+    public shared ({ caller }) func handlerCreateGroup(userPrincipal: Principal, userBucket: Principal, params: Group.CreateGroupParams) : async Result.Result<{ isFull: Bool; identifier: Identifiers.Identifier }, Text> {
         if (await isCanisterAllowed(caller)) return #err(ERR_INVALID_CALLER);
 
         let group = Group.createGroup({ name = params.name; createdBy = userPrincipal; identifier = { id = memory.idGroupCounter; bucket = Principal.fromActor(this) }; kind = params.kind; });
+
+        switch ( await (actor(userBucket.toText()) : UsersBucket.UsersBucket).handlerAddGroupToUser(userPrincipal, group.identifier) ) {
+            case (#ok) ();
+            case (#err(e)) return #err(e);
+        };
 
         memory.groups.add(Map.size(memory.groups), group);
         memory.idGroupCounter += 1;

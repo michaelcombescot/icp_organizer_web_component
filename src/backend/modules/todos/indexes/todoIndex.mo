@@ -3,18 +3,22 @@ import Result "mo:core/Result";
 import Error "mo:core/Error";
 import Runtime "mo:core/Runtime";
 import Debug "mo:core/Debug";
-import GroupsBucket "../todos/buckets/groupsBucket";
-import UsersBucket "../users/buckets/usersBucket";
-import Identifiers "../../shared/identifiers";
+import GroupsBucket "../buckets/groupsBucket";
+import TodosBucket "../buckets/todosBucket";
+import UsersBucket "../buckets/usersBucket";
 import UsersMapping "../../shared/usersMapping";
 import Group "../todos/models/group";
 import MixinOpsOperations "../../shared/mixins/mixinOpsOperations";
 import MixinAllowedCanisters "../../shared/mixins/mixinAllowedCanisters";
-import { setTimer; recurringTimer } = "mo:core/Timer";
+import Timer "mo:core/Timer";
 
 // only goal of this canister is too keep track of the relationship between users principals and canisters.
 // this is the main piece of code which should need to change in case of scaling needs (by adding new users buckets )
-shared ({ caller = owner }) persistent actor class MainIndex() = this {
+shared ({ caller = owner }) persistent actor class TodoIndex() = this {
+    /////////////
+    // CONFIGS //
+    /////////////
+
     ////////////
     // ERRORS //
     ////////////
@@ -47,10 +51,10 @@ shared ({ caller = owner }) persistent actor class MainIndex() = this {
     // JOBS //
     //////////
 
-    ignore setTimer<system>(
+    ignore Timer.setTimer<system>(
         #seconds(0),
         func () : async () {
-            ignore recurringTimer<system>(#seconds(60_000_000_000), topCanisterRequest);
+            ignore Timer.recurringTimer<system>(#seconds(60_000_000_000), topCanisterRequest);
             await topCanisterRequest();
         }
     );

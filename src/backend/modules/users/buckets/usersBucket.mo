@@ -9,6 +9,9 @@ import MixinOpsOperations "../../../shared/mixins/mixinOpsOperations";
 import MixinAllowedCanisters "../../../shared/mixins/mixinAllowedCanisters";
 import { setTimer; recurringTimer } = "mo:core/Timer";
 
+// This kind of bucket exists to map a user principal with the principal of the bucket where it's data are stored.
+// This is done in the goal to have an easy distribution among users between exixsting buckets in a predictable way.
+// If this bucket where to save more data, like map of groups of todos or this kind of things, the size used per user would vary tremndously, which is complicated for predictability of scaling.
 shared ({ caller = owner }) persistent actor class UsersBucket() = this {
     ////////////
     // MIXINS //
@@ -21,13 +24,13 @@ shared ({ caller = owner }) persistent actor class UsersBucket() = this {
         toppingAmount           = 2_000_000_000_000;
         toppingIntervalNs       = 20_000_000_000;
     });
-    include MixinAllowedCanisters(coordinatorActor);    
+    include MixinAllowedCanisters(coordinatorActor);
 
     ////////////
     // MEMORY //
     ////////////
 
-    let memoryUsers = Map.empty<Principal, UserData.UserData>();
+    let memoryUsers = Map.empty<Principal, Principal>();
 
     //////////
     // JOBS //

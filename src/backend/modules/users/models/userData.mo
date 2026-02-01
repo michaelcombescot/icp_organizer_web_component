@@ -1,5 +1,6 @@
-import Map "mo:core/Map";
 import Time "mo:core/Time";
+import Map "mo:core/Map";
+import Array "mo:core/Array";
 import Text "mo:base/Text";
 import Identifiers "../../../shared/identifiers";
 
@@ -15,6 +16,22 @@ module {
         name: Text;
         email: Text;
         groups: [Identifiers.Identifier];
-        createdAt: Time.Time;
-    }
+    };
+
+    public func newUserData() : UserData {
+        {
+            name = "";
+            email = "";
+            groups = Map.empty<Identifiers.Identifier, ()>();
+            createdAt = Time.now();
+        }
+    };
+
+    public func newSharableUserData(userData: UserData) : SharableUserData {
+        {
+            name = userData.name;
+            email = userData.email;
+            groups = Array.fromIter( Map.keys(userData.groups) );
+        }
+    };
 };

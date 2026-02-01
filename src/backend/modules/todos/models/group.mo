@@ -1,7 +1,5 @@
 import Identifier "../../../shared/identifiers";
 import Map "mo:core/Map";
-import Todo "todo";
-import TodoList "todoList";
 import Time "mo:core/Time";
 import Principal "mo:core/Principal";
 
@@ -9,8 +7,8 @@ module {
     public type Group = {
         identifier: Identifier.Identifier;
         name: Text;
-        todos: Map.Map<Nat, Todo.Todo>;
-        todoLists: Map.Map<Nat, TodoList.TodoList>;
+        todos: Map.Map<Identifier.Identifier, ()>;
+        todoLists: Map.Map<Identifier.Identifier, ()>;
         users: Map.Map<Principal, UserGroupPermission>;
         kind: Kind;
         createdAt: Time.Time;
@@ -40,8 +38,8 @@ module {
         {
             identifier = identifier;
             name = name;
-            todos = Map.empty<Nat, Todo.Todo>();
-            todoLists = Map.empty<Nat, TodoList.TodoList>();
+            todos = Map.empty<Identifier.Identifier, ()>();
+            todoLists = Map.empty<Identifier.Identifier, ()>();
             users = Map.singleton<Principal, UserGroupPermission>(createdBy, #owner);
             kind = kind;
             createdAt = Time.now();
@@ -58,12 +56,4 @@ module {
         name: Text;
         kind: Kind;
     };
-
-    public type RespGetGroupDisplayData = {
-        identifier: Identifier.Identifier;
-        name: Text;
-        todos: [Todo.Todo];
-        todoLists: [TodoList.TodoList];
-        kind: Kind;
-    }
 };

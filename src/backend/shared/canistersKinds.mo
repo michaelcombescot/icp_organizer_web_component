@@ -21,11 +21,13 @@ module {
     };
 
     public type IndexesKind = {
-        #mainIndex;
+        #todosIndex;
     };
 
     public type BucketsKind = {
         #groupsBucket;
+        #todosBucket;
+        #todosListsBucket;
         #usersBucket;
     };
 

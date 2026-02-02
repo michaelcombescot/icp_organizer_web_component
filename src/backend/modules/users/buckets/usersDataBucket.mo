@@ -6,9 +6,9 @@ import Principal "mo:core/Principal";
 import Blob "mo:core/Blob";
 import Result "mo:core/Result";
 import UserData "../models/userData";
-import errors "../../../shared/errors";
+import Errors "../../../shared/errors";
 
-shared ({ caller = owner }) persistent actor class UsersData() = this {
+shared ({ caller = owner }) persistent actor class UsersDataBucket() = this {
     /////////////
     // CONFIGS //
     /////////////
@@ -78,14 +78,14 @@ shared ({ caller = owner }) persistent actor class UsersData() = this {
     /////////
 
     public shared func createUserData(userPrincipal: Principal) : async Result.Result<(), Text> {
-        if ( Map.size(memory.users) >= MAX_NUMBER_ENTRIES ) { return #err(errors.ERR_BUCKET_FULL); };
+        if ( Map.size(memory.users) >= MAX_NUMBER_ENTRIES ) { return #err(Errors.ERR_BUCKET_FULL); };
 
         switch ( Map.get(memory.users, userPrincipal) ) {
             case null {
                 Map.add(memory.users, userPrincipal, UserData.newUserData());
                 #ok(());
             };
-            case (?_) #err(errors.ERR_USER_ALREADY_EXISTS);
+            case (?_) #err(Errors.ERR_USER_ALREADY_EXISTS);
         }
     };
 

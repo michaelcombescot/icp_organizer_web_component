@@ -3,8 +3,11 @@ import MixinOpsOperations "../../../shared/mixins/mixinOpsOperations";
 import Principal "mo:core/Principal";
 import Timer "mo:core/Timer";
 import Blob "mo:core/Blob";
+import Result "mo:core/Result";
 import UsersMapping "../helpers/usersMapping";
 import UsersBucket "../buckets/usersBucket";
+import UsersDataBucket "../buckets/usersDataBucket";
+import UserData "../models/userData";
 
 shared ({ caller = owner }) persistent actor class UsersIndex() = this {
     /////////////
@@ -29,7 +32,8 @@ shared ({ caller = owner }) persistent actor class UsersIndex() = this {
     ////////////
 
     let memory = {
-        memoryUsersMapping: [Principal] = [];
+        usersArray: [Principal] = [];
+        currentDataBucket: ?Principal = null
     };
 
     //////////
@@ -52,7 +56,8 @@ shared ({ caller = owner }) persistent actor class UsersIndex() = this {
         arg: Blob;
         caller : Principal;
         msg : {
-            #getCurrentUserData: () -> ();
+            #createUser : () -> ();
+            #getUserData: () -> ();
         };
     };
 
@@ -62,7 +67,8 @@ shared ({ caller = owner }) persistent actor class UsersIndex() = this {
         if ( Blob.size(params.arg) > 50 ) { return false; };
 
         switch ( params.msg ) {
-            case (#getCurrentUserData(_)) true;
+            case (#createUser(_)) true;
+            case (#getUserData(_)) true;
         }
     };
 
@@ -70,17 +76,28 @@ shared ({ caller = owner }) persistent actor class UsersIndex() = this {
     // API //
     /////////
 
-    public shared ({ caller }) func getCurrentUserData() : async Principal {
-        let userBucketPrincipal = UsersMapping.helperFetchUserBucket(memoryUsersMapping, caller);
+    public shared ({ caller }) func createUser() : async Result.Result<Principal, Text> {
+        let userBucketPrincipal = UsersMapping.helperFetchUserBucket(memory.usersArray, caller);
 
-        switch ( (actor(userBucketPrincipal): UsersBucket.UsersBucket).getUserPrincipal() ) {
-            case ( null ) {
-                // this should never happen due to the inspect function
-                throw Error.reject("ERR_INVALID_CALLER");
-            };
-            case ( some bucketActor ) {
-                return await bucketActor.getUserPrincipal(caller);
-            };
-        }
+        switch ( await (actor(userBucketPrincipal.toText()): UsersBucket.UsersBucket).handlerCreateUser(caller, userBucketPrincipal) ) {
+            case ( #ok(_) ) ;
+            case ( #err(error)) return #err(error);
+        };
+
+        switch ( await (actor(userBucketPrincipal.toText()): UsersBucket.UsersBucket).handlerCreateUser(caller) ) {
+            case ( #ok(dataPrincipal) ) dataPrincipal;      
+            case ( #err(error)) return #err(error);
+        };
+    };
+
+    public shared ({ caller }) func getUserData() : async Result.Result<UserData.SharableUserData, Text> {
+        let userBucketPrincipal = UsersMapping.helperFetchUserBucket(memory.usersArray, caller);
+
+        let userDataPrincipal = switch ( await (actor(userBucketPrincipal.toText()): UsersBucket.UsersBucket).handlerGetUserDataBucket() ) {
+                                    case ( #ok(dataPrincipal) ) dataPrincipal;      
+                                    case ( #err(error)) return #err(error);
+                                };
+
+        await (actor(userDataPrincipal.toText()): UsersDataBucket.UsersDataBucket).getUserData(caller)
     };
 }

@@ -7,11 +7,11 @@ import UserData "../models/userData";
 import Identifiers "../../../shared/identifiers";
 import MixinOpsOperations "../../../shared/mixins/mixinOpsOperations";
 import MixinAllowedCanisters "../../../shared/mixins/mixinAllowedCanisters";
-import { setTimer; recurringTimer } = "mo:core/Timer";
+import Timer "mo:core/Timer";
+import Errors "../../../shared/errors";
 
 // This kind of bucket exists to map a user principal with the principal of the bucket where it's data are stored.
-// This is done in the goal to have an easy distribution among users between exixsting buckets in a predictable way.
-// If this bucket where to save more data, like map of groups of todos or this kind of things, the size used per user would vary tremndously, which is complicated for predictability of scaling.
+// This is done in the goal to have an easy distribution among users between exixsting buckets in a predictable way and smooth out the scaling if needed.
 shared ({ caller = owner }) persistent actor class UsersBucket() = this {
     ////////////
     // MIXINS //
@@ -36,21 +36,13 @@ shared ({ caller = owner }) persistent actor class UsersBucket() = this {
     // JOBS //
     //////////
 
-    ignore setTimer<system>(
+    ignore Timer.setTimer<system>(
         #seconds(0),
         func () : async () {
-            ignore recurringTimer<system>(#seconds(60_000_000_000), topCanisterRequest);
+            ignore Timer.recurringTimer<system>(#seconds(60_000_000_000), topCanisterRequest);
             await topCanisterRequest();
         }
     );
-
-    ////////////
-    // ERRORS //
-    ////////////
-
-    let ERR_USER_NOT_FOUND = "ERR_USER_NOT_FOUND";
-    let ERR_USER_ALREADY_EXISTS = "ERR_USER_ALREADY_EXISTS";
-    let ERR_INVALID_CALLER = "ERR_INVALID_CALLER";
 
     ////////////
     // SYSTEM //
@@ -60,9 +52,8 @@ shared ({ caller = owner }) persistent actor class UsersBucket() = this {
         arg: Blob;
         caller : Principal;
         msg : {
-            #handlerGetUserData : () -> ();
-            #handlerCreateUser : () -> { userPrincipal: Principal; };
-            #handlerAddGroupToUser : () -> (userPrincipal: Principal, groupIdentifier: Identifiers.Identifier);
+            #handlerGetUserDataBucket : () -> ();
+            #handlerCreateUser : () -> (userPrincipal : Principal, userBucketPrincipal : Principal);
         }
     };
 
@@ -70,9 +61,8 @@ shared ({ caller = owner }) persistent actor class UsersBucket() = this {
         if ( params.caller == Principal.anonymous() ) { return false; };
 
         switch ( params.msg ) {
-            case (#handlerGetUserData(_))       true;
-            case (#handlerCreateUser(_))        true;
-            case (#handlerAddGroupToUser(_))    true;
+            case (#handlerGetUserDataBucket(_))     true;
+            case (#handlerCreateUser(_))            true;
         }
     };
 
@@ -82,43 +72,14 @@ shared ({ caller = owner }) persistent actor class UsersBucket() = this {
     // API //
     /////////
 
-    public shared ({ caller }) func handlerGetUserData() : async Result.Result<UserData.SharableUserData, Text> {
-        let ?userData = memoryUsers.get(caller) else return #err(ERR_USER_NOT_FOUND);
-
-        #ok({
-            name = userData.name;
-            email = userData.email;
-            groups = Array.fromIter( Map.keys(userData.groups) );
-            createdAt = userData.createdAt;
-        })
+    public shared ({ caller }) func handlerGetUserDataBucket() : async Result.Result<Principal, Text> {
+        let ?userBucket = memoryUsers.get(caller) else return #err(Errors.ERR_USER_DOES_NOT_EXISTS);
+        #ok(userBucket);
     };
 
-    public shared func handlerCreateUser({ userPrincipal: Principal; }) : async Result.Result<(), Text> {
-        switch ( memoryUsers.get(userPrincipal) ) {
-            case (?_) return #err(ERR_USER_ALREADY_EXISTS);
-            case null ();
-        };
-
-        // create user data
-        let userData: UserData.UserData = {
-            name = "";
-            email = "";
-            groups = Map.empty<Identifiers.Identifier, ()>();
-            createdAt = Time.now();
-        };
-
-        memoryUsers.add(userPrincipal, userData);
-
-        #ok();
-    };
-
-    public shared ({ caller }) func handlerAddGroupToUser(userPrincipal: Principal, groupIdentifier: Identifiers.Identifier) : async Result.Result<(), Text> {
-        if ( await isCanisterAllowed(caller) ) { return #err(ERR_INVALID_CALLER) };
-
-        let ?userData = memoryUsers.get(userPrincipal) else return #err(ERR_USER_NOT_FOUND);
-
-        userData.groups.add(groupIdentifier, ());
-
+    public shared func handlerCreateUser(userPrincipal: Principal, userBucketPrincipal: Principal) : async Result.Result<(), Text> {
+        let ?_ = memoryUsers.get(userPrincipal) else return #err(Errors.ERR_USER_ALREADY_EXISTS);
+        memoryUsers.add(userPrincipal, userBucketPrincipal);
         #ok();
     };
 };
